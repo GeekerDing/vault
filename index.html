@@ -9,7 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Scrooge's Safe">
 <meta name="application-name" content="Scrooge's Safe">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=20260726-2">
 <link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png?v=20260726-2">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20260726-2">
@@ -19,6 +20,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <style>
 :root{
+  color-scheme:light dark;
   --bg:#FFFFFF; --card:#FFFFFF; --card2:#F7F7F5; --line:#E9E9E7;
   --tx:#191919; --dim:#787774;
   --gold:#191919; --goldS:#F7F7F5;
@@ -26,7 +28,24 @@
   --red:#D44C47; --redS:#FCEDEC;
   --amber:#D9730D; --amberS:#FBF3DB;
   --blue:#2383E2; --blueS:#EAF3FB;
+  --inverse:#FFFFFF; --field:#FFFFFF; --field-line:#D7D7D5;
+  --header:rgba(255,255,255,.94); --nav-bg:rgba(255,255,255,.96);
+  --muted-icon:#9B9A97; --shadow:rgba(0,0,0,.18);
   --nav:65px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#191919; --card:#202020; --card2:#2A2A2A; --line:#373737;
+    --tx:#F1F1EF; --dim:#A9A9A6;
+    --gold:#F1F1EF; --goldS:#2A2A2A;
+    --green:#55B77E; --greenS:#183727;
+    --red:#FF7369; --redS:#44221F;
+    --amber:#ECA559; --amberS:#44311F;
+    --blue:#65A9E8; --blueS:#1F3345;
+    --inverse:#191919; --field:#202020; --field-line:#4A4A48;
+    --header:rgba(25,25,25,.94); --nav-bg:rgba(25,25,25,.96);
+    --muted-icon:#8B8B88; --shadow:rgba(0,0,0,.42);
+  }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
@@ -41,7 +60,7 @@ input,select,textarea{font:inherit}
 .tnum{font-variant-numeric:tabular-nums}
 
 /* ---------- 顶栏 ---------- */
-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);
+header{position:sticky;top:0;z-index:20;background:var(--header);
   backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
   padding:calc(env(safe-area-inset-top) + 9px) 16px 9px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:55px}
@@ -85,9 +104,9 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 /* ---------- 按钮 ---------- */
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;
   padding:12px 16px;border-radius:6px;font-weight:650;font-size:14px;
-  background:var(--tx);color:#FFFFFF;min-height:44px}
+  background:var(--tx);color:var(--inverse);min-height:44px}
 .btn:active{opacity:.72}
-.btn.ghost{background:#FFFFFF;color:var(--tx);border:1px solid var(--line)}
+.btn.ghost{background:var(--field);color:var(--tx);border:1px solid var(--line)}
 .btn.danger{background:var(--redS);color:var(--red)}
 .btn.sm{padding:8px 11px;font-size:13px;border-radius:5px;min-height:34px}
 .btnrow{display:flex;gap:8px}
@@ -99,14 +118,14 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;padding:7px 12px;border-radius:6px;background:var(--card2);
   color:var(--tx);font-size:13px;font-weight:600;border:1px solid transparent}
-.chip.on{background:var(--tx);color:#FFFFFF}
+.chip.on{background:var(--tx);color:var(--inverse)}
 
 /* ---------- 表单 ---------- */
 .field{display:flex;flex-direction:column;gap:5px}
 .field>label{color:var(--dim);font-size:12px}
 .field input,.field select,.field textarea{
-  background:#FFFFFF;border-radius:5px;padding:12px;color:var(--tx);
-  border:1px solid #D7D7D5;font-size:16px;width:100%}
+  background:var(--field);border-radius:5px;padding:12px;color:var(--tx);
+  border:1px solid var(--field-line);font-size:16px;width:100%}
 .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--tx)}
 .field .hint{color:var(--dim);font-size:11px}
 .field input[type=date]{min-height:46px}
@@ -129,20 +148,20 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 
 /* ---------- 底部导航 ---------- */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(255,255,255,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:var(--nav-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 2px 7px;color:#9B9A97;font-size:10px;font-weight:600;min-width:0}
+  padding:8px 2px 7px;color:var(--muted-icon);font-size:10px;font-weight:600;min-width:0}
 nav button.on{color:var(--tx)}
 nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify-content:center}
 
 /* ---------- 图表 ---------- */
 .chart{width:100%;display:block;overflow:visible}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
-  transform:translateX(-50%);z-index:80;background:var(--tx);color:#FFFFFF;
+  transform:translateX(-50%);z-index:80;background:var(--tx);color:var(--inverse);
   padding:11px 17px;border-radius:6px;font-size:13px;font-weight:600;
-  box-shadow:0 8px 24px rgba(0,0,0,.18);opacity:0;pointer-events:none;
+  box-shadow:0 8px 24px var(--shadow);opacity:0;pointer-events:none;
   transition:opacity .2s;max-width:88vw;text-align:center}
 .toast.show{opacity:1}
 
@@ -155,7 +174,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .lockbox{width:min(100%,390px);display:flex;flex-direction:column;gap:14px}
 .vaultmark{width:72px;height:72px;object-fit:cover;border-radius:16px;margin-bottom:4px}
 .lockbox h1{font-size:28px;margin:0}.lockbox p{margin:0;line-height:1.6}
-.lockbox input{background:#FFFFFF;border:1px solid #D7D7D5;border-radius:5px;
+.lockbox input{background:var(--field);border:1px solid var(--field-line);border-radius:5px;
   padding:13px;color:var(--tx);font-size:16px;width:100%}
 .lockbox input:focus{outline:0;border-color:var(--tx)}
 .lock-error{min-height:18px;color:var(--red);font-size:12px}
@@ -184,7 +203,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .asset-label{display:flex;flex-direction:column;min-width:0}
 .asset-label b{font-size:14px;font-weight:650}.asset-label span{color:var(--dim);font-size:12px}
 .asset-value{text-align:right;font-size:18px;font-weight:700;white-space:nowrap}
-.asset-strip>.ph{color:#9B9A97;font-size:16px}
+.asset-strip>.ph{color:var(--muted-icon);font-size:16px}
 .home-section{display:flex;flex-direction:column}
 .section-title{font-size:14px;font-weight:700;margin:4px 0 7px}
 .activity-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;
