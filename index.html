@@ -1072,7 +1072,7 @@ function loadTesseract(){
   });
   return tesseractLoader;
 }
-async function prepareMeterImage(file){
+async function loadMeterImage(file){
   var source, cleanup=function(){};
   if(window.createImageBitmap) source=await createImageBitmap(file);
   else{
@@ -1083,24 +1083,40 @@ async function prepareMeterImage(file){
       img.src=url;
     });
   }
-  var max=1800, scale=Math.min(1,max/Math.max(source.width,source.height));
+  return {source:source,cleanup:cleanup};
+}
+function meterCanvas(source,rect,maxWidth,upscale){
+  var sx=Math.round(source.width*rect.x), sy=Math.round(source.height*rect.y);
+  var sw=Math.max(1,Math.round(source.width*rect.w)), sh=Math.max(1,Math.round(source.height*rect.h));
+  var scale=Math.min(upscale||1,maxWidth/sw);
   var canvas=document.createElement('canvas');
-  canvas.width=Math.max(1,Math.round(source.width*scale));
-  canvas.height=Math.max(1,Math.round(source.height*scale));
+  canvas.width=Math.max(1,Math.round(sw*scale));
+  canvas.height=Math.max(1,Math.round(sh*scale));
   var ctx=canvas.getContext('2d',{willReadFrequently:true});
-  ctx.drawImage(source,0,0,canvas.width,canvas.height);
-  if(source.close) source.close();
-  cleanup();
+  ctx.drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
   var image=ctx.getImageData(0,0,canvas.width,canvas.height), d=image.data;
   for(var i=0;i<d.length;i+=4){
     var gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-    gray=Math.max(0,Math.min(255,(gray-128)*1.45+128));
+    gray=Math.max(0,Math.min(255,(gray-128)*1.7+128));
     d[i]=d[i+1]=d[i+2]=gray;
   }
   ctx.putImageData(image,0,0);
   return new Promise(function(resolve,reject){
     canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('无法处理照片'));},'image/jpeg',.9);
   });
+}
+async function prepareMeterImages(file){
+  var loaded=await loadMeterImage(file), source=loaded.source;
+  try{
+    return await Promise.all([
+      meterCanvas(source,{x:0,y:0,w:1,h:1},1800,1),
+      meterCanvas(source,{x:.18,y:.16,w:.64,h:.32},1800,4),
+      meterCanvas(source,{x:.08,y:.30,w:.84,h:.34},1800,4)
+    ]);
+  }finally{
+    if(source.close) source.close();
+    loaded.cleanup();
+  }
 }
 function meterNumber(token){
   var s=String(token||'').replace(/[Oo]/g,'0').replace(/[^\d.,]/g,'');
@@ -1115,26 +1131,48 @@ function meterNumber(token){
   var n=parseFloat(s);
   return isFinite(n)?n:NaN;
 }
-function extractMeterCandidates(text,last){
-  var matches=String(text||'').replace(/[Oo]/g,'0').match(/\d[\d\s.,]{2,}\d/g)||[];
+function extractMeterCandidates(text,last,decimalPlaces,wholeOnly){
+  var matches=String(text||'').replace(/[Oo]/g,'0').match(/\d[\d \t.,]{2,}\d/g)||[];
+  decimalPlaces=decimalPlaces&&decimalPlaces.length?decimalPlaces:[0];
   var seen={}, out=[];
   matches.forEach(function(token){
-    var n=meterNumber(token), digits=String(token).replace(/\D/g,'').length;
-    if(!isFinite(n)||n<0||digits<4||digits>10) return;
-    var key=String(n);
-    if(seen[key]) return;
-    seen[key]=1;
-    var score=digits;
-    if(isFinite(last)){
-      if(n>=last) score+=50;
-      var delta=Math.abs(n-last);
-      if(delta<10000) score+=20;
-      if(delta<2000) score+=20;
-      score-=Math.min(20,delta/5000);
+    var compact=String(token).replace(/\D/g,''), digits=compact.length;
+    if(digits<4||digits>10) return;
+    var separators=token.match(/[.,]/g)||[];
+    var lastSeparator=Math.max(token.lastIndexOf('.'),token.lastIndexOf(','));
+    var decimalTail=lastSeparator>=0?token.slice(lastSeparator+1).replace(/\D/g,'').length:0;
+    var explicitDecimal=separators.length===1&&decimalTail>0&&decimalTail<=2;
+    var values=[{n:meterNumber(token),places:explicitDecimal?'explicit':0}];
+    if(!separators.length){
+      decimalPlaces.forEach(function(p){
+        if(p>0&&digits>p) values.push({n:parseInt(compact,10)/Math.pow(10,p),places:p});
+      });
     }
-    out.push({value:n,raw:token.trim(),score:score});
+    values.forEach(function(candidate){
+      var n=candidate.n;
+      if(!isFinite(n)||n<0) return;
+      if(wholeOnly) n=Math.floor(n);
+      var key=String(n);
+      if(seen[key]) return;
+      seen[key]=1;
+      var score=digits, integerDigits=String(Math.floor(n)).length;
+      if(candidate.places==='explicit'||candidate.places===decimalPlaces[0]) score+=180;
+      if(isFinite(last)){
+        var delta=Math.abs(n-last), range=Math.max(50,Math.abs(last)*.03);
+        score+=120/(1+delta/range);
+        if(n>=last) score+=15;
+        if(n>=last*.5&&n<=last*2+5000) score+=25;
+        if(n>last*5+10000) score-=80;
+        if(integerDigits===String(Math.floor(last)).length) score+=18;
+      }
+      out.push({value:n,raw:token.trim(),score:score});
+    });
   });
   return out.sort(function(a,b){return b.score-a.score;});
+}
+function meterDecimalRules(m){
+  var preferred=Number.isInteger(m.ocrDecimals)?m.ocrDecimals:2;
+  return [preferred,0,1,2].filter(function(p,i,a){return a.indexOf(p)===i;});
 }
 function updateOcrProgress(message,progress){
   var text=document.getElementById('ocr_status'), bar=document.getElementById('ocr_bar');
@@ -1156,22 +1194,28 @@ async function scanMeterPhoto(input){
     '<p class="dim" id="ocr_status" style="margin:0">正在准备照片…</p>';
   try{
     var T=await loadTesseract();
-    var prepared=await prepareMeterImage(file);
+    var prepared=await prepareMeterImages(file);
     var worker=await T.createWorker('eng',1,{logger:function(m){
       var labels={loading_tesseract_core:'加载识别引擎',initializing_tesseract:'初始化识别引擎',
         loading_language_traineddata:'加载数字模型',initializing_api:'准备识别',
         recognizing_text:'识别表盘数字'};
-      updateOcrProgress(labels[m.status]||'正在识别',m.progress||0);
+      updateOcrProgress(labels[m.status]||'正在识别',(m.progress||0)/prepared.length);
     }});
     await worker.setParameters({
       tessedit_char_whitelist:'0123456789., ',
       tessedit_pageseg_mode:T.PSM&&T.PSM.SPARSE_TEXT?T.PSM.SPARSE_TEXT:'11'
     });
-    var recognized=await worker.recognize(prepared);
+    var texts=[];
+    for(var pass=0;pass<prepared.length;pass++){
+      updateOcrProgress('识别读数区域 '+(pass+1)+' / '+prepared.length,pass/prepared.length);
+      var recognized=await worker.recognize(prepared[pass]);
+      texts.push(recognized.data.text);
+    }
     await worker.terminate();
     var m=pickMeter(window._addKind);
     var rs=meterReadings(S.readings,m.id), last=rs.length?rs[rs.length-1].value:NaN;
-    var candidates=extractMeterCandidates(recognized.data.text,last);
+    var places=meterDecimalRules(m);
+    var candidates=extractMeterCandidates(texts.join('\n'),last,places,true);
     if(!candidates.length){
       updateOcrProgress('没有可靠识别到数字，请重拍或手动输入',1);
       return;
@@ -1181,7 +1225,8 @@ async function scanMeterPhoto(input){
     document.getElementById('ocr_bar').style.width='100%';
     result.insertAdjacentHTML('beforeend',
       '<div class="chips" style="margin:0;padding:2px 0">'+candidates.slice(0,6).map(function(c){
-        return '<button class="chip" onclick="applyOcrCandidate('+c.value+')">'+n2(c.value)+'</button>';
+        return '<button class="chip" onclick="applyOcrCandidate('+c.value+')">'+
+          (Number.isInteger(c.value)?n0(c.value):n2(c.value))+'</button>';
       }).join('')+'</div>');
   }catch(e){
     updateOcrProgress('识别失败：'+e.message,0);
