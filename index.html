@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; object-src 'none'">
 <title>Scrooge's Safe</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -71,6 +72,17 @@ header .hbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--
   border-radius:6px;font-size:18px}
 header .hbtn:active{background:var(--card2)}
 .header-actions{display:flex;align-items:center;gap:2px}
+#syncButton{position:relative}
+#syncButton[data-status="syncing"] i{animation:sync-spin 1s linear infinite}
+#syncButton[data-status="ok"]{color:var(--green)}
+#syncButton[data-status="warning"]{color:var(--amber)}
+#syncButton[data-status="error"]{color:var(--red)}
+@keyframes sync-spin{to{transform:rotate(360deg)}}
+.sync-state{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;
+  background:var(--card2);font-size:21px}
+.sync-state.ok{background:var(--greenS);color:var(--green)}
+.sync-state.warning{background:var(--amberS);color:var(--amber)}
+.sync-state.error{background:var(--redS);color:var(--red)}
 
 /* ---------- 布局 ---------- */
 main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto}
@@ -268,6 +280,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
     <img src="assets/scrooges-safe-icon.png" alt="">
     <h1>Scrooge's Safe</h1>
   </div><div class="header-actions">
+    <button class="hbtn" id="syncButton" data-status="off" onclick="manualSyncButton()" aria-label="家庭同步未设置" title="家庭同步未设置"><i id="syncIcon" class="ph ph-cloud-slash"></i></button>
     <button class="hbtn" onclick="lockVault()" aria-label="锁定" title="锁定"><i class="ph ph-lock"></i></button>
     <button class="hbtn" onclick="openSettings()" aria-label="设置" title="设置"><i class="ph ph-gear"></i></button>
   </div></header>
@@ -911,6 +924,7 @@ async function persistSnapshot(snapshot,key,kdf){
 }
 function save(){
   if(!S || !vaultKey || !vaultEnvelope) return Promise.resolve(false);
+  if(typeof syncLocalChanged==='function') syncLocalChanged();
   var snapshot=JSON.stringify(S), key=vaultKey;
   var kdf={iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
   saveQueue=saveQueue.catch(function(){}).then(function(){
@@ -958,6 +972,7 @@ function unlockUi(){
   document.body.classList.remove('locked');
   setLockError('');
   render();
+  if(typeof syncUnlocked==='function') syncUnlocked();
 }
 async function setupVault(){
   var p=val('setup_pw'), p2=val('setup_pw2');
@@ -992,6 +1007,7 @@ async function unlockWithPassword(){
 }
 async function lockVault(){
   if(!vaultStarted) return;
+  if(typeof syncLocked==='function') syncLocked();
   try{ await saveQueue; }catch(e){}
   closeSheet();
   clearChartState();
@@ -1062,9 +1078,12 @@ async function changeMasterPassword(){
     var env=JSON.parse(localStorage.getItem(ENC_KEY));
     var oldKey=await keyForEnvelope(old,env);
     await decryptTextWithKey(env,oldKey);
+    var syncConfig=typeof readSyncConfig==='function' ? await readSyncConfig(oldKey) : null;
     var kdf=freshKdf();
     var nextKey=await deriveVaultKey(next,b64ToBytes(kdf.salt),kdf.iterations);
     await persistSnapshot(JSON.stringify(S),nextKey,kdf);
+    if(syncConfig&&typeof writeSyncConfig==='function')
+      await writeSyncConfig(syncConfig,nextKey,kdf);
     vaultKey=nextKey;
     if(hasDeviceUnlock()) await storeDeviceKey(nextKey);
     closeSheet(); toast('主密码已更改');
@@ -1140,6 +1159,506 @@ async function disableDeviceUnlock(){
   try{ await deleteDeviceKey(); }catch(e){}
   localStorage.removeItem(DEVICE_KEY);
   closeSheet(); toast('设备解锁已停用');
+}
+/* ================= 家庭端到端加密同步 ================= */
+var SYNC_CONFIG_KEY='scrooge.vault.sync.config.v1';
+var SYNC_META_KEY='scrooge.vault.sync.meta.v1';
+var SYNC_FILE_PATH='vault.sync.json';
+var syncTimer=null, syncPollTimer=null, syncRunning=null, syncAbortController=null;
+var syncEditVersion=0, syncSession=0;
+var syncStatus={kind:'off',text:'家庭同步未设置',detail:''};
+
+function syncClone(value){
+  return value===undefined?undefined:JSON.parse(JSON.stringify(value));
+}
+function syncSame(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function syncObject(value){
+  return value!==null&&typeof value==='object'&&!Array.isArray(value);
+}
+function syncIdArrays(values){
+  var found=false;
+  for(var i=0;i<values.length;i++){
+    var value=values[i];
+    if(value===undefined) continue;
+    if(!Array.isArray(value)) return false;
+    for(var j=0;j<value.length;j++){
+      found=true;
+      if(!syncObject(value[j])||typeof value[j].id!=='string') return false;
+    }
+  }
+  return found;
+}
+function syncMergeValue(base,local,remote,path,context){
+  if(syncSame(local,remote)) return syncClone(local);
+  if(syncSame(local,base)) return syncClone(remote);
+  if(syncSame(remote,base)) return syncClone(local);
+
+  if(syncIdArrays([base,local,remote])){
+    var maps=[{}, {}, {}], order=[], seen={};
+    [base||[],remote||[],local||[]].forEach(function(list,listIndex){
+      list.forEach(function(item){
+        maps[listIndex][item.id]=item;
+        if(!seen[item.id]){ seen[item.id]=1; order.push(item.id); }
+      });
+    });
+    return order.map(function(id){
+      return syncMergeValue(maps[0][id],maps[2][id],maps[1][id],
+        path+'['+id+']',context);
+    }).filter(function(item){return item!==undefined;});
+  }
+
+  if(syncObject(local)&&syncObject(remote)&&(base===undefined||syncObject(base))){
+    var keys={}, out={};
+    Object.keys(base||{}).concat(Object.keys(local),Object.keys(remote)).forEach(function(k){
+      keys[k]=1;
+    });
+    Object.keys(keys).forEach(function(k){
+      var merged=syncMergeValue(base&&base[k],local[k],remote[k],
+        path?(path+'.'+k):k,context);
+      if(merged!==undefined) out[k]=merged;
+    });
+    return out;
+  }
+
+  context.conflicts.push(path||'state');
+  return syncClone(context.preferLocal?local:remote);
+}
+function syncStateEmpty(state){
+  if(!state) return true;
+  return ['properties','meters','readings','txs','contracts'].every(function(k){
+    return !Array.isArray(state[k])||state[k].length===0;
+  });
+}
+function syncMergeStates(base,local,remote,preferLocal){
+  if(!base&&syncStateEmpty(local)&&!syncStateEmpty(remote))
+    return {state:syncClone(remote),conflicts:[]};
+  if(!base&&syncStateEmpty(remote)&&!syncStateEmpty(local))
+    return {state:syncClone(local),conflicts:[]};
+  var context={preferLocal:!!preferLocal,conflicts:[]};
+  var state=syncMergeValue(base||{},local,remote,'',context);
+  return {state:assertState(Object.assign({},SEED,state)),conflicts:context.conflicts};
+}
+
+function readSyncMeta(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_META_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+function writeSyncMeta(patch){
+  var meta=Object.assign({},readSyncMeta(),patch||{});
+  localStorage.setItem(SYNC_META_KEY,JSON.stringify(meta));
+  return meta;
+}
+async function readSyncConfig(key){
+  var raw=localStorage.getItem(SYNC_CONFIG_KEY);
+  if(!raw) return null;
+  var env=JSON.parse(raw), useKey=key||vaultKey;
+  if(!useKey||env.format!=='scrooge-vault-sync-config')
+    throw new Error('本机同步设置无法解密');
+  return JSON.parse(await decryptTextWithKey(env,useKey));
+}
+async function writeSyncConfig(config,key,kdf){
+  var useKey=key||vaultKey;
+  var useKdf=kdf||{iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
+  var env=await encryptTextWithKey(JSON.stringify(config),useKey,useKdf,
+    'scrooge-vault-sync-config');
+  localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(env));
+  writeSyncMeta({
+    configured:true,auto:config.auto!==false,repo:config.repo,branch:config.branch,
+    deviceName:config.deviceName
+  });
+}
+function syncDeviceId(){
+  return b64Url(randomBytes(18));
+}
+function syncRepoParts(repo){
+  var match=String(repo||'').trim().match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if(!match) throw new Error('仓库格式应为 owner/repo');
+  return {owner:match[1],repo:match[2]};
+}
+function syncApiUrl(config){
+  var p=syncRepoParts(config.repo);
+  var path=SYNC_FILE_PATH.split('/').map(encodeURIComponent).join('/');
+  return 'https://api.github.com/repos/'+encodeURIComponent(p.owner)+'/'+
+    encodeURIComponent(p.repo)+'/contents/'+path;
+}
+async function syncGithubRequest(config,method,body,query){
+  var url=syncApiUrl(config)+(query?('?'+query):'');
+  var response=await fetch(url,{
+    method:method,
+    headers:{
+      Accept:'application/vnd.github+json',
+      Authorization:'Bearer '+config.token,
+      'X-GitHub-Api-Version':'2022-11-28',
+      'Content-Type':'application/json'
+    },
+    body:body?JSON.stringify(body):undefined,
+    signal:syncAbortController?syncAbortController.signal:undefined,
+    cache:'no-store'
+  });
+  var data=null;
+  try{ data=await response.json(); }catch(e){}
+  if(response.status===404&&method==='GET') return null;
+  if(!response.ok){
+    var err=new Error((data&&data.message)||('GitHub 请求失败 ('+response.status+')'));
+    err.status=response.status;
+    throw err;
+  }
+  return data;
+}
+async function syncReadCloud(config){
+  var data=await syncGithubRequest(config,'GET',null,
+    'ref='+encodeURIComponent(config.branch||'main'));
+  if(!data) return null;
+  var raw=new TextDecoder().decode(b64ToBytes(String(data.content||'').replace(/\s/g,'')));
+  return {sha:data.sha,envelope:JSON.parse(raw)};
+}
+async function syncWriteCloud(config,envelope,sha){
+  var content=bytesToB64(new TextEncoder().encode(JSON.stringify(envelope)));
+  var body={
+    message:"Update encrypted Scrooge's Safe vault",
+    content:content,branch:config.branch||'main'
+  };
+  if(sha) body.sha=sha;
+  return syncGithubRequest(config,'PUT',body);
+}
+async function encryptSyncPayload(payload,password){
+  var kdf=freshKdf();
+  var key=await deriveVaultKey(password,b64ToBytes(kdf.salt),kdf.iterations);
+  return encryptTextWithKey(JSON.stringify(payload),key,kdf,'scrooge-vault-sync');
+}
+async function decryptSyncPayload(envelope,password){
+  if(!envelope||envelope.format!=='scrooge-vault-sync')
+    throw new Error('云端文件不是 Scrooge\'s Safe 加密同步数据');
+  try{
+    var key=await keyForEnvelope(password,envelope);
+    var payload=JSON.parse(await decryptTextWithKey(envelope,key));
+    payload.state=assertState(Object.assign({},SEED,payload.state));
+    return payload;
+  }catch(e){
+    if(e.message&&e.message.indexOf('云端文件')>=0) throw e;
+    throw new Error('同步密码错误，或云端密文已损坏');
+  }
+}
+
+function syncStatusIcon(kind){
+  return {
+    off:'cloud-slash',idle:'cloud',syncing:'arrows-clockwise',
+    ok:'cloud-check',offline:'cloud-slash',error:'cloud-x',warning:'warning-circle'
+  }[kind]||'cloud';
+}
+function setSyncStatus(kind,text,detail){
+  syncStatus={kind:kind,text:text,detail:detail||''};
+  var button=document.getElementById('syncButton'), iconEl=document.getElementById('syncIcon');
+  if(button){
+    button.dataset.status=kind;
+    button.setAttribute('aria-label',text);
+    button.title=text;
+  }
+  if(iconEl) iconEl.className='ph ph-'+syncStatusIcon(kind);
+  var statusText=document.getElementById('sync_status_text');
+  var statusDetail=document.getElementById('sync_status_detail');
+  var statusState=document.getElementById('sync_status_state');
+  if(statusText) statusText.textContent=text;
+  if(statusDetail) statusDetail.textContent=detail||'';
+  if(statusState){
+    statusState.className='sync-state '+kind;
+    statusState.innerHTML=icon(syncStatusIcon(kind));
+  }
+}
+function syncTimeLabel(value){
+  if(!value) return '尚未同步';
+  try{
+    return new Date(value).toLocaleString('zh-CN',{
+      month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'
+    });
+  }catch(e){ return value; }
+}
+function syncRefreshStatus(){
+  var meta=readSyncMeta();
+  if(!meta.configured) return setSyncStatus('off','家庭同步未设置','');
+  if(navigator.onLine===false) return setSyncStatus('offline','当前离线',
+    '数据会保存在本机，联网后自动同步');
+  if(meta.pending) return setSyncStatus('idle','等待同步',
+    '本机有新修改');
+  if(meta.lastError) return setSyncStatus('error','同步需要处理',meta.lastError);
+  setSyncStatus(meta.conflicts?'warning':'ok',
+    meta.conflicts?('已同步，'+meta.conflicts+' 处冲突保留了较新的设备内容'):'已同步',
+    syncTimeLabel(meta.lastSyncAt));
+}
+function syncClearTimers(){
+  clearTimeout(syncTimer); syncTimer=null;
+  clearInterval(syncPollTimer); syncPollTimer=null;
+}
+function syncSchedule(delay){
+  var meta=readSyncMeta();
+  if(!meta.configured||meta.auto===false||!S||!vaultKey) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(function(){ syncNow({quiet:true}); },delay==null?1800:delay);
+}
+function syncLocalChanged(){
+  syncEditVersion++;
+  var meta=readSyncMeta();
+  if(!meta.configured) return;
+  writeSyncMeta({pending:true,localChangedAt:new Date().toISOString(),lastError:''});
+  syncRefreshStatus();
+  syncSchedule(1800);
+}
+function syncUnlocked(){
+  syncSession++;
+  syncEditVersion=0;
+  if(syncAbortController) syncAbortController.abort();
+  syncClearTimers();
+  syncRefreshStatus();
+  var meta=readSyncMeta();
+  if(meta.configured&&meta.auto!==false){
+    syncSchedule(2500);
+    syncPollTimer=setInterval(function(){
+      if(!document.hidden) syncNow({quiet:true});
+    },90000);
+  }
+}
+function syncLocked(){
+  syncSession++;
+  if(syncAbortController) syncAbortController.abort();
+  syncAbortController=null;
+  syncClearTimers();
+  syncRunning=null;
+  setSyncStatus('off','金库已锁定','');
+}
+function syncNetworkChanged(){
+  if(navigator.onLine===false) syncRefreshStatus();
+  else syncSchedule(400);
+}
+window.addEventListener('online',syncNetworkChanged);
+window.addEventListener('offline',syncNetworkChanged);
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&S&&vaultKey) syncSchedule(500);
+});
+
+function syncAssertSession(session){
+  if(session!==syncSession||!S||!vaultKey) throw {cancelled:true};
+}
+async function syncOnce(config,session){
+  syncAssertSession(session);
+  await saveQueue.catch(function(){});
+  syncAssertSession(session);
+  var meta=readSyncMeta(), startVersion=syncEditVersion;
+  var local=syncClone(S), cloud=await syncReadCloud(config);
+  syncAssertSession(session);
+
+  if(!cloud){
+    if(syncEditVersion!==startVersion) throw {retry:true};
+    var firstPayload={
+      schema:1,revision:1,updatedAt:new Date().toISOString(),
+      deviceId:config.deviceId,deviceName:config.deviceName,state:local
+    };
+    var firstEnvelope=await encryptSyncPayload(firstPayload,config.password);
+    syncAssertSession(session);
+    await syncWriteCloud(config,firstEnvelope,null);
+    syncAssertSession(session);
+    config.baseState=syncClone(local);
+    config.revision=1;
+    return {config:config,state:local,localAtStart:local,editVersion:startVersion,
+      conflicts:[],uploaded:true};
+  }
+
+  var remotePayload=await decryptSyncPayload(cloud.envelope,config.password);
+  syncAssertSession(session);
+  var localChanged=new Date(meta.localChangedAt||0).getTime();
+  var remoteChanged=new Date(remotePayload.updatedAt||0).getTime();
+  var merged=syncMergeStates(config.baseState||null,local,remotePayload.state,
+    localChanged>=remoteChanged);
+  if(syncEditVersion!==startVersion) throw {retry:true};
+
+  var needsUpload=!syncSame(merged.state,remotePayload.state);
+  var revision=Number(remotePayload.revision)||0;
+  if(needsUpload){
+    var nextPayload={
+      schema:1,revision:revision+1,updatedAt:new Date().toISOString(),
+      deviceId:config.deviceId,deviceName:config.deviceName,state:merged.state
+    };
+    var envelope=await encryptSyncPayload(nextPayload,config.password);
+    syncAssertSession(session);
+    try{
+      await syncWriteCloud(config,envelope,cloud.sha);
+      syncAssertSession(session);
+      revision++;
+    }catch(e){
+      if(e.status===409||e.status===422) throw {retry:true};
+      throw e;
+    }
+  }
+  config.baseState=syncClone(merged.state);
+  config.revision=revision;
+  return {config:config,state:merged.state,localAtStart:local,editVersion:startVersion,
+    conflicts:merged.conflicts,uploaded:needsUpload};
+}
+async function runSync(options){
+  options=options||{};
+  if(!S||!vaultKey) return false;
+  var meta=readSyncMeta();
+  if(!meta.configured){
+    if(!options.quiet) openSyncSettings();
+    return false;
+  }
+  if(navigator.onLine===false){
+    setSyncStatus('offline','当前离线','数据会保存在本机，联网后自动同步');
+    if(!options.quiet) toast('当前离线，修改已安全保存在本机');
+    return false;
+  }
+
+  setSyncStatus('syncing','正在加密同步…','');
+  var session=syncSession;
+  syncAbortController=new AbortController();
+  var config=await readSyncConfig();
+  syncAssertSession(session);
+  if(!config||!config.token||!config.password) throw new Error('同步设置不完整');
+  var result, attempts=0;
+  while(attempts<4){
+    attempts++;
+    try{ result=await syncOnce(config,session); break; }
+    catch(e){
+      if(e&&e.retry){ await new Promise(function(r){setTimeout(r,180*attempts);}); continue; }
+      throw e;
+    }
+  }
+  if(!result) throw new Error('两台设备同时修改较频繁，请稍后重试');
+  syncAssertSession(session);
+
+  var stateToApply=result.state;
+  if(syncEditVersion!==result.editVersion){
+    var followup=syncMergeStates(result.localAtStart,S,result.state,true);
+    stateToApply=followup.state;
+    result.conflicts=result.conflicts.concat(followup.conflicts);
+  }
+  var changed=!syncSame(S,stateToApply);
+  if(changed){
+    S=assertState(Object.assign({},SEED,syncClone(stateToApply)));
+    await saveQueue.catch(function(){});
+    syncAssertSession(session);
+    var kdf={iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
+    await persistSnapshot(JSON.stringify(S),vaultKey,kdf);
+    render();
+  }
+  config=result.config;
+  config.lastSyncAt=new Date().toISOString();
+  await writeSyncConfig(config);
+  syncAssertSession(session);
+  var stillPending=!syncSame(S,config.baseState);
+  writeSyncMeta({
+    pending:stillPending,lastSyncAt:config.lastSyncAt,lastError:'',
+    conflicts:result.conflicts.length,revision:config.revision
+  });
+  syncRefreshStatus();
+  if(stillPending) syncSchedule(500);
+  if(!options.quiet)
+    toast(result.conflicts.length?
+      ('同步完成，'+result.conflicts.length+' 处同时修改已按较新时间合并'):'家庭数据已同步');
+  return true;
+}
+function syncNow(options){
+  if(syncRunning) return syncRunning;
+  var run=runSync(options).catch(function(e){
+    if(e&&(e.cancelled||e.name==='AbortError')) return false;
+    var message=e&&e.message?e.message:'同步失败';
+    writeSyncMeta({lastError:message});
+    setSyncStatus('error','同步失败',message);
+    if(!options||!options.quiet) toast('同步失败：'+message);
+    return false;
+  }).finally(function(){
+    if(syncRunning===run){
+      syncRunning=null;
+      syncAbortController=null;
+    }
+  });
+  syncRunning=run;
+  return syncRunning;
+}
+function manualSyncButton(){
+  if(!readSyncMeta().configured) return openSyncSettings();
+  syncNow({quiet:false});
+}
+
+function syncSettingsStatusCard(){
+  var meta=readSyncMeta();
+  return card(
+    '<div class="between"><div><h2 class="h2" id="sync_status_text">'+
+      esc(syncStatus.text)+'</h2><p class="dim" id="sync_status_detail" style="margin:3px 0 0">'+
+      esc(syncStatus.detail||syncTimeLabel(meta.lastSyncAt))+'</p></div>'+
+      '<span class="sync-state '+esc(syncStatus.kind)+'" id="sync_status_state">'+
+        icon(syncStatusIcon(syncStatus.kind))+'</span></div>'+
+    (meta.configured?btn('立即同步','syncNow({quiet:false})','ghost sm','arrows-clockwise'):'')
+  );
+}
+function renderSyncSettings(config){
+  var body=document.getElementById('sheetBody');
+  if(!body) return;
+  config=config||{};
+  body.innerHTML=syncSettingsStatusCard()+
+    card('<h2 class="h2">端到端加密</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '两台手机先在本机加密数据，再把密文保存到私有 GitHub 仓库。'+
+      '同步密码和 GitHub 令牌只以主密钥加密保存在这台设备。</p>','green')+
+    field({id:'sync_device',label:'这台设备的名称',val:config.deviceName||'我的 iPhone',
+      ph:'例如：Ding 的 iPhone'})+
+    field({id:'sync_repo',label:'私有同步仓库',val:config.repo||'GeekerDing/scrooge-safe-sync',
+      ph:'owner/repo'})+
+    field({id:'sync_branch',label:'分支',val:config.branch||'main'})+
+    field({id:'sync_token',label:'GitHub Fine-grained Token',type:'password',
+      ph:config.token?'已保存，留空不修改':'仅限该仓库 Contents 读写',
+      hint:'每台设备单独保存；不要使用拥有全部仓库权限的通用令牌。'})+
+    '<a class="btn ghost" href="https://github.com/settings/personal-access-tokens/new" '+
+      'target="_blank" rel="noopener noreferrer">'+icon('key')+'创建限权令牌</a>'+
+    field({id:'sync_password',label:'家庭同步密码',type:'password',
+      ph:config.password?'已保存，留空不修改':'至少 12 位，夫妻两台设备输入相同密码',
+      hint:'建议与本机主密码不同，并保存在密码管理器中。'})+
+    field({id:'sync_password2',label:'再次输入新的同步密码',type:'password',
+      ph:config.password?'不修改时留空':'再次输入'})+
+    '<div class="switch"><span>联网后自动同步</span><input type="checkbox" id="sync_auto" '+
+      (config.auto===false?'':'checked')+' style="width:auto;transform:scale(1.4)"></div>'+
+    btn(config.token?'保存并同步':'连接并同步','saveSyncSettings()',null,'cloud-arrow-up')+
+    (config.token?btn('停用这台设备的同步','disableFamilySync()','danger'):'');
+}
+async function openSyncSettings(){
+  openSheet('家庭同步',card('<p class="dim" style="margin:0">正在读取本机加密设置…</p>'));
+  try{ renderSyncSettings(await readSyncConfig()); }
+  catch(e){
+    document.getElementById('sheetBody').innerHTML=
+      card('<h2 class="h2">无法读取同步设置</h2><p class="dim" style="margin:0">'+
+        esc(e.message)+'</p>','red');
+  }
+}
+async function saveSyncSettings(){
+  try{
+    var existing=await readSyncConfig()||{};
+    var token=val('sync_token')||existing.token;
+    var password=val('sync_password')||existing.password;
+    var password2=val('sync_password2');
+    var repo=val('sync_repo'), deviceName=val('sync_device');
+    syncRepoParts(repo);
+    if(!deviceName) throw new Error('请填写设备名称');
+    if(!token||token.length<20) throw new Error('请填写该私有仓库的限权 GitHub Token');
+    if(!password||password.length<12) throw new Error('家庭同步密码至少需要 12 位');
+    if(val('sync_password')&&password!==password2) throw new Error('两次输入的同步密码不一致');
+    var config=Object.assign({},existing,{
+      token:token,password:password,repo:repo,branch:val('sync_branch')||'main',
+      deviceName:deviceName,deviceId:existing.deviceId||syncDeviceId(),
+      auto:document.getElementById('sync_auto').checked
+    });
+    await writeSyncConfig(config);
+    writeSyncMeta({pending:true,lastError:'',localChangedAt:new Date().toISOString()});
+    syncUnlocked();
+    closeSheet();
+    await syncNow({quiet:false});
+  }catch(e){ toast(e.message); }
+}
+function disableFamilySync(){
+  if(!confirm('停用这台设备的家庭同步？本机数据和云端密文都不会被删除。')) return;
+  localStorage.removeItem(SYNC_CONFIG_KEY);
+  localStorage.removeItem(SYNC_META_KEY);
+  syncClearTimers();
+  closeSheet();
+  syncRefreshStatus();
+  toast('这台设备已停用家庭同步');
 }
 /* ================= 银行 CSV 导入 ================= */
 var bankImportRows=[];
@@ -1352,7 +1871,7 @@ function loadTesseract(){
   if(tesseractLoader) return tesseractLoader;
   tesseractLoader=new Promise(function(resolve,reject){
     var script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js';
+    script.src='assets/vendor/tesseract/tesseract.min.js';
     script.onload=function(){ resolve(window.Tesseract); };
     script.onerror=function(){ reject(new Error('OCR 组件下载失败，请检查网络')); };
     document.head.appendChild(script);
@@ -1482,7 +2001,12 @@ async function scanMeterPhoto(input){
   try{
     var T=await loadTesseract();
     var prepared=await prepareMeterImages(file);
-    var worker=await T.createWorker('eng',1,{logger:function(m){
+    var worker=await T.createWorker('eng',1,{
+      workerPath:'assets/vendor/tesseract/worker.min.js',
+      workerBlobURL:false,
+      corePath:'assets/vendor/tesseract/tesseract-core-lstm.wasm.js',
+      langPath:'assets/vendor/tesseract/lang',
+      logger:function(m){
       var labels={loading_tesseract_core:'加载识别引擎',initializing_tesseract:'初始化识别引擎',
         loading_language_traineddata:'加载数字模型',initializing_api:'准备识别',
         recognizing_text:'识别表盘数字'};
@@ -1939,8 +2463,9 @@ function openSettings(){
   openSheet('设置与备份',
     card('<h2 class="h2">数据</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
-      S.contracts.length+' 份合同。<br>数据已加密保存在这台设备的浏览器里，不会上传到任何服务器。'+
+      S.contracts.length+' 份合同。<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
+    btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
     btn('导出加密备份','exportBackup()',null,'lock-key')+
     fileField({id:'imp_file',label:'选择备份文件',accept:'.json,.vault.json,application/json',
       onchange:'readBackupFile(this)',hint:'支持新的加密备份，也兼容旧版明文 JSON。文件只在本机读取。'})+
