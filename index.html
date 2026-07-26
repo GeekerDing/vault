@@ -2,52 +2,64 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>金库</title>
+<title>Scrooge's Safe</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="金库">
-<meta name="theme-color" content="#0E1116">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230E1116'/%3E%3Ccircle cx='90' cy='90' r='58' fill='none' stroke='%23E9B949' stroke-width='9'/%3E%3Ccircle cx='90' cy='90' r='20' fill='%23E9B949'/%3E%3Cg stroke='%23E9B949' stroke-width='9' stroke-linecap='round'%3E%3Cpath d='M90 32V52'/%3E%3Cpath d='M90 128V148'/%3E%3Cpath d='M32 90H52'/%3E%3Cpath d='M128 90H148'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Scrooge's Safe">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="apple-touch-icon" href="assets/scrooges-safe-icon.png">
+<link rel="icon" type="image/png" href="assets/scrooges-safe-icon.png">
+<link rel="manifest" href="assets/manifest.webmanifest">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <style>
 :root{
-  --bg:#0E1116; --card:#171C24; --card2:#1F2631; --line:#2A3240;
-  --tx:#F2F4F7; --dim:#8C97A8;
-  --gold:#E9B949; --goldS:#3A2F14;
-  --green:#3DD68C; --greenS:#12301F;
-  --red:#F0616D; --redS:#341418;
-  --amber:#F5A524; --amberS:#3A2A0E;
-  --blue:#5B8DEF; --blueS:#16233C;
-  --nav:72px;
+  --bg:#FFFFFF; --card:#FFFFFF; --card2:#F7F7F5; --line:#E9E9E7;
+  --tx:#191919; --dim:#787774;
+  --gold:#191919; --goldS:#F7F7F5;
+  --green:#0F7B3E; --greenS:#EDF7F1;
+  --red:#D44C47; --redS:#FCEDEC;
+  --amber:#D9730D; --amberS:#FBF3DB;
+  --blue:#2383E2; --blueS:#EAF3FB;
+  --nav:65px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
-  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
+  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45;letter-spacing:0;
+  scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar,.sheet>.body::-webkit-scrollbar{display:none}
 body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 input,select,textarea{font:inherit}
+.ph,.ph-fill{font-size:1.25em;line-height:1;display:inline-flex}
 .tnum{font-variant-numeric:tabular-nums}
 
 /* ---------- 顶栏 ---------- */
-header{position:sticky;top:0;z-index:20;background:rgba(14,17,22,.86);
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);
   backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
-  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;justify-content:space-between;gap:10px}
-header h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.3px}
-header .hbtn{color:var(--dim);font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;background:var(--card2)}
-.header-actions{display:flex;align-items:center;gap:7px}
+  padding:calc(env(safe-area-inset-top) + 9px) 16px 9px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:55px}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand img{width:30px;height:30px;object-fit:cover;border-radius:7px;flex:0 0 auto}
+header h1{margin:0;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .hbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--tx);
+  border-radius:6px;font-size:18px}
+header .hbtn:active{background:var(--card2)}
+.header-actions{display:flex;align-items:center;gap:2px}
 
 /* ---------- 布局 ---------- */
-main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
-.card{background:var(--card);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px}
+main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:15px;display:flex;flex-direction:column;gap:10px}
 .card.gold{background:var(--goldS)} .card.green{background:var(--greenS)}
 .card.red{background:var(--redS)} .card.amber{background:var(--amberS)} .card.blue{background:var(--blueS)}
 .h2{font-size:17px;font-weight:700;margin:0}
 .h3{font-size:14px;font-weight:600;margin:0}
 .dim{color:var(--dim);font-size:12px}
-.big{font-size:31px;font-weight:700;letter-spacing:-.5px}
+.big{font-size:30px;font-weight:700}
 .between{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hr{height:1px;background:var(--line);margin:2px 0}
 .stats{display:flex;flex-wrap:wrap;gap:14px}
@@ -59,7 +71,7 @@ main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-widt
 .row .l b{font-weight:400;font-size:14px;display:block;overflow-wrap:anywhere}
 .row .v{font-weight:600;font-size:14px;white-space:nowrap}
 .row.tap:active{opacity:.55}
-.badge{display:inline-block;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge{display:inline-block;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:650;white-space:nowrap}
 .b-gold{background:var(--goldS);color:var(--gold)} .b-dim{background:var(--card2);color:var(--dim)}
 .b-green{background:var(--greenS);color:var(--green)} .b-red{background:var(--redS);color:var(--red)}
 .b-amber{background:var(--amberS);color:var(--amber)} .b-blue{background:var(--blueS);color:var(--blue)}
@@ -69,34 +81,34 @@ main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-widt
 
 /* ---------- 按钮 ---------- */
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:13px 16px;border-radius:12px;font-weight:700;font-size:15px;
-  background:var(--gold);color:#1A1405}
-.btn:active{opacity:.7}
-.btn.ghost{background:var(--card2);color:var(--tx)}
+  padding:12px 16px;border-radius:6px;font-weight:650;font-size:14px;
+  background:var(--tx);color:#FFFFFF;min-height:44px}
+.btn:active{opacity:.72}
+.btn.ghost{background:#FFFFFF;color:var(--tx);border:1px solid var(--line)}
 .btn.danger{background:var(--redS);color:var(--red)}
-.btn.sm{padding:9px 12px;font-size:13px;border-radius:10px}
+.btn.sm{padding:8px 11px;font-size:13px;border-radius:5px;min-height:34px}
 .btnrow{display:flex;gap:8px}
 .btnrow>*{flex:1}
 
 /* ---------- chips ---------- */
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;
-  -ms-overflow-style:none;margin:0 -16px;padding-left:16px;padding-right:16px}
+  -ms-overflow-style:none;margin:0 -18px;padding-left:18px;padding-right:18px}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;padding:8px 13px;border-radius:10px;background:var(--card2);
-  color:var(--tx);font-size:13px;font-weight:600}
-.chip.on{background:var(--gold);color:#1A1405}
+.chip{flex:0 0 auto;padding:7px 12px;border-radius:6px;background:var(--card2);
+  color:var(--tx);font-size:13px;font-weight:600;border:1px solid transparent}
+.chip.on{background:var(--tx);color:#FFFFFF}
 
 /* ---------- 表单 ---------- */
 .field{display:flex;flex-direction:column;gap:5px}
 .field>label{color:var(--dim);font-size:12px}
 .field input,.field select,.field textarea{
-  background:var(--card2);border-radius:10px;padding:12px;color:var(--tx);
-  border:1px solid transparent;font-size:16px;width:100%}
-.field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--gold)}
+  background:#FFFFFF;border-radius:5px;padding:12px;color:var(--tx);
+  border:1px solid #D7D7D5;font-size:16px;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--tx)}
 .field .hint{color:var(--dim);font-size:11px}
 .field input[type=date]{min-height:46px}
 .switch{display:flex;align-items:center;justify-content:space-between;
-  background:var(--card2);border-radius:10px;padding:12px}
+  background:var(--card2);border-radius:5px;padding:12px}
 
 /* ---------- 弹层 ---------- */
 .sheet{position:fixed;inset:0;z-index:50;background:var(--bg);
@@ -108,26 +120,26 @@ main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-widt
 .sheet>.top .h2{font-size:18px}
 .sheet>.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:16px 16px calc(40px + env(safe-area-inset-bottom));
-  display:flex;flex-direction:column;gap:12px}
-.x{color:var(--dim);font-size:26px;line-height:1;padding:0 6px}
+  display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
+.x{color:var(--tx);font-size:25px;line-height:1;width:36px;height:36px;border-radius:6px}
+.x:active{background:var(--card2)}
 
 /* ---------- 底部导航 ---------- */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(23,28,36,.93);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:rgba(255,255,255,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:9px 2px 8px;color:var(--dim);font-size:10px;font-weight:600}
-nav button.on{color:var(--gold)}
-nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round}
+  padding:8px 2px 7px;color:#9B9A97;font-size:10px;font-weight:600;min-width:0}
+nav button.on{color:var(--tx)}
+nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify-content:center}
 
 /* ---------- 图表 ---------- */
 .chart{width:100%;display:block;overflow:visible}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
-  transform:translateX(-50%);z-index:80;background:var(--card2);color:var(--tx);
-  padding:11px 17px;border-radius:12px;font-size:13px;font-weight:600;
-  box-shadow:0 8px 28px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transform:translateX(-50%);z-index:80;background:var(--tx);color:#FFFFFF;
+  padding:11px 17px;border-radius:6px;font-size:13px;font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);opacity:0;pointer-events:none;
   transition:opacity .2s;max-width:88vw;text-align:center}
 .toast.show{opacity:1}
 
@@ -138,12 +150,11 @@ body.locked{overflow:hidden}
 body.locked .lock{display:flex}
 body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .lockbox{width:min(100%,390px);display:flex;flex-direction:column;gap:14px}
-.vaultmark{width:66px;height:66px;border:3px solid var(--gold);border-radius:50%;
-  display:grid;place-items:center;color:var(--gold);font-size:25px;font-weight:800;margin-bottom:4px}
+.vaultmark{width:72px;height:72px;object-fit:cover;border-radius:16px;margin-bottom:4px}
 .lockbox h1{font-size:28px;margin:0}.lockbox p{margin:0;line-height:1.6}
-.lockbox input{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+.lockbox input{background:#FFFFFF;border:1px solid #D7D7D5;border-radius:5px;
   padding:13px;color:var(--tx);font-size:16px;width:100%}
-.lockbox input:focus{outline:0;border-color:var(--gold)}
+.lockbox input:focus{outline:0;border-color:var(--tx)}
 .lock-error{min-height:18px;color:var(--red);font-size:12px}
 .lock-actions{display:flex;flex-direction:column;gap:9px}
 
@@ -154,16 +165,52 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .import-row{display:grid;grid-template-columns:24px 76px 1fr auto;align-items:center;gap:8px;
   padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
 .import-row input{width:18px;height:18px}.import-row .note{min-width:0;overflow-wrap:anywhere}
-.ocr-preview{width:100%;max-height:230px;object-fit:contain;background:#050607;border-radius:10px}
+.ocr-preview{width:100%;max-height:230px;object-fit:contain;background:var(--card2);border-radius:6px}
 .progress{height:6px;background:var(--card2);border-radius:6px;overflow:hidden}
-.progress>span{display:block;height:100%;background:var(--gold);width:0;transition:width .2s}
+.progress>span{display:block;height:100%;background:var(--tx);width:0;transition:width .2s}
+
+/* ---------- 今天 ---------- */
+.today-head{padding:2px 0 7px}
+.today-head h1{font-size:30px;line-height:1.15;margin:0 0 4px;font-weight:750}
+.today-date{margin:0;color:var(--dim);font-size:13px}
+.asset-strip{display:grid;grid-template-columns:38px minmax(0,1fr) auto 18px;
+  align-items:center;gap:10px;width:100%;padding:15px 0;border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);text-align:left}
+.asset-icon,.activity-icon{display:grid;place-items:center;background:var(--card2);border-radius:50%;color:var(--tx)}
+.asset-icon{width:38px;height:38px;font-size:19px}
+.asset-label{display:flex;flex-direction:column;min-width:0}
+.asset-label b{font-size:14px;font-weight:650}.asset-label span{color:var(--dim);font-size:12px}
+.asset-value{text-align:right;font-size:18px;font-weight:700;white-space:nowrap}
+.asset-strip>.ph{color:#9B9A97;font-size:16px}
+.home-section{display:flex;flex-direction:column}
+.section-title{font-size:14px;font-weight:700;margin:4px 0 7px}
+.activity-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;
+  gap:10px;width:100%;padding:10px 0;text-align:left;border-bottom:1px solid var(--line)}
+.activity-row:last-child{border-bottom:0}
+.activity-icon{width:38px;height:38px;font-size:18px}
+.activity-icon.red{background:var(--redS);color:var(--red)}
+.activity-icon.amber{background:var(--amberS);color:var(--amber)}
+.activity-icon.green{background:var(--greenS);color:var(--green)}
+.activity-icon.blue{background:var(--blueS);color:var(--blue)}
+.activity-copy{min-width:0;display:flex;flex-direction:column}
+.activity-copy b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity-copy span{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity-value{text-align:right;font-size:13px;font-weight:650;white-space:nowrap}
+.activity-value small{display:block;color:var(--dim);font-size:10px;font-weight:500}
+.home-actions{display:flex;flex-direction:column;gap:8px;padding-top:2px}
+.home-support{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.home-support .btn{min-width:0;padding-left:8px;padding-right:8px}
+@media (min-width:700px){
+  header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
+  nav{left:50%;right:auto;width:640px;transform:translateX(-50%);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+}
 </style>
 </head>
 <body>
 <div class="lock" id="lock" aria-live="polite">
   <div class="lockbox">
-    <div class="vaultmark">¥</div>
-    <h1 id="lockTitle">打开金库</h1>
+    <img class="vaultmark" src="assets/scrooges-safe-icon.png" alt="Scrooge's Safe">
+    <h1 id="lockTitle">打开 Scrooge's Safe</h1>
     <p class="dim" id="lockText"></p>
     <div id="lockFields"></div>
     <div class="lock-error" id="lockError"></div>
@@ -171,9 +218,12 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   </div>
 </div>
 <div class="app-shell">
-  <header><h1>金库</h1><div class="header-actions">
-    <button class="hbtn" onclick="lockVault()">锁定</button>
-    <button class="hbtn" onclick="openSettings()">设置</button>
+  <header><div class="brand">
+    <img src="assets/scrooges-safe-icon.png" alt="">
+    <h1>Scrooge's Safe</h1>
+  </div><div class="header-actions">
+    <button class="hbtn" onclick="lockVault()" aria-label="锁定" title="锁定"><i class="ph ph-lock"></i></button>
+    <button class="hbtn" onclick="openSettings()" aria-label="设置" title="设置"><i class="ph ph-gear"></i></button>
   </div></header>
   <main id="main"></main>
   <nav id="nav"></nav>
@@ -384,7 +434,10 @@ function chips(items,cur,fn){
     return '<button class="chip'+(i.k===cur?' on':'')+'" onclick="'+fn+'(\''+i.k+'\')">'+esc(i.label)+'</button>';
   }).join('')+'</div>';
 }
-function btn(t,onclick,kind){ return '<button class="btn'+(kind?' '+kind:'')+'" onclick="'+onclick+'">'+esc(t)+'</button>'; }
+function btn(t,onclick,kind,iconName){
+  return '<button class="btn'+(kind?' '+kind:'')+'" onclick="'+onclick+'">'+
+    (iconName?icon(iconName):'')+esc(t)+'</button>';
+}
 function field(o){
   var t=o.type||'text';
   var input = t==='textarea'
@@ -407,6 +460,17 @@ function fileField(o){
 }
 function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
 function fnum(id){ var v=val(id).replace(',','.'); var n=parseFloat(v); return isFinite(n)?n:NaN; }
+function icon(name,fill){
+  return '<i class="'+(fill?'ph-fill':'ph')+' ph-'+name+'" aria-hidden="true"></i>';
+}
+function activityRow(o){
+  var tag=o.onclick?'button':'div';
+  return '<'+tag+' class="activity-row"'+(o.onclick?' onclick="'+o.onclick+'"':'')+'>'+
+    '<span class="activity-icon '+esc(o.tone||'')+'">'+icon(o.icon||'circle')+'</span>'+
+    '<span class="activity-copy"><b>'+esc(o.label)+'</b><span>'+esc(o.sub||'')+'</span></span>'+
+    '<span class="activity-value tnum">'+esc(o.value||'')+
+      (o.meta?'<small>'+esc(o.meta)+'</small>':'')+'</span></'+tag+'>';
+}
 
 /* ================= 图表 ================= */
 var CW=320;
@@ -459,16 +523,16 @@ function barChart(data,fmt,colorFn,every){
 
 /* ================= 底部导航 ================= */
 var TABS=[
-  {k:'home',  label:'概览', icon:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>'},
-  {k:'power', label:'电费', icon:'<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>'},
-  {k:'gas',   label:'燃气', icon:'<path d="M12 22c4-1 6-4.2 6-7.5 0-4.5-4-6-4-9.5-2.5 1.5-3 4-3 5.5C9 8 7 9 7 12c0 4 2.5 9 5 10z"/>'},
-  {k:'save',  label:'储蓄', icon:'<rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M16 12.5h2.5"/>'},
-  {k:'ctr',   label:'合同', icon:'<path d="M6 2.5h8l4.5 4.5V21.5H6z"/><path d="M14 2.5V7h4.5"/><path d="M9 12h6M9 16h6"/>'}
+  {k:'home',  label:'今天', icon:'house'},
+  {k:'power', label:'电费', icon:'lightning'},
+  {k:'gas',   label:'燃气', icon:'flame'},
+  {k:'save',  label:'储蓄', icon:'piggy-bank'},
+  {k:'ctr',   label:'合同', icon:'file-text'}
 ];
 function renderNav(){
   document.getElementById('nav').innerHTML=TABS.map(function(t){
     return '<button class="'+(view===t.k?'on':'')+'" onclick="go(\''+t.k+'\')">'+
-      '<svg viewBox="0 0 24 24">'+t.icon+'</svg><span>'+t.label+'</span></button>';
+      icon(t.icon,view===t.k)+'<span>'+t.label+'</span></button>';
   }).join('');
 }
 function go(v){ view=v; showAllTx=false; render(); window.scrollTo(0,0); }
@@ -488,75 +552,96 @@ function closeSheet(){
 /* ================= 概览 ================= */
 function viewHome(){
   var fx=S.fxRmbPerEur, tot=totalEur(S.txs,S.accounts,fx), out='';
-
-  out+=card('<span class="dim">家庭净资产（折算欧元）</span>'+
-    '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
-    '<span class="dim">≈ '+n0(tot*fx)+' ¥ · 汇率 1€ = '+n2(fx)+' ¥</span>'+hr()+
-    '<div class="stats">'+S.accounts.map(function(a){
-      return stat(a.name,n0(accountBalance(S.txs,a.id)),a.currency==='EUR'?'€':'¥');
-    }).join('')+'</div>','gold');
-
-  var urgent=S.contracts.map(function(c){return {c:c,st:contractStatus(c)};})
-    .filter(function(x){return ['expired','notice','soon'].indexOf(x.st.urgency)>=0;})
-    .sort(function(a,b){return URG_RANK[a.st.urgency]-URG_RANK[b.st.urgency];});
-  if(urgent.length) out+=card(h2('⏰ 合同需要行动',badge(urgent.length,'red'))+
-    urgent.map(function(x){ return row({label:x.c.name,
-      sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)):'',
-      value:x.st.label,tone:'red',onclick:"go('ctr')"}); }).join(''),'red');
-
-  var cards=S.meters.map(function(m){
+  var date=today().split('-');
+  var meters=S.meters.map(function(m){
     var rs=meterReadings(S.readings,m.id), iv=intervals(rs,m);
-    return {m:m, prop:S.properties.filter(function(p){return p.id===m.propertyId;})[0],
-      last:rs[rs.length-1], lastIv:iv[iv.length-1], per:currentPeriod(rs,m),
-      bad:iv.some(function(i){return i.anomaly;})};
+    return {m:m,last:rs[rs.length-1],lastIv:iv[iv.length-1],
+      prop:S.properties.filter(function(p){return p.id===m.propertyId;})[0]};
   });
-  var stale=cards.filter(function(x){ return x.last && daysBetween(x.last.date,today())>120; });
+  var missing=S.contracts.filter(function(c){return !c.premium||!c.endDate;});
+  var readingPending=[], pending=[];
 
-  out+=card(h2('能源用量')+cards.map(function(x){
-    var s='<div class="between"><h3 class="h3">'+esc(x.prop?x.prop.name:'')+' · '+
-      (x.m.kind==='power'?'电':'气')+'</h3>'+
-      (x.bad?badge('⚠︎ 读数异常','red'):'')+
-      badge(x.last?fmtDate(x.last.date):'无记录', stale.indexOf(x)>=0?'amber':'dim')+'</div>';
-    s+= x.lastIv
-      ? '<p class="dim" style="margin:4px 0">'+(x.lastIv.avg30<0?'<span class="c-red">上期读数低于上次，数字暂不可信 · </span>':'')+
-        '上期月均 '+n0(x.lastIv.avg30)+' kWh · '+n2(x.lastIv.cost)+' €'+
-        (x.per?(' · 本年度累计 '+n0(x.per.kwh)+' kWh / '+n0(x.per.cost)+' €'):'')+'</p>'
-      : '<p class="dim" style="margin:4px 0">读数不足，无法计算</p>';
-    if(x.per && x.m.monthlyAbschlag>0)
-      s+='<p class="dim '+(x.per.delta>0?'c-red':'c-green')+'" style="margin:0 0 4px">'+
-        (x.per.delta>0?'预计补缴 ':'预计退款 ')+n2(Math.abs(x.per.delta))+
-        ' €（已预缴 '+n0(x.per.abschlagPaid)+' €）</p>';
-    return s+hr();
-  }).join('')+'<div class="btnrow">'+btn('录电表',"go('power')",'ghost')+btn('录气表',"go('gas')",'ghost')+'</div>');
+  meters.forEach(function(x){
+    if(x.lastIv&&x.lastIv.anomaly) readingPending.push(activityRow({
+      icon:x.m.kind==='power'?'lightning':'flame',tone:'red',
+      label:(x.m.kind==='power'?'电表':'燃气表')+'读数待核对',
+      sub:(x.prop?x.prop.name+' · ':'')+fmtDate(x.last.date),
+      value:n0(Math.floor(x.last.value)),meta:x.m.unit==='m3'?'m³':'kWh',
+      onclick:"go('"+x.m.kind+"')"
+    }));
+    else if(x.last&&daysBetween(x.last.date,today())>120) readingPending.push(activityRow({
+      icon:'camera',tone:'amber',label:(x.m.kind==='power'?'电表':'燃气表')+'该抄表了',
+      sub:(x.prop?x.prop.name+' · ':'')+'上次 '+fmtDate(x.last.date),
+      value:daysBetween(x.last.date,today())+' 天',onclick:"startMeterEntry('"+x.m.kind+"')"
+    }));
+  });
+  if(readingPending.length) pending.push(readingPending.shift());
+  pending.push(activityRow({
+    icon:'file-csv',tone:'blue',label:'导入新的银行账单',
+    sub:'支持 ING 与常见 CSV',value:'导入',onclick:'startBankImport()'
+  }));
+  if(missing.length) pending.push(activityRow({
+    icon:'file-dashed',tone:'amber',label:'合同资料待补齐',
+    sub:'缺少保费或到期日',value:missing.length+' 份',onclick:"go('ctr')"
+  }));
+  pending=pending.concat(readingPending);
 
-  if(stale.length) out+=card(h2('该抄表了')+stale.map(function(x){
-    return row({label:(x.prop?x.prop.name:'')+(x.m.kind==='power'?' 电表':' 气表'),
-      sub:'上次 '+fmtDate(x.last.date)+' · 读数 '+n2(x.last.value),
-      value:'超 '+daysBetween(x.last.date,today())+' 天',tone:'dim'});
-  }).join(''),'amber');
+  var recent=[];
+  meters.forEach(function(x){
+    var r=x.last, m=x.m;
+    if(!r) return;
+    recent.push({date:r.date,html:activityRow({
+      icon:m.kind==='power'?'lightning':'flame',tone:m.kind==='power'?'amber':'blue',
+      label:m.label,sub:fmtDate(r.date)+' · 抄表记录',
+      value:n0(Math.floor(r.value)),meta:m.unit==='m3'?'m³':'kWh',
+      onclick:"go('"+m.kind+"')"
+    })});
+  });
+  S.txs.forEach(function(t){
+    var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
+    if(!a) return;
+    recent.push({date:t.date,html:activityRow({
+      icon:t.amount>=0?'arrow-down-left':'arrow-up-right',tone:t.amount>=0?'green':'red',
+      label:t.note||a.name,sub:fmtDate(t.date)+' · '+a.name,
+      value:money(t.amount,a.currency),onclick:"go('save')"
+    })});
+  });
+  recent.sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
 
-  var b=S.budget;
-  var insY=S.contracts.filter(function(c){return INSURANCE.indexOf(c.category)>=0;})
-    .reduce(function(s,c){return s+contractStatus(c).yearlyCost;},0);
-  var eneY=cards.reduce(function(s,x){return s+(x.per?x.per.projectedYearCost:0);},0);
-  out+=card(h2('年度固定支出估算')+'<div class="stats">'+
-    stat('保险合计',n0(insY),'€')+stat('能源（推算）',n0(eneY),'€')+
-    stat('Grundbesitz',n0(b.grundbesitzQuartal*4),'€')+'</div>');
-
-  var absch=S.meters.reduce(function(s,m){return s+m.monthlyAbschlag;},0);
-  var houseM=(b.grundbesitzQuartal*4+b.wohngebaeudeJahr)/12;
-  var fix=b.tilgung+b.autoMonat+houseM+absch+b.festkosten.reduce(function(s,f){return s+f.amount;},0);
-  var rest=b.einkommen-fix;
-  out+=card(h2('月度收支框架')+
-    row({label:'收入 Einkommen',value:eur(b.einkommen),tone:'green'})+
-    row({label:'Tilgung 房贷',value:eur(-b.tilgung),tone:'red'})+
-    row({label:'Autokosten',value:eur(-b.autoMonat),tone:'red'})+
-    row({label:'房屋固定 (Grundbesitz + Wohngebäude)',value:eur(-houseM),tone:'red'})+
-    row({label:'能源 Abschlag',value:eur(-absch),tone:'red'})+
-    b.festkosten.map(function(f){return row({label:f.label,value:eur(-f.amount),tone:'red'});}).join('')+
-    hr()+row({label:'结余 Rest',value:eur(rest),tone:rest>=0?'green':'red'})+
-    row({label:'储蓄目标 / 月',value:eur(b.sparZiel),tone:'gold'}));
+  out+='<div class="today-head"><h1>今天</h1><p class="today-date">'+
+    Number(date[0])+'年'+Number(date[1])+'月'+Number(date[2])+'日</p></div>';
+  out+='<button class="asset-strip" onclick="go(\'save\')">'+
+    '<span class="asset-icon">'+icon('wallet')+'</span>'+
+    '<span class="asset-label"><b>总资产</b><span>折算欧元 · 1 € = '+n2(fx)+' ¥</span></span>'+
+    '<span class="asset-value tnum">'+n2(tot)+' €</span>'+icon('caret-right')+'</button>';
+  out+='<section class="home-section"><h2 class="section-title">待处理</h2>'+
+    pending.slice(0,3).join('')+'</section>';
+  out+='<section class="home-section"><h2 class="section-title">最近记录</h2>'+
+    recent.slice(0,3).map(function(x){return x.html;}).join('')+'</section>';
+  out+='<div class="home-actions">'+
+    '<button class="btn" onclick="openQuickRecord()">'+icon('plus')+'快速记录</button>'+
+    '<div class="home-support">'+
+      '<button class="btn ghost" onclick="startMeterEntry(\'power\')">'+icon('camera')+'拍照抄表</button>'+
+      '<button class="btn ghost" onclick="startBankImport()">'+icon('file-arrow-up')+'导入账单</button>'+
+    '</div></div>';
   return out;
+}
+
+function startMeterEntry(kind){
+  closeSheet(); view=kind; render(); window.scrollTo(0,0); addReading();
+}
+function startTransaction(){
+  closeSheet(); view='save'; render(); window.scrollTo(0,0); addTx();
+}
+function startBankImport(){
+  closeSheet(); view='save'; render(); window.scrollTo(0,0); openBankImport();
+}
+function openQuickRecord(){
+  openSheet('快速记录',
+    '<button class="btn" onclick="startMeterEntry(\'power\')">'+icon('camera')+'拍照录电表</button>'+
+    '<button class="btn ghost" onclick="startMeterEntry(\'gas\')">'+icon('flame')+'拍照录燃气表</button>'+
+    '<button class="btn ghost" onclick="startTransaction()">'+icon('plus-circle')+'记一笔储蓄</button>'+
+    '<button class="btn ghost" onclick="startBankImport()">'+icon('file-csv')+'导入银行账单</button>');
 }
 /* ================= 加密存储与设备解锁 ================= */
 var KDF_ITERATIONS=310000;
@@ -656,7 +741,7 @@ function passwordInput(id,placeholder,enter){
     esc(placeholder)+'"'+(enter?' onkeydown="if(event.key===\'Enter\') '+enter+'"':'')+'>';
 }
 function showSetup(){
-  lockUi('保护你的金库',
+  lockUi('保护 Scrooge\'s Safe',
     '设置主密码后，数据会用 AES‑GCM 加密保存。密码无法找回，请另外保存。',
     '<div style="display:flex;flex-direction:column;gap:9px">'+
       passwordInput('setup_pw','至少 8 位主密码')+
@@ -669,7 +754,7 @@ function hasDeviceUnlock(){
 function showUnlock(){
   var device=hasDeviceUnlock()
     ? '<button class="btn ghost" onclick="unlockWithDevice()">使用 Face ID / 设备解锁</button>' : '';
-  lockUi('打开金库','数据已在此设备加密。请输入主密码，或使用已启用的设备认证。',
+  lockUi('打开 Scrooge\'s Safe','数据已在此设备加密。请输入主密码，或使用已启用的设备认证。',
     passwordInput('unlock_pw','主密码','unlockWithPassword()'),
     device+'<button class="btn" onclick="unlockWithPassword()">用主密码解锁</button>');
   setTimeout(function(){ var e=document.getElementById('unlock_pw'); if(e)e.focus(); },50);
@@ -692,7 +777,7 @@ async function setupVault(){
     localStorage.removeItem(KEY);
     pendingState=null;
     unlockUi();
-    toast('金库已加密');
+    toast('Scrooge\'s Safe 已加密');
   }catch(e){ setLockError('加密失败：'+e.message); }
 }
 async function unlockWithPassword(){
@@ -733,7 +818,7 @@ async function initVault(){
       showUnlock();
       return;
     }catch(e){
-      lockUi('无法打开金库','本地加密数据格式异常。请从加密备份恢复。','','');
+      lockUi('无法打开 Scrooge\'s Safe','本地加密数据格式异常。请从加密备份恢复。','','');
       setLockError(e.message);
       return;
     }
@@ -816,8 +901,8 @@ async function enableDeviceUnlock(){
     var userId=randomBytes(16);
     var cred=await navigator.credentials.create({publicKey:{
       challenge:randomBytes(32),
-      rp:{name:'金库'},
-      user:{id:userId,name:'vault-device',displayName:'金库设备'},
+      rp:{name:"Scrooge's Safe"},
+      user:{id:userId,name:'vault-device',displayName:"Scrooge's Safe 设备"},
       pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',
         residentKey:'discouraged'},
@@ -1298,7 +1383,7 @@ function viewMeter(kind){
   }
 
   var bad=iv.filter(function(i){return i.anomaly;});
-  if(bad.length) out+=card(h2('⚠︎ 读数异常')+bad.map(function(a){
+  if(bad.length) out+=card(h2(icon('warning')+' 读数异常')+bad.map(function(a){
     return '<p class="c-red" style="margin:0;font-size:13px">'+fmtDate(a.from)+' → '+fmtDate(a.to)+
       '：读数下降 '+n2(Math.abs(a.netRaw))+' '+unit+'，请核对是否录错或换表。</p>';
   }).join(''),'red');
@@ -1315,7 +1400,7 @@ function viewMeter(kind){
   if(rs.length) body+=row({label:fmtDate(rs[0].date)+'   '+n2(rs[0].value)+' '+unit,sub:'基准读数',
     right:'<button class="btn sm ghost" onclick="delReading(\''+rs[0].id+'\')">删</button>'});
   out+=card(body);
-  out+=btn('＋ 录入新读数','addReading()');
+  out+=btn('录入新读数','addReading()',null,'plus');
   return out;
 }
 
@@ -1398,7 +1483,8 @@ function viewSave(){
   var out='';
 
   out+=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
-    '<button class="badge b-gold" onclick="editFx()">汇率 1€ = '+n2(fx)+' ¥ ✎</button></div>'+
+    '<button class="badge b-gold" onclick="editFx()" aria-label="编辑汇率" title="编辑汇率">'+
+      '汇率 1€ = '+n2(fx)+' ¥ '+icon('pencil-simple')+'</button></div>'+
     '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
     '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>','gold');
 
@@ -1438,8 +1524,8 @@ function viewSave(){
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
   out+=card(body);
-  out+='<div class="btnrow">'+btn('＋ 记一笔','addTx()')+
-    btn('导入银行账单','openBankImport()','ghost')+'</div>';
+  out+='<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
+    btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div>';
   return out;
 }
 function addTx(){
@@ -1503,14 +1589,14 @@ function viewCtr(){
     stat('所有合同年化',n0(yearly),'€',null,S.contracts.length+' 份合同')+
     stat('需要关注',String(att.length),'份',att.length?'red':'green')+'</div>','gold');
 
-  if(att.length) out+=card(h2('⏰ 需要行动')+att.map(function(x){
+  if(att.length) out+=card(h2(icon('bell')+' 需要行动')+att.map(function(x){
     return row({label:x.c.name,
       sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)+' · 到期 '+fmtDate(x.c.endDate)):
         ('到期 '+fmtDate(x.c.endDate)),
       value:x.st.label,tone:'red',onclick:"editCtr('"+x.c.id+"')"});
   }).join(''),'red');
 
-  out+=btn('📅 导出到 iPhone 日历 (.ics)','exportIcs()');
+  out+=btn('导出到 iPhone 日历 (.ics)','exportIcs()',null,'calendar-arrow-down');
   out+='<p class="dim" style="margin:-4px 0 0">每份合同生成「退保截止日」（提前 14 天提醒）与「到期日」（提前 7 天提醒）两个全天事件。</p>';
 
   out+=chips([{k:'all',label:'全部'}].concat(CATS.map(function(c){return {k:c,label:c};})),catSel,'setCat');
@@ -1540,7 +1626,7 @@ function viewCtr(){
       onclick:"editCtr('"+c.id+"')"});
   }).join(''),'amber');
 
-  out+=btn('＋ 新增合同','editCtr()');
+  out+=btn('新增合同','editCtr()',null,'plus');
   return out;
 }
 
@@ -1629,7 +1715,7 @@ function exportBackup(){
       '导出的文件使用 AES‑256‑GCM 加密。建议使用与主密码不同的密码，并保存在密码管理器里。</p>','green')+
     field({id:'backup_pw',label:'备份密码（至少 8 位）',type:'password'})+
     field({id:'backup_pw2',label:'再次输入备份密码',type:'password'})+
-    btn('生成加密备份','makeEncryptedBackup()'));
+    btn('生成加密备份','makeEncryptedBackup()',null,'lock-key'));
 }
 async function makeEncryptedBackup(){
   var p=val('backup_pw'), p2=val('backup_pw2');
@@ -1638,7 +1724,7 @@ async function makeEncryptedBackup(){
   try{
     var env=await encryptBackupPayload(S,p);
     closeSheet();
-    saveFile('金库加密备份-'+today()+'.vault.json',JSON.stringify(env,null,2),
+    saveFile('Scrooges-Safe-加密备份-'+today()+'.vault.json',JSON.stringify(env,null,2),
       'application/json','加密备份已生成');
   }catch(e){ toast('备份失败：'+e.message); }
 }
@@ -1650,20 +1736,20 @@ function openSettings(){
       '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
       S.contracts.length+' 份合同。<br>数据已加密保存在这台设备的浏览器里，不会上传到任何服务器。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
-    btn('导出加密备份','exportBackup()')+
+    btn('导出加密备份','exportBackup()',null,'lock-key')+
     fileField({id:'imp_file',label:'选择备份文件',accept:'.json,.vault.json,application/json',
       onchange:'readBackupFile(this)',hint:'支持新的加密备份，也兼容旧版明文 JSON。文件只在本机读取。'})+
     field({id:'imp',label:'备份内容',type:'textarea',ph:'选择文件后会自动读取，也可以粘贴旧版 JSON'})+
     field({id:'imp_pw',label:'备份密码（旧版明文备份留空）',type:'password'})+
     btn('覆盖恢复','doImport()','ghost')+
     hr()+
-    btn('安全设置 / Face ID','openSecuritySettings()','ghost')+
+    btn('安全设置 / Face ID','openSecuritySettings()','ghost','fingerprint')+
     hr()+
     card('<h2 class="h2">放到 iPhone 主屏幕上托管用</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '下面这个按钮会生成一份<b>不含任何数据</b>的空壳 HTML。'+
       '要把 App 放到网上（才能"添加到主屏幕"）时上传这一份，'+
       '你的财务数据就不会出现在网上。装好后在手机上用上面的「导出备份 → 覆盖恢复」把数据搬进去。</p>')+
-    btn('⬇︎ 导出空壳版 HTML（不含数据）','exportShell()','ghost')+
+    btn('导出空壳版 HTML（不含数据）','exportShell()','ghost','download-simple')+
     hr()+
     btn('重置为 Excel 初始数据','doReset()','danger'));
 }
@@ -1709,7 +1795,7 @@ function exportShell(){
              .replace(/<nav id="nav">[\s\S]*?<\/nav>/,'<nav id="nav"></nav>')
              .replace(/<div class="body" id="sheetBody">[\s\S]*?<\/div>\s*<\/div>/,
                       '<div class="body" id="sheetBody"></div></div>');
-  saveFile('金库-空壳版.html','<!DOCTYPE html>\n'+shell,'text/html','空壳版已生成（不含数据）');
+  saveFile('Scrooges-Safe-空壳版.html','<!DOCTYPE html>\n'+shell,'text/html','空壳版已生成（不含数据）');
 }
 
 /* ================= 渲染 ================= */
@@ -1723,7 +1809,7 @@ function render(){
   renderNav();
 }
 window.vaultReady=initVault().catch(function(e){
-  lockUi('无法启动金库','浏览器初始化失败。','','');
+  lockUi('无法启动 Scrooge\'s Safe','浏览器初始化失败。','','');
   setLockError(e.message);
 });
 </script>
