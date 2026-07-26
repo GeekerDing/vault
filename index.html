@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<title>金库</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="金库">
+<meta name="theme-color" content="#0E1116">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230E1116'/%3E%3Ccircle cx='90' cy='90' r='58' fill='none' stroke='%23E9B949' stroke-width='9'/%3E%3Ccircle cx='90' cy='90' r='20' fill='%23E9B949'/%3E%3Cg stroke='%23E9B949' stroke-width='9' stroke-linecap='round'%3E%3Cpath d='M90 32V52'/%3E%3Cpath d='M90 128V148'/%3E%3Cpath d='M32 90H52'/%3E%3Cpath d='M128 90H148'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0E1116; --card:#171C24; --card2:#1F2631; --line:#2A3240;
+  --tx:#F2F4F7; --dim:#8C97A8;
+  --gold:#E9B949; --goldS:#3A2F14;
+  --green:#3DD68C; --greenS:#12301F;
+  --red:#F0616D; --redS:#341418;
+  --amber:#F5A524; --amberS:#3A2A0E;
+  --blue:#5B8DEF; --blueS:#16233C;
+  --nav:72px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select,textarea{font:inherit}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- 顶栏 ---------- */
+header{position:sticky;top:0;z-index:20;background:rgba(14,17,22,.86);
+  backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+header h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.3px}
+header .hbtn{color:var(--dim);font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;background:var(--card2)}
+
+/* ---------- 布局 ---------- */
+main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px}
+.card.gold{background:var(--goldS)} .card.green{background:var(--greenS)}
+.card.red{background:var(--redS)} .card.amber{background:var(--amberS)} .card.blue{background:var(--blueS)}
+.h2{font-size:17px;font-weight:700;margin:0}
+.h3{font-size:14px;font-weight:600;margin:0}
+.dim{color:var(--dim);font-size:12px}
+.big{font-size:31px;font-weight:700;letter-spacing:-.5px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hr{height:1px;background:var(--line);margin:2px 0}
+.stats{display:flex;flex-wrap:wrap;gap:14px}
+.stat{flex:1 1 96px;min-width:92px;display:flex;flex-direction:column;gap:2px}
+.stat .v{font-size:21px;font-weight:700}
+.stat .v small{font-size:11px;color:var(--dim);font-weight:400}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;text-align:left;width:100%}
+.row .l{flex:1;min-width:0}
+.row .l b{font-weight:400;font-size:14px;display:block;overflow-wrap:anywhere}
+.row .v{font-weight:600;font-size:14px;white-space:nowrap}
+.row.tap:active{opacity:.55}
+.badge{display:inline-block;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;white-space:nowrap}
+.b-gold{background:var(--goldS);color:var(--gold)} .b-dim{background:var(--card2);color:var(--dim)}
+.b-green{background:var(--greenS);color:var(--green)} .b-red{background:var(--redS);color:var(--red)}
+.b-amber{background:var(--amberS);color:var(--amber)} .b-blue{background:var(--blueS);color:var(--blue)}
+.c-gold{color:var(--gold)} .c-green{color:var(--green)} .c-red{color:var(--red)}
+.c-dim{color:var(--dim)} .c-blue{color:var(--blue)}
+.empty{padding:22px;text-align:center;color:var(--dim);font-size:13px}
+
+/* ---------- 按钮 ---------- */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:13px 16px;border-radius:12px;font-weight:700;font-size:15px;
+  background:var(--gold);color:#1A1405}
+.btn:active{opacity:.7}
+.btn.ghost{background:var(--card2);color:var(--tx)}
+.btn.danger{background:var(--redS);color:var(--red)}
+.btn.sm{padding:9px 12px;font-size:13px;border-radius:10px}
+.btnrow{display:flex;gap:8px}
+.btnrow>*{flex:1}
+
+/* ---------- chips ---------- */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;
+  -ms-overflow-style:none;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:8px 13px;border-radius:10px;background:var(--card2);
+  color:var(--tx);font-size:13px;font-weight:600}
+.chip.on{background:var(--gold);color:#1A1405}
+
+/* ---------- 表单 ---------- */
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label{color:var(--dim);font-size:12px}
+.field input,.field select,.field textarea{
+  background:var(--card2);border-radius:10px;padding:12px;color:var(--tx);
+  border:1px solid transparent;font-size:16px;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--gold)}
+.field .hint{color:var(--dim);font-size:11px}
+.field input[type=date]{min-height:46px}
+.switch{display:flex;align-items:center;justify-content:space-between;
+  background:var(--card2);border-radius:10px;padding:12px}
+
+/* ---------- 弹层 ---------- */
+.sheet{position:fixed;inset:0;z-index:50;background:var(--bg);
+  display:flex;flex-direction:column;transform:translateY(100%);
+  transition:transform .26s cubic-bezier(.3,.8,.3,1)}
+.sheet.open{transform:translateY(0)}
+.sheet>.top{display:flex;align-items:center;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;border-bottom:1px solid var(--line)}
+.sheet>.top .h2{font-size:18px}
+.sheet>.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:16px 16px calc(40px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:12px}
+.x{color:var(--dim);font-size:26px;line-height:1;padding:0 6px}
+
+/* ---------- 底部导航 ---------- */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:rgba(23,28,36,.93);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-top:1px solid var(--line);display:flex;
+  padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:9px 2px 8px;color:var(--dim);font-size:10px;font-weight:600}
+nav button.on{color:var(--gold)}
+nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- 图表 ---------- */
+.chart{width:100%;display:block;overflow:visible}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
+  transform:translateX(-50%);z-index:80;background:var(--card2);color:var(--tx);
+  padding:11px 17px;border-radius:12px;font-size:13px;font-weight:600;
+  box-shadow:0 8px 28px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity .2s;max-width:88vw;text-align:center}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><h1>金库</h1><button class="hbtn" onclick="openSettings()">设置</button></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">×</button></div><div class="body" id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],accounts:[{id:"ing",name:"ING 储蓄",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+/* ================= 计算引擎 =================
+   逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
+   月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
+   （对应 Excel  电: (E5-E4)/(B5-B4)*30   气: (Q5-Q4)*k/(M5-M4)*30 ）
+   ============================================ */
+var DAY = 86400000;
+
+function toD(iso){ var p = iso.split('-'); return Date.UTC(+p[0], p[1]-1, +p[2]); }
+function isoOf(ms){ return new Date(ms).toISOString().slice(0,10); }
+function today(){ var n=new Date(); return isoOf(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())); }
+function daysBetween(a,b){ return Math.round((toD(b)-toD(a))/DAY); }
+function addDays(d,n){ return isoOf(toD(d)+n*DAY); }
+function fmtDate(d){ if(!d) return '—'; var p=d.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; }
+function isDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d); }
+
+/** 结算年度起点：以 Ablesetermin (MM-DD) 为分界 */
+function periodStart(d, term){
+  var t=term.split('-'), am=+t[0], ad=+t[1];
+  var dt=new Date(toD(d)), y=dt.getUTCFullYear();
+  var cut=Date.UTC(y,am-1,ad);
+  return isoOf(toD(d)>=cut ? cut : Date.UTC(y-1,am-1,ad));
+}
+
+function n0(v){ return Math.round(v).toLocaleString('de-DE'); }
+function n2(v){ return v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function eur(v){ return (v<0?'−':'')+n2(Math.abs(v))+' €'; }
+function money(v,cur){ return (v<0?'−':'')+n2(Math.abs(v))+' '+(cur==='EUR'?'€':'¥'); }
+
+function sortByDate(a){ return a.slice().sort(function(x,y){ return x.date<y.date?-1:x.date>y.date?1:0; }); }
+function meterReadings(readings,id){ return sortByDate(readings.filter(function(r){return r.meterId===id;})); }
+
+/** 每两次抄表之间的区间 */
+function intervals(rs,m){
+  var s=sortByDate(rs), out=[];
+  for(var i=1;i<s.length;i++){
+    var days=daysBetween(s[i-1].date,s[i].date);
+    var safe=days>0?days:1;
+    var netRaw=s[i].value-s[i-1].value;
+    var kwh=netRaw*m.factor;
+    var cost=kwh*m.arbeitspreisCt/100;
+    var absch=m.monthlyAbschlag*safe*12/365;
+    out.push({from:s[i-1].date,to:s[i].date,days:days,netRaw:netRaw,kwh:kwh,
+      avg30:kwh/safe*30, perDay:kwh/safe, cost:cost, abschlag:absch,
+      delta:cost-absch, anomaly:netRaw<0, readingId:s[i].id, value:s[i].value});
+  }
+  return out;
+}
+
+/** 本结算年度累计 */
+function currentPeriod(rs,m,now){
+  now=now||today();
+  var s=sortByDate(rs);
+  if(s.length<2) return null;
+  var start=periodStart(now,m.ableseTermin);
+  // 基准 = 不晚于结算年度起点的最后一次抄表；若全都晚于起点则取第一次
+  var bi=-1;
+  for(var i=0;i<s.length;i++) if(s[i].date<=start) bi=i;
+  if(bi<0) bi=0;
+  var base=s[bi], last=s[s.length-1];
+  if(base.date===last.date) return null;
+  var netRaw=last.value-base.value, kwh=netRaw*m.factor;
+  var days=Math.max(1,daysBetween(base.date,last.date));
+  var cost=kwh*m.arbeitspreisCt/100;
+  var paid=m.monthlyAbschlag*(daysBetween(base.date,now)/30.44);
+  var perDay=kwh/days;
+  return {start:base.date,end:last.date,kwh:kwh,netRaw:netRaw,cost:cost,
+    abschlagPaid:paid, delta:cost-paid, days:days, avg30:perDay*30,
+    projectedYearKwh:perDay*365, projectedYearCost:perDay*365*m.arbeitspreisCt/100};
+}
+
+function accountBalance(txs,id){
+  return txs.reduce(function(s,t){ return t.accountId===id ? s+t.amount : s; },0);
+}
+function totalEur(txs,accounts,fx){
+  return accounts.reduce(function(s,a){
+    var b=accountBalance(txs,a.id);
+    return s + (a.currency==='EUR' ? b : b/fx);
+  },0);
+}
+/** 累计余额曲线（对应「存款走势」表） */
+function balanceSeries(txs,ids){
+  var rel=txs.filter(function(t){return ids.indexOf(t.accountId)>=0;})
+             .sort(function(a,b){return a.date<b.date?-1:1;});
+  var out=[],run=0;
+  for(var i=0;i<rel.length;i++){
+    run+=rel[i].amount;
+    if(out.length && out[out.length-1].date===rel[i].date) out[out.length-1].value=run;
+    else out.push({date:rel[i].date,value:run});
+  }
+  return out;
+}
+function monthlyNet(txs,ids){
+  var m={};
+  txs.forEach(function(t){
+    if(ids.indexOf(t.accountId)<0) return;
+    var k=t.date.slice(0,7); m[k]=(m[k]||0)+t.amount;
+  });
+  return Object.keys(m).sort().map(function(k){return {date:k,value:m[k]};});
+}
+
+var CYCLE_N={'jährlich':1,'halbjährlich':2,'quartal':4,'monatlich':12,'einmalig':0};
+var CYCLE_ZH={'jährlich':'每年','halbjährlich':'每半年','quartal':'每季度','monatlich':'每月','einmalig':'一次性'};
+
+/** 合同倒计时 */
+function contractStatus(c,now){
+  now=now||today();
+  var yearly=(c.premium||0)*(CYCLE_N[c.cycle]||0);
+  if(!c.endDate) return {daysToEnd:null,noticeDeadline:null,daysToNotice:null,
+    urgency:'open', label:c.autoRenew?'自动续约 · 无固定到期':'无到期日', yearlyCost:yearly};
+  var dEnd=daysBetween(now,c.endDate);
+  var nd=c.noticeDays>0 ? addDays(c.endDate,-c.noticeDays) : c.endDate;
+  var dNotice=daysBetween(now,nd);
+  var u,label;
+  if(dEnd<0){ u='expired'; label='已过期 '+Math.abs(dEnd)+' 天'; }
+  else if(dNotice<=0){ u='notice'; label='退保期已过 · '+dEnd+' 天后到期'; }
+  else if(dNotice<=45){ u='soon'; label=dNotice+' 天内需决定退保'; }
+  else { u='ok'; label=dEnd+' 天后到期'; }
+  return {daysToEnd:dEnd,noticeDeadline:nd,daysToNotice:dNotice,urgency:u,label:label,yearlyCost:yearly};
+}
+var URG_RANK={notice:0,expired:1,soon:2,ok:3,open:4};
+var URG_TONE={expired:'red',notice:'red',soon:'amber',ok:'green',open:'blue'};
+var INSURANCE=['车险','房屋险','家财险','责任险','法律险','健康险'];
+
+/* ---------- .ics 日历文件 ---------- */
+function icsEsc(s){ return String(s).replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n'); }
+function icsStamp(){
+  var d=new Date(), p=function(n){return String(n).padStart(2,'0');};
+  return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'T'+
+         p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+'Z';
+}
+function buildIcs(contracts){
+  var L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Scrooge Vault//Contracts//ZH',
+         'CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:金库 · 合同到期'];
+  var alarm=function(trig,desc){ return ['BEGIN:VALARM','ACTION:DISPLAY',
+    'TRIGGER:'+trig,'DESCRIPTION:'+icsEsc(desc),'END:VALARM']; };
+  contracts.forEach(function(c){
+    if(!c.endDate) return;
+    var st=contractStatus(c);
+    var mny=c.premium?(' · '+c.premium.toFixed(2)+' € / '+c.cycle):'';
+    var desc=[c.provider?('服务商：'+c.provider):'', c.tariff?('Tarif：'+c.tariff):'',
+      c.premium?('保费：'+c.premium.toFixed(2)+' € ('+CYCLE_ZH[c.cycle]+')'):'',
+      '合同期：'+fmtDate(c.startDate)+' – '+fmtDate(c.endDate),
+      '退保通知期：'+c.noticeDays+' 天',
+      c.autoRenew?'自动续约：是（不退保则自动延长）':'自动续约：否',
+      c.notes?('备注：'+c.notes):''].filter(Boolean).join('\n');
+    var ds=function(d){return d.replace(/-/g,'');};
+    if(st.noticeDeadline && c.noticeDays>0){
+      L=L.concat(['BEGIN:VEVENT','UID:'+c.id+'-notice@scrooge','DTSTAMP:'+icsStamp(),
+        'DTSTART;VALUE=DATE:'+ds(st.noticeDeadline),
+        'SUMMARY:⚠︎ 退保截止：'+icsEsc(c.name)+icsEsc(mny),
+        'DESCRIPTION:'+icsEsc(desc)],
+        alarm('-P14D',c.name+' 退保通知期还有 14 天'),
+        alarm('-PT9H',c.name+' 今天是退保通知最后一天'),
+        ['END:VEVENT']);
+    }
+    L=L.concat(['BEGIN:VEVENT','UID:'+c.id+'-end@scrooge','DTSTAMP:'+icsStamp(),
+      'DTSTART;VALUE=DATE:'+ds(c.endDate),
+      'SUMMARY:'+icsEsc(c.category)+' 到期：'+icsEsc(c.name)+icsEsc(mny),
+      'DESCRIPTION:'+icsEsc(desc)],
+      alarm('-P7D',c.name+' 7 天后到期'), ['END:VEVENT']);
+  });
+  L.push('END:VCALENDAR');
+  return L.join('\r\n');
+}
+/* ================= 状态与存储 ================= */
+var KEY='scrooge.vault.v1';
+var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
+
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    S = raw ? Object.assign({},SEED,JSON.parse(raw)) : JSON.parse(JSON.stringify(SEED));
+  }catch(e){ S=JSON.parse(JSON.stringify(SEED)); }
+}
+function save(){
+  try{ localStorage.setItem(KEY,JSON.stringify(S)); }
+  catch(e){ toast('保存失败：存储空间可能已满'); }
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+var toastT;
+function toast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600);
+}
+
+/* ================= 小工具 ================= */
+function card(inner,tone){ return '<div class="card'+(tone?' '+tone:'')+'">'+inner+'</div>'; }
+function h2(t,right){ return '<div class="between"><h2 class="h2">'+t+'</h2>'+(right||'')+'</div>'; }
+function badge(t,tone){ return '<span class="badge b-'+(tone||'dim')+'">'+esc(t)+'</span>'; }
+function stat(label,v,unit,tone,sub){
+  return '<div class="stat"><span class="dim">'+esc(label)+'</span>'+
+    '<span class="v tnum'+(tone?' c-'+tone:'')+'">'+v+(unit?' <small>'+unit+'</small>':'')+'</span>'+
+    (sub?'<span class="dim">'+esc(sub)+'</span>':'')+'</div>';
+}
+function row(o){
+  var tag = o.onclick ? 'button' : 'div';
+  return '<'+tag+' class="row'+(o.onclick?' tap':'')+'"'+(o.onclick?' onclick="'+o.onclick+'"':'')+'>'+
+    '<span class="l"><b>'+esc(o.label)+'</b>'+(o.sub?'<span class="dim">'+esc(o.sub)+'</span>':'')+'</span>'+
+    (o.value?'<span class="v tnum'+(o.tone?' c-'+o.tone:'')+'">'+o.value+'</span>':'')+
+    (o.right||'')+'</'+tag+'>';
+}
+function hr(){ return '<div class="hr"></div>'; }
+function chips(items,cur,fn){
+  return '<div class="chips">'+items.map(function(i){
+    return '<button class="chip'+(i.k===cur?' on':'')+'" onclick="'+fn+'(\''+i.k+'\')">'+esc(i.label)+'</button>';
+  }).join('')+'</div>';
+}
+function btn(t,onclick,kind){ return '<button class="btn'+(kind?' '+kind:'')+'" onclick="'+onclick+'">'+esc(t)+'</button>'; }
+function field(o){
+  var t=o.type||'text';
+  var input = t==='textarea'
+    ? '<textarea id="'+o.id+'" rows="3" placeholder="'+esc(o.ph||'')+'">'+esc(o.val||'')+'</textarea>'
+    : t==='select'
+      ? '<select id="'+o.id+'">'+o.opts.map(function(op){
+          return '<option value="'+esc(op.k)+'"'+(op.k===o.val?' selected':'')+'>'+esc(op.label)+'</option>';}).join('')+'</select>'
+      : '<input id="'+o.id+'" type="'+t+'" value="'+esc(o.val==null?'':o.val)+'"'+
+        (o.step?' step="'+o.step+'"':'')+(o.inputmode?' inputmode="'+o.inputmode+'"':'')+
+        ' placeholder="'+esc(o.ph||'')+'"'+(o.oninput?' oninput="'+o.oninput+'"':'')+'>';
+  return '<div class="field"><label for="'+o.id+'">'+esc(o.label)+'</label>'+input+
+    '<span class="hint" id="'+o.id+'_hint">'+(o.hint||'')+'</span></div>';
+}
+function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
+function fnum(id){ var v=val(id).replace(',','.'); var n=parseFloat(v); return isFinite(n)?n:NaN; }
+
+/* ================= 图表 ================= */
+var CW=320;
+function lineChart(data,color,fmt){
+  if(data.length<2) return '<p class="dim">数据不足</p>';
+  color=color||'var(--gold)'; fmt=fmt||n0;
+  var H=150, padB=18, h=H-padB, padL=4;
+  var vs=data.map(function(d){return d.value;});
+  var mn=Math.min.apply(null,vs.concat([0])), mx=Math.max.apply(null,vs);
+  var lo=Math.min.apply(null,vs);          // 真实最小值，用于标签
+  var span=(mx-mn)||1;
+  var X=function(i){ return padL+(i/(data.length-1))*(CW-padL*2); };
+  var Y=function(v){ return h-((v-mn)/span)*(h-8)-4; };
+  var d=data.map(function(p,i){ return (i?'L':'M')+X(i).toFixed(1)+','+Y(p.value).toFixed(1); }).join(' ');
+  var area=d+' L'+X(data.length-1).toFixed(1)+','+h+' L'+padL+','+h+' Z';
+  var zy=Y(0);
+  return '<svg class="chart" viewBox="0 0 '+CW+' '+H+'" preserveAspectRatio="none" height="'+H+'">'+
+    '<path d="'+area+'" fill="'+color+'" opacity=".13"/>'+
+    (mn<0?'<line x1="'+padL+'" y1="'+zy+'" x2="'+(CW-padL)+'" y2="'+zy+'" stroke="var(--line)"/>':'')+
+    '<path d="'+d+'" stroke="'+color+'" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>'+
+    '<circle cx="'+X(data.length-1)+'" cy="'+Y(vs[vs.length-1])+'" r="3.5" fill="'+color+'"/>'+
+    '</svg>'+
+    '<div class="between"><span class="dim">'+data[0].date+' · 低 '+fmt(lo)+'</span>'+
+    '<span class="dim">高 '+fmt(mx)+' · '+data[data.length-1].date+'</span></div>';
+}
+function barChart(data,fmt,colorFn,every){
+  if(!data.length) return '<p class="dim">暂无数据</p>';
+  fmt=fmt||n0; every=every||Math.max(1,Math.ceil(data.length/6));
+  var H=150, padB=20, h=H-padB;
+  var vs=data.map(function(d){return d.value;});
+  var mn=Math.min.apply(null,vs.concat([0])), mx=Math.max.apply(null,vs.concat([0]));
+  var span=(mx-mn)||1, step=CW/data.length, bw=step*0.62;
+  var Y=function(v){ return h-((v-mn)/span)*(h-6)-3; };
+  var zy=Y(0), out='';
+  data.forEach(function(p,i){
+    var y=Y(p.value), top=Math.min(y,zy), bh=Math.max(1.5,Math.abs(zy-y));
+    var col=colorFn?colorFn(p.value):(p.value<0?'var(--red)':'var(--gold)');
+    out+='<rect x="'+(i*step+(step-bw)/2).toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bw.toFixed(1)+
+      '" height="'+bh.toFixed(1)+'" rx="2" fill="'+col+'" opacity=".92"/>';
+  });
+  data.forEach(function(p,i){
+    if(i%every) return;
+    var lab=p.date.length>7?p.date.slice(2,7):p.date.slice(2);
+    out+='<text x="'+(i*step+step/2).toFixed(1)+'" y="'+(H-6)+'" font-size="8" fill="var(--dim)" text-anchor="middle">'+lab+'</text>';
+  });
+  return '<svg class="chart" viewBox="0 0 '+CW+' '+H+'" height="'+H+'">'+
+    '<line x1="0" y1="'+zy+'" x2="'+CW+'" y2="'+zy+'" stroke="var(--line)"/>'+out+'</svg>'+
+    '<div class="between"><span class="dim">最低 '+fmt(mn)+'</span><span class="dim">最高 '+fmt(mx)+'</span></div>';
+}
+
+/* ================= 底部导航 ================= */
+var TABS=[
+  {k:'home',  label:'概览', icon:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>'},
+  {k:'power', label:'电费', icon:'<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>'},
+  {k:'gas',   label:'燃气', icon:'<path d="M12 22c4-1 6-4.2 6-7.5 0-4.5-4-6-4-9.5-2.5 1.5-3 4-3 5.5C9 8 7 9 7 12c0 4 2.5 9 5 10z"/>'},
+  {k:'save',  label:'储蓄', icon:'<rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M16 12.5h2.5"/>'},
+  {k:'ctr',   label:'合同', icon:'<path d="M6 2.5h8l4.5 4.5V21.5H6z"/><path d="M14 2.5V7h4.5"/><path d="M9 12h6M9 16h6"/>'}
+];
+function renderNav(){
+  document.getElementById('nav').innerHTML=TABS.map(function(t){
+    return '<button class="'+(view===t.k?'on':'')+'" onclick="go(\''+t.k+'\')">'+
+      '<svg viewBox="0 0 24 24">'+t.icon+'</svg><span>'+t.label+'</span></button>';
+  }).join('');
+}
+function go(v){ view=v; showAllTx=false; render(); window.scrollTo(0,0); }
+
+/* ================= 弹层 ================= */
+function openSheet(title,html){
+  document.getElementById('sheetTitle').textContent=title;
+  document.getElementById('sheetBody').innerHTML=html;
+  document.getElementById('sheet').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+/* ================= 概览 ================= */
+function viewHome(){
+  var fx=S.fxRmbPerEur, tot=totalEur(S.txs,S.accounts,fx), out='';
+
+  out+=card('<span class="dim">家庭净资产（折算欧元）</span>'+
+    '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
+    '<span class="dim">≈ '+n0(tot*fx)+' ¥ · 汇率 1€ = '+n2(fx)+' ¥</span>'+hr()+
+    '<div class="stats">'+S.accounts.map(function(a){
+      return stat(a.name,n0(accountBalance(S.txs,a.id)),a.currency==='EUR'?'€':'¥');
+    }).join('')+'</div>','gold');
+
+  var urgent=S.contracts.map(function(c){return {c:c,st:contractStatus(c)};})
+    .filter(function(x){return ['expired','notice','soon'].indexOf(x.st.urgency)>=0;})
+    .sort(function(a,b){return URG_RANK[a.st.urgency]-URG_RANK[b.st.urgency];});
+  if(urgent.length) out+=card(h2('⏰ 合同需要行动',badge(urgent.length,'red'))+
+    urgent.map(function(x){ return row({label:x.c.name,
+      sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)):'',
+      value:x.st.label,tone:'red',onclick:"go('ctr')"}); }).join(''),'red');
+
+  var cards=S.meters.map(function(m){
+    var rs=meterReadings(S.readings,m.id), iv=intervals(rs,m);
+    return {m:m, prop:S.properties.filter(function(p){return p.id===m.propertyId;})[0],
+      last:rs[rs.length-1], lastIv:iv[iv.length-1], per:currentPeriod(rs,m),
+      bad:iv.some(function(i){return i.anomaly;})};
+  });
+  var stale=cards.filter(function(x){ return x.last && daysBetween(x.last.date,today())>120; });
+
+  out+=card(h2('能源用量')+cards.map(function(x){
+    var s='<div class="between"><h3 class="h3">'+esc(x.prop?x.prop.name:'')+' · '+
+      (x.m.kind==='power'?'电':'气')+'</h3>'+
+      (x.bad?badge('⚠︎ 读数异常','red'):'')+
+      badge(x.last?fmtDate(x.last.date):'无记录', stale.indexOf(x)>=0?'amber':'dim')+'</div>';
+    s+= x.lastIv
+      ? '<p class="dim" style="margin:4px 0">'+(x.lastIv.avg30<0?'<span class="c-red">上期读数低于上次，数字暂不可信 · </span>':'')+
+        '上期月均 '+n0(x.lastIv.avg30)+' kWh · '+n2(x.lastIv.cost)+' €'+
+        (x.per?(' · 本年度累计 '+n0(x.per.kwh)+' kWh / '+n0(x.per.cost)+' €'):'')+'</p>'
+      : '<p class="dim" style="margin:4px 0">读数不足，无法计算</p>';
+    if(x.per && x.m.monthlyAbschlag>0)
+      s+='<p class="dim '+(x.per.delta>0?'c-red':'c-green')+'" style="margin:0 0 4px">'+
+        (x.per.delta>0?'预计补缴 ':'预计退款 ')+n2(Math.abs(x.per.delta))+
+        ' €（已预缴 '+n0(x.per.abschlagPaid)+' €）</p>';
+    return s+hr();
+  }).join('')+'<div class="btnrow">'+btn('录电表',"go('power')",'ghost')+btn('录气表',"go('gas')",'ghost')+'</div>');
+
+  if(stale.length) out+=card(h2('该抄表了')+stale.map(function(x){
+    return row({label:(x.prop?x.prop.name:'')+(x.m.kind==='power'?' 电表':' 气表'),
+      sub:'上次 '+fmtDate(x.last.date)+' · 读数 '+n2(x.last.value),
+      value:'超 '+daysBetween(x.last.date,today())+' 天',tone:'dim'});
+  }).join(''),'amber');
+
+  var b=S.budget;
+  var insY=S.contracts.filter(function(c){return INSURANCE.indexOf(c.category)>=0;})
+    .reduce(function(s,c){return s+contractStatus(c).yearlyCost;},0);
+  var eneY=cards.reduce(function(s,x){return s+(x.per?x.per.projectedYearCost:0);},0);
+  out+=card(h2('年度固定支出估算')+'<div class="stats">'+
+    stat('保险合计',n0(insY),'€')+stat('能源（推算）',n0(eneY),'€')+
+    stat('Grundbesitz',n0(b.grundbesitzQuartal*4),'€')+'</div>');
+
+  var absch=S.meters.reduce(function(s,m){return s+m.monthlyAbschlag;},0);
+  var houseM=(b.grundbesitzQuartal*4+b.wohngebaeudeJahr)/12;
+  var fix=b.tilgung+b.autoMonat+houseM+absch+b.festkosten.reduce(function(s,f){return s+f.amount;},0);
+  var rest=b.einkommen-fix;
+  out+=card(h2('月度收支框架')+
+    row({label:'收入 Einkommen',value:eur(b.einkommen),tone:'green'})+
+    row({label:'Tilgung 房贷',value:eur(-b.tilgung),tone:'red'})+
+    row({label:'Autokosten',value:eur(-b.autoMonat),tone:'red'})+
+    row({label:'房屋固定 (Grundbesitz + Wohngebäude)',value:eur(-houseM),tone:'red'})+
+    row({label:'能源 Abschlag',value:eur(-absch),tone:'red'})+
+    b.festkosten.map(function(f){return row({label:f.label,value:eur(-f.amount),tone:'red'});}).join('')+
+    hr()+row({label:'结余 Rest',value:eur(rest),tone:rest>=0?'green':'red'})+
+    row({label:'储蓄目标 / 月',value:eur(b.sparZiel),tone:'gold'}));
+  return out;
+}
+/* ================= 电费 / 燃气 ================= */
+function pickMeter(kind){
+  var ms=S.meters.filter(function(m){return m.kind===kind;});
+  if(!meterSel[kind] || !ms.some(function(m){return m.id===meterSel[kind];}))
+    meterSel[kind]=ms.length?ms[0].id:null;
+  return ms.filter(function(m){return m.id===meterSel[kind];})[0];
+}
+function setMeter(id){
+  var m=S.meters.filter(function(x){return x.id===id;})[0];
+  if(m){ meterSel[m.kind]=id; render(); }
+}
+
+function viewMeter(kind){
+  var ms=S.meters.filter(function(m){return m.kind===kind;});
+  var m=pickMeter(kind);
+  if(!m) return card('<p class="empty">尚未配置表计</p>');
+  var unit = m.unit==='m3' ? 'm³' : 'kWh';
+  var rs=meterReadings(S.readings,m.id), iv=intervals(rs,m), per=currentPeriod(rs,m);
+  var last=rs[rs.length-1], li=iv[iv.length-1];
+  var out='';
+
+  if(ms.length>1) out+=chips(ms.map(function(x){
+    var p=S.properties.filter(function(q){return q.id===x.propertyId;})[0];
+    return {k:x.id,label:p?p.name:x.label};
+  }),m.id,'setMeter');
+
+  var head='<div class="between"><div><span class="dim">最新读数 · '+
+    (last?fmtDate(last.date):'—')+'</span><br><span class="big tnum c-gold">'+
+    (last?n2(last.value):'—')+' <small class="dim" style="font-size:13px">'+unit+
+    '</small></span></div>'+badge(kind==='power'?'电':'气','gold')+'</div>';
+  if(li){
+    head+=hr()+'<span class="dim">上一期间 '+fmtDate(li.from)+' → '+fmtDate(li.to)+' · '+li.days+' 天</span>'+
+      '<div class="stats">'+
+      stat('净用量',n2(li.netRaw),unit,null,m.factor!==1?('= '+n0(li.kwh)+' kWh'):'')+
+      stat('月均 (30天)',n0(li.avg30),'kWh',null,'日均 '+n2(li.perDay)+' kWh')+
+      stat('折算费用',n2(li.cost),'€','gold')+'</div>';
+    if(m.monthlyAbschlag>0) head+=row({
+      label:'同期预缴 Abschlag（'+n0(m.monthlyAbschlag)+' €/月）',
+      sub:li.delta>0?('预计补缴 '+n2(li.delta)+' €'):('预计退款 '+n2(-li.delta)+' €'),
+      value:eur(li.abschlag), tone:li.delta>0?'red':'green'});
+  }
+  out+=card(head,'gold');
+
+  if(per){
+    out+=card(h2('本结算年度累计',badge('抄表日 '+m.ableseTermin,'dim'))+
+      '<span class="dim">'+fmtDate(per.start)+' → '+fmtDate(per.end)+' · '+per.days+' 天</span>'+
+      '<div class="stats">'+stat('累计用量',n0(per.kwh),'kWh')+
+      stat('累计费用',n2(per.cost),'€','gold')+stat('月均',n0(per.avg30),'kWh')+'</div>'+hr()+
+      '<div class="stats">'+stat('全年推算用量',n0(per.projectedYearKwh),'kWh')+
+      stat('全年推算费用',n0(per.projectedYearCost),'€')+
+      (m.monthlyAbschlag>0 ? stat(per.delta>0?'预计补缴':'预计退款',
+        n2(Math.abs(per.delta)),'€',per.delta>0?'red':'green','已预缴 '+n0(per.abschlagPaid)+' €') : '')+
+      '</div><p class="dim" style="margin:0">费用仅按 Arbeitspreis '+n2(m.arbeitspreisCt)+
+      ' ct/kWh 折算，未含 Grundpreis / 基础费。</p>');
+  }
+
+  if(iv.length){
+    out+=card(h2('每期月均消耗 (kWh / 30天)')+barChart(
+      iv.map(function(i){return {date:i.to,value:Math.max(0,Math.round(i.avg30))};}),
+      function(v){return n0(v)+' kWh';}));
+    out+=card(h2('每期费用 (€)')+barChart(
+      iv.map(function(i){return {date:i.to,value:Math.round(i.cost)};}),
+      function(v){return n0(v)+' €';}, function(){return 'var(--blue)';}));
+  }
+
+  var bad=iv.filter(function(i){return i.anomaly;});
+  if(bad.length) out+=card(h2('⚠︎ 读数异常')+bad.map(function(a){
+    return '<p class="c-red" style="margin:0;font-size:13px">'+fmtDate(a.from)+' → '+fmtDate(a.to)+
+      '：读数下降 '+n2(Math.abs(a.netRaw))+' '+unit+'，请核对是否录错或换表。</p>';
+  }).join(''),'red');
+
+  var body=h2('抄表记录 ('+rs.length+')',
+    '<button class="btn sm ghost" onclick="editTarif()">资费</button>')+
+    '<span class="dim">表号 '+esc(m.serial||'—')+(m.reference?(' · 客户号 '+esc(m.reference)):'')+'</span>'+hr();
+  if(!rs.length) body+='<p class="empty">还没有抄表记录</p>';
+  iv.slice().reverse().forEach(function(i){
+    body+=row({label:fmtDate(i.to)+'   '+n2(i.value)+' '+unit,
+      sub:'+'+n2(i.netRaw)+' '+unit+' · '+i.days+' 天 · 月均 '+n0(i.avg30)+' kWh · '+n2(i.cost)+' €',
+      right:'<button class="btn sm ghost" onclick="delReading(\''+i.readingId+'\')">删</button>'});
+  });
+  if(rs.length) body+=row({label:fmtDate(rs[0].date)+'   '+n2(rs[0].value)+' '+unit,sub:'基准读数',
+    right:'<button class="btn sm ghost" onclick="delReading(\''+rs[0].id+'\')">删</button>'});
+  out+=card(body);
+  out+=btn('＋ 录入新读数','addReading()');
+  return out;
+}
+
+function addReading(){
+  var kind = view==='gas' ? 'gas' : 'power';
+  var m=pickMeter(kind);
+  var rs=meterReadings(S.readings,m.id), last=rs[rs.length-1];
+  var unit=m.unit==='m3'?'m³':'kWh';
+  openSheet('录入 · '+m.label,
+    (last?card('<span class="dim">上次读数</span><span class="h2 tnum">'+n2(last.value)+' '+unit+
+      ' · '+fmtDate(last.date)+'</span>','blue'):'')+
+    field({id:'rd_date',label:'日期',type:'date',val:today()})+
+    field({id:'rd_val',label:'表读数 (Brutto, '+unit+')',type:'number',step:'any',
+      inputmode:'decimal',ph:last?('≥ '+n2(last.value)):'例如 12345',oninput:'previewReading()'})+
+    field({id:'rd_note',label:'备注（可选）',ph:'例如 年度 Ablesung'})+
+    btn('保存','saveReading()'));
+  window._addKind=kind;
+}
+function previewReading(){
+  var m=pickMeter(window._addKind);
+  var rs=meterReadings(S.readings,m.id), last=rs[rs.length-1];
+  var v=fnum('rd_val'), el=document.getElementById('rd_val_hint');
+  if(!el) return;
+  if(!last || !isFinite(v)){ el.textContent=''; return; }
+  var net=v-last.value, kwh=net*m.factor;
+  el.innerHTML='本期净用量 '+n2(net)+' '+(m.unit==='m3'?'m³':'kWh')+
+    (m.factor!==1?(' = '+n0(kwh)+' kWh'):'')+' · 约 '+n2(kwh*m.arbeitspreisCt/100)+' €'+
+    (net<0?' <span class="c-red">（读数比上次低，请核对）</span>':'');
+}
+function saveReading(){
+  var m=pickMeter(window._addKind);
+  var d=val('rd_date'), v=fnum('rd_val');
+  if(!isDate(d)) return toast('请选择日期');
+  if(!isFinite(v)) return toast('请输入有效的表读数');
+  var rs=meterReadings(S.readings,m.id), last=rs[rs.length-1];
+  if(last && v<last.value && !confirm('读数 '+n2(v)+' 小于上次的 '+n2(last.value)+'，仍然保存吗？')) return;
+  S.readings.push({id:uid(),meterId:m.id,date:d,value:v,note:val('rd_note')});
+  save(); closeSheet(); render(); toast('已保存');
+}
+function delReading(id){
+  var r=S.readings.filter(function(x){return x.id===id;})[0];
+  if(!r || !confirm('删除 '+fmtDate(r.date)+' 的读数 '+n2(r.value)+'？')) return;
+  S.readings=S.readings.filter(function(x){return x.id!==id;});
+  save(); render(); toast('已删除');
+}
+function editTarif(){
+  var m=pickMeter(view==='gas'?'gas':'power');
+  openSheet('资费设置 · '+m.label,
+    field({id:'tf_p',label:'Arbeitspreis (ct/kWh)',type:'number',step:'any',inputmode:'decimal',
+      val:m.arbeitspreisCt,hint:'用于把用量折算成钱'})+
+    field({id:'tf_a',label:'每月预缴 Abschlag (€)',type:'number',step:'any',inputmode:'decimal',
+      val:m.monthlyAbschlag,hint:'填 0 表示不预缴，则不显示补缴/退款估算'})+
+    (m.unit==='m3'?field({id:'tf_f',label:'m³ → kWh 换算系数',type:'number',step:'any',
+      inputmode:'decimal',val:m.factor,hint:'Brennwert × Zustandszahl，账单上可查，Excel 中为 10.7'}):'')+
+    field({id:'tf_t',label:'年度抄表日 (MM-DD)',val:m.ableseTermin,hint:'用于划分结算年度'})+
+    btn('保存','saveTarif(\''+m.id+'\')'));
+}
+function saveTarif(id){
+  var m=S.meters.filter(function(x){return x.id===id;})[0];
+  var p=fnum('tf_p'), a=fnum('tf_a'), f=fnum('tf_f'), t=val('tf_t');
+  if(isFinite(p)) m.arbeitspreisCt=p;
+  if(isFinite(a)) m.monthlyAbschlag=a;
+  if(isFinite(f)&&f>0) m.factor=f;
+  if(/^\d{2}-\d{2}$/.test(t)) m.ableseTermin=t;
+  save(); closeSheet(); render(); toast('已保存');
+}
+
+/* ================= 储蓄 ================= */
+function setAcc(k){ accSel=k; showAllTx=false; render(); }
+function toggleAllTx(){ showAllTx=!showAllTx; render(); }
+
+function viewSave(){
+  var fx=S.fxRmbPerEur, tot=totalEur(S.txs,S.accounts,fx);
+  var eurIds=S.accounts.filter(function(a){return a.currency==='EUR';}).map(function(a){return a.id;});
+  var ids = accSel==='all' ? eurIds : [accSel];
+  var sel = S.accounts.filter(function(a){return a.id===accSel;})[0];
+  var out='';
+
+  out+=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
+    '<button class="badge b-gold" onclick="editFx()">汇率 1€ = '+n2(fx)+' ¥ ✎</button></div>'+
+    '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
+    '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>','gold');
+
+  out+=card(h2('账户余额')+S.accounts.map(function(a){
+    var b=accountBalance(S.txs,a.id);
+    var sub=(a.currency==='RMB'?('≈ '+n2(b/fx)+' €'):'')+(a.note?((a.currency==='RMB'?' · ':'')+a.note):'');
+    return row({label:a.name,sub:sub,value:money(b,a.currency),tone:b<0?'red':'',
+      onclick:"setAcc('"+a.id+"')"});
+  }).join(''));
+
+  out+=chips([{k:'all',label:'欧元合计'}].concat(S.accounts.map(function(a){
+    return {k:a.id,label:a.name};})),accSel,'setAcc');
+
+  out+=card(h2('余额走势',badge(accSel==='all'?'EUR 账户合计':(sel?sel.currency:''),'dim'))+
+    lineChart(balanceSeries(S.txs,ids)));
+
+  var mn=monthlyNet(S.txs,ids).slice(-18);
+  var yr=today().slice(0,4);
+  var rel = accSel==='all' ? S.txs.filter(function(t){return eurIds.indexOf(t.accountId)>=0;})
+                           : S.txs.filter(function(t){return t.accountId===accSel;});
+  var din=rel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
+  var dout=rel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
+  out+=card(h2('月度净流入')+barChart(mn,n0,function(v){return v<0?'var(--red)':'var(--green)';},3)+hr()+
+    '<div class="stats">'+stat(yr+' 存入',n0(din),'','green')+
+    stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
+    stat('净额',n0(din+dout),'',din+dout>=0?'green':'red')+'</div>');
+
+  var list=rel.slice().sort(function(a,b){return a.date<b.date?1:-1;});
+  var shown = showAllTx ? list : list.slice(0,25);
+  var body=h2('流水',badge(list.length+' 条','dim'));
+  body+=shown.map(function(t){
+    var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
+    return row({label:t.note||'（无备注）',sub:fmtDate(t.date)+' · '+a.name,
+      value:money(t.amount,a.currency),tone:t.amount<0?'red':'green',
+      right:'<button class="btn sm ghost" onclick="delTx(\''+t.id+'\')">删</button>'});
+  }).join('');
+  if(!list.length) body+='<p class="empty">还没有流水</p>';
+  if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
+  out+=card(body);
+  out+=btn('＋ 记一笔','addTx()');
+  return out;
+}
+function addTx(){
+  openSheet('记一笔',
+    field({id:'tx_acc',label:'账户',type:'select',val:accSel==='all'?S.accounts[0].id:accSel,
+      opts:S.accounts.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
+    field({id:'tx_date',label:'日期',type:'date',val:today()})+
+    field({id:'tx_amt',label:'金额（存入为正，支出为负）',type:'number',step:'any',
+      inputmode:'decimal',ph:'1000 或 -500'})+
+    field({id:'tx_note',label:'备注',ph:'例如 7月存 / 还信用卡'})+
+    '<div class="btnrow">'+btn('+1000',"setAmt(1000)",'ghost')+btn('+2000',"setAmt(2000)",'ghost')+
+    btn('+500',"setAmt(500)",'ghost')+'</div>'+
+    btn('保存','saveTx()'));
+}
+function setAmt(v){ document.getElementById('tx_amt').value=v; }
+function saveTx(){
+  var d=val('tx_date'), a=fnum('tx_amt');
+  if(!isDate(d)) return toast('请选择日期');
+  if(!isFinite(a)||a===0) return toast('请输入金额，存入为正、支出为负');
+  S.txs.push({id:uid(),accountId:val('tx_acc'),date:d,amount:a,note:val('tx_note')});
+  save(); closeSheet(); render(); toast('已记录');
+}
+function delTx(id){
+  var t=S.txs.filter(function(x){return x.id===id;})[0];
+  var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
+  if(!confirm('删除 '+fmtDate(t.date)+' '+money(t.amount,a.currency)+'？')) return;
+  S.txs=S.txs.filter(function(x){return x.id!==id;});
+  save(); render(); toast('已删除');
+}
+function editFx(){
+  openSheet('汇率设置',
+    field({id:'fx',label:'1 EUR = ? RMB',type:'number',step:'any',inputmode:'decimal',
+      val:S.fxRmbPerEur,hint:'用于把招行 RMB 余额折算成欧元汇总'})+
+    btn('保存','saveFx()'));
+}
+function saveFx(){
+  var v=fnum('fx');
+  if(isFinite(v)&&v>0){ S.fxRmbPerEur=v; save(); }
+  closeSheet(); render();
+}
+/* ================= 合同与保险 ================= */
+var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','税费','能源','通讯','其他'];
+var CYCLES=['jährlich','halbjährlich','quartal','monatlich','einmalig'];
+function setCat(k){ catSel=k; render(); }
+
+function viewCtr(){
+  var list=S.contracts.filter(function(c){return catSel==='all'||c.category===catSel;})
+    .map(function(c){return {c:c,st:contractStatus(c)};})
+    .sort(function(a,b){
+      var r=URG_RANK[a.st.urgency]-URG_RANK[b.st.urgency];
+      return r || ((a.st.daysToEnd==null?99999:a.st.daysToEnd)-(b.st.daysToEnd==null?99999:b.st.daysToEnd));
+    });
+  var yearly=S.contracts.reduce(function(s,c){return s+contractStatus(c).yearlyCost;},0);
+  var insY=S.contracts.filter(function(c){return INSURANCE.indexOf(c.category)>=0;})
+    .reduce(function(s,c){return s+contractStatus(c).yearlyCost;},0);
+  var att=list.filter(function(x){return ['expired','notice','soon'].indexOf(x.st.urgency)>=0;});
+  var miss=S.contracts.filter(function(c){return !c.premium||!c.endDate;});
+  var out='';
+
+  out+=card('<div class="stats">'+stat('年度保险支出',n0(insY),'€','gold')+
+    stat('所有合同年化',n0(yearly),'€',null,S.contracts.length+' 份合同')+
+    stat('需要关注',String(att.length),'份',att.length?'red':'green')+'</div>','gold');
+
+  if(att.length) out+=card(h2('⏰ 需要行动')+att.map(function(x){
+    return row({label:x.c.name,
+      sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)+' · 到期 '+fmtDate(x.c.endDate)):
+        ('到期 '+fmtDate(x.c.endDate)),
+      value:x.st.label,tone:'red',onclick:"editCtr('"+x.c.id+"')"});
+  }).join(''),'red');
+
+  out+=btn('📅 导出到 iPhone 日历 (.ics)','exportIcs()');
+  out+='<p class="dim" style="margin:-4px 0 0">每份合同生成「退保截止日」（提前 14 天提醒）与「到期日」（提前 7 天提醒）两个全天事件。</p>';
+
+  out+=chips([{k:'all',label:'全部'}].concat(CATS.map(function(c){return {k:c,label:c};})),catSel,'setCat');
+
+  if(!list.length) out+=card('<p class="empty">此分类下没有合同</p>');
+  out+=list.map(function(x){
+    var c=x.c, st=x.st;
+    var prop=S.properties.filter(function(p){return p.id===c.propertyId;})[0];
+    var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(c.name)+'</h3>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+badge(c.category,'dim')+
+      (prop?badge(prop.name,'blue'):'')+(c.tariff?badge(c.tariff,'dim'):'')+'</div></div>'+
+      badge(st.label,URG_TONE[st.urgency])+'</div>'+hr()+
+      row({label:fmtDate(c.startDate)+' → '+(c.endDate?fmtDate(c.endDate):'无固定到期'),
+        sub:CYCLE_ZH[c.cycle]+(c.noticeDays>0?(' · 退保通知期 '+c.noticeDays+' 天'):'')+
+          (c.autoRenew?' · 自动续约':''),
+        value:c.premium?(n2(c.premium)+' €'):'待补',tone:c.premium?'gold':'dim'});
+    if(c.premium && c.cycle!=='jährlich' && c.cycle!=='einmalig')
+      body+='<span class="dim">年化 '+eur(st.yearlyCost)+'</span>';
+    if(c.notes) body+='<p class="dim" style="margin:0;line-height:1.5">'+esc(c.notes)+'</p>';
+    body+=btn('编辑',"editCtr('"+c.id+"')",'ghost sm');
+    return card(body);
+  }).join('');
+
+  if(miss.length) out+=card(h2('资料待补齐')+miss.map(function(c){
+    return row({label:c.name,
+      sub:[!c.premium?'缺保费':'',!c.endDate?'缺到期日':''].filter(Boolean).join(' · '),
+      onclick:"editCtr('"+c.id+"')"});
+  }).join(''),'amber');
+
+  out+=btn('＋ 新增合同','editCtr()');
+  return out;
+}
+
+function editCtr(id){
+  var c = id ? S.contracts.filter(function(x){return x.id===id;})[0]
+    : {id:'',name:'',category:'其他',propertyId:null,provider:'',tariff:'',premium:null,
+       cycle:'jährlich',startDate:today(),endDate:null,autoRenew:true,noticeDays:30,notes:''};
+  openSheet(id?'编辑合同':'新增合同',
+    field({id:'c_name',label:'名称',val:c.name})+
+    field({id:'c_cat',label:'类型',type:'select',val:c.category,
+      opts:CATS.map(function(k){return {k:k,label:k};})})+
+    field({id:'c_prop',label:'关联房产',type:'select',val:c.propertyId||'none',
+      opts:[{k:'none',label:'无 / 通用'}].concat(S.properties.map(function(p){
+        return {k:p.id,label:p.name};}))})+
+    field({id:'c_prov',label:'保险公司 / 服务商',val:c.provider})+
+    field({id:'c_tar',label:'Tarif / Stufe',val:c.tariff})+
+    field({id:'c_prem',label:'保费 (€)',type:'number',step:'any',inputmode:'decimal',
+      val:c.premium==null?'':c.premium})+
+    field({id:'c_cyc',label:'缴费周期',type:'select',val:c.cycle,
+      opts:CYCLES.map(function(k){return {k:k,label:CYCLE_ZH[k]};})})+
+    field({id:'c_start',label:'生效日',type:'date',val:c.startDate})+
+    field({id:'c_end',label:'到期日',type:'date',val:c.endDate||'',
+      hint:'留空 = 自动续约、无固定到期'})+
+    field({id:'c_notice',label:'退保通知期（天）',type:'number',inputmode:'numeric',
+      val:c.noticeDays,hint:'德国常见：车险 30 天、房屋/家财险 90 天'})+
+    '<div class="switch"><span>自动续约</span><input type="checkbox" id="c_auto" '+
+      (c.autoRenew?'checked':'')+' style="width:auto;transform:scale(1.4)"></div>'+
+    field({id:'c_notes',label:'注意事项 / 备注',type:'textarea',val:c.notes,
+      ph:'免赔额、理赔电话、保单号、涨价情况…'})+
+    btn('保存',"saveCtr('"+(c.id||'')+"')")+
+    (id?btn('删除此合同',"delCtr('"+c.id+"')",'danger'):''));
+}
+function saveCtr(id){
+  var name=val('c_name');
+  if(!name) return toast('请填写合同名称');
+  var st=val('c_start'), en=val('c_end');
+  if(!isDate(st)) return toast('请选择生效日');
+  if(en && !isDate(en)) return toast('到期日格式不对');
+  var prem=fnum('c_prem'), nd=parseInt(val('c_notice'),10);
+  var prop=val('c_prop');
+  var obj={id:id||uid(),name:name,category:val('c_cat'),
+    propertyId:prop==='none'?null:prop, provider:val('c_prov'), tariff:val('c_tar'),
+    premium:isFinite(prem)?prem:null, cycle:val('c_cyc'), startDate:st, endDate:en||null,
+    autoRenew:document.getElementById('c_auto').checked,
+    noticeDays:isFinite(nd)?nd:0, notes:val('c_notes')};
+  var i=-1;
+  S.contracts.forEach(function(c,k){ if(c.id===id) i=k; });
+  if(i>=0) S.contracts[i]=obj; else S.contracts.push(obj);
+  save(); closeSheet(); render(); toast('已保存');
+}
+function delCtr(id){
+  var c=S.contracts.filter(function(x){return x.id===id;})[0];
+  if(!confirm('删除合同「'+c.name+'」？')) return;
+  S.contracts=S.contracts.filter(function(x){return x.id!==id;});
+  save(); closeSheet(); render(); toast('已删除');
+}
+
+/* ================= 文件导出 ================= */
+function saveFile(name,text,mime,utiHint){
+  var blob=new Blob([text],{type:mime});
+  // iPhone 优先走系统分享面板 —— 可直接选「日历」或存到「文件」
+  if(navigator.canShare){
+    try{
+      var f=new File([blob],name,{type:mime});
+      if(navigator.canShare({files:[f]})){
+        navigator.share({files:[f],title:name}).catch(function(){});
+        return;
+      }
+    }catch(e){}
+  }
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },1500);
+  toast(utiHint||'已生成 '+name);
+}
+function exportIcs(){
+  var withEnd=S.contracts.filter(function(c){return c.endDate;});
+  if(!withEnd.length) return toast('没有带到期日的合同可导出');
+  saveFile('scrooge-contracts.ics',buildIcs(withEnd),'text/calendar',
+    '已生成 '+withEnd.length+' 份合同的日历事件');
+}
+function exportBackup(){
+  saveFile('金库备份-'+today()+'.json',JSON.stringify(S,null,2),'application/json','备份已生成');
+}
+
+/* ================= 设置 ================= */
+function openSettings(){
+  openSheet('设置与备份',
+    card('<h2 class="h2">数据</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
+      S.contracts.length+' 份合同。<br>所有数据只存在这台设备的浏览器里，不会上传到任何服务器。'+
+      '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
+    btn('⬇︎ 导出 JSON 备份','exportBackup()')+
+    field({id:'imp',label:'从备份恢复（粘贴 JSON）',type:'textarea',ph:'{"version":1,...}'})+
+    btn('覆盖恢复','doImport()','ghost')+
+    hr()+
+    card('<h2 class="h2">放到 iPhone 主屏幕上托管用</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '下面这个按钮会生成一份<b>不含任何数据</b>的空壳 HTML。'+
+      '要把 App 放到网上（才能"添加到主屏幕"）时上传这一份，'+
+      '你的财务数据就不会出现在网上。装好后在手机上用上面的「导出备份 → 覆盖恢复」把数据搬进去。</p>')+
+    btn('⬇︎ 导出空壳版 HTML（不含数据）','exportShell()','ghost')+
+    hr()+
+    btn('重置为 Excel 初始数据','doReset()','danger'));
+}
+function doImport(){
+  var t=val('imp');
+  if(!t) return toast('请先粘贴备份内容');
+  try{
+    var p=JSON.parse(t);
+    if(!p||!Array.isArray(p.accounts)) throw new Error('格式不符');
+    S=Object.assign({},SEED,p); save(); closeSheet(); render(); toast('已恢复');
+  }catch(e){ toast('恢复失败：'+e.message); }
+}
+function doReset(){
+  if(!confirm('将丢弃所有新增记录，恢复到从 Excel 导入时的状态。继续？')) return;
+  S=JSON.parse(JSON.stringify(SEED)); save(); closeSheet(); render(); toast('已重置');
+}
+/** 生成不含数据的空壳，用于公开托管 */
+function exportShell(){
+  var html=document.documentElement.outerHTML;
+  var empty='var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],'+
+    'accounts:[{id:"ing",name:"ING 储蓄",currency:"EUR",note:""}],txs:[],contracts:[],'+
+    'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
+    'festkosten:[],sparZiel:0}};';
+  var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
+  if(i<0||j<0||j<i) return toast('无法定位数据段，请手动删除 var SEED');
+  var shell=html.slice(0,i)+empty+'\n'+html.slice(j);
+  // 去掉运行时注入的内容，保证空壳干净
+  shell=shell.replace(/<main id="main">[\s\S]*?<\/main>/,'<main id="main"></main>')
+             .replace(/<nav id="nav">[\s\S]*?<\/nav>/,'<nav id="nav"></nav>')
+             .replace(/<div class="body" id="sheetBody">[\s\S]*?<\/div>\s*<\/div>/,
+                      '<div class="body" id="sheetBody"></div></div>');
+  saveFile('金库-空壳版.html','<!DOCTYPE html>\n'+shell,'text/html','空壳版已生成（不含数据）');
+}
+
+/* ================= 渲染 ================= */
+function render(){
+  var m=document.getElementById('main');
+  if(view==='home') m.innerHTML=viewHome();
+  else if(view==='power') m.innerHTML=viewMeter('power');
+  else if(view==='gas') m.innerHTML=viewMeter('gas');
+  else if(view==='save') m.innerHTML=viewSave();
+  else m.innerHTML=viewCtr();
+  renderNav();
+}
+load();
+save();   // 首次打开就落盘，之后的每次改动都会立即保存
+render();
+</script>
+
+
+</body></html>
