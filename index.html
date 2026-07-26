@@ -157,7 +157,31 @@ nav button.on{color:var(--tx)}
 nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify-content:center}
 
 /* ---------- 图表 ---------- */
-.chart{width:100%;display:block;overflow:visible}
+.chart-shell{display:flex;flex-direction:column;gap:4px;min-width:0}
+.chart-readout{height:28px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;border-bottom:1px solid var(--line)}
+.chart-readout span{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-readout strong{font-size:14px;font-weight:700;white-space:nowrap}
+.chart-frame{display:grid;grid-template-columns:42px minmax(0,1fr);gap:6px;align-items:start}
+.chart-y-axis{height:138px;position:relative;color:var(--dim);font-size:9px;
+  font-variant-numeric:tabular-nums}
+.chart-y-unit{position:absolute;top:0;right:0;font-weight:650;color:var(--tx)}
+.chart-y-label{position:absolute;right:0;line-height:1;transform:translateY(-50%);white-space:nowrap}
+.chart-plot{min-width:0}
+.chart{width:100%;height:138px;display:block;overflow:visible;touch-action:pan-y;
+  cursor:crosshair;border-radius:4px}
+.chart:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.chart-grid{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.chart-zero{stroke:var(--dim);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.65}
+.chart-focus-line{stroke:var(--dim);stroke-width:1;stroke-dasharray:3 3;
+  vector-effect:non-scaling-stroke;pointer-events:none}
+.chart-focus-dot{stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+.chart-bar{vector-effect:non-scaling-stroke}
+.chart-bar.selected{stroke:var(--tx);stroke-width:1.5}
+.chart-x-axis{height:18px;position:relative;margin-top:3px;color:var(--dim);
+  font-size:9px;font-variant-numeric:tabular-nums}
+.chart-x-label{position:absolute;top:0;line-height:1;transform:translateX(-50%);white-space:nowrap}
+.chart-x-label.first{transform:none}.chart-x-label.last{transform:translateX(-100%)}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%);z-index:80;background:var(--tx);color:var(--inverse);
   padding:11px 17px;border-radius:6px;font-size:13px;font-weight:600;
@@ -495,52 +519,201 @@ function activityRow(o){
 }
 
 /* ================= 图表 ================= */
-var CW=320;
-function lineChart(data,color,fmt){
-  if(data.length<2) return '<p class="dim">数据不足</p>';
-  color=color||'var(--gold)'; fmt=fmt||n0;
-  var H=150, padB=18, h=H-padB, padL=4;
-  var vs=data.map(function(d){return d.value;});
-  var mn=Math.min.apply(null,vs.concat([0])), mx=Math.max.apply(null,vs);
-  var lo=Math.min.apply(null,vs);          // 真实最小值，用于标签
-  var span=(mx-mn)||1;
-  var X=function(i){ return padL+(i/(data.length-1))*(CW-padL*2); };
-  var Y=function(v){ return h-((v-mn)/span)*(h-8)-4; };
-  var d=data.map(function(p,i){ return (i?'L':'M')+X(i).toFixed(1)+','+Y(p.value).toFixed(1); }).join(' ');
-  var area=d+' L'+X(data.length-1).toFixed(1)+','+h+' L'+padL+','+h+' Z';
-  var zy=Y(0);
-  return '<svg class="chart" viewBox="0 0 '+CW+' '+H+'" preserveAspectRatio="none" height="'+H+'">'+
-    '<path d="'+area+'" fill="'+color+'" opacity=".13"/>'+
-    (mn<0?'<line x1="'+padL+'" y1="'+zy+'" x2="'+(CW-padL)+'" y2="'+zy+'" stroke="var(--line)"/>':'')+
-    '<path d="'+d+'" stroke="'+color+'" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>'+
-    '<circle cx="'+X(data.length-1)+'" cy="'+Y(vs[vs.length-1])+'" r="3.5" fill="'+color+'"/>'+
-    '</svg>'+
-    '<div class="between"><span class="dim">'+data[0].date+' · 低 '+fmt(lo)+'</span>'+
-    '<span class="dim">高 '+fmt(mx)+' · '+data[data.length-1].date+'</span></div>';
+var CW=320, CH=138, chartStore={}, chartSeq=0;
+
+function clearChartState(){ chartStore={}; chartSeq=0; }
+function chartNiceStep(v){
+  var p=Math.pow(10,Math.floor(Math.log(v)/Math.LN10)), n=v/p;
+  return (n<=1?1:n<=2?2:n<=5?5:10)*p;
 }
-function barChart(data,fmt,colorFn,every){
+function chartScale(vs){
+  var rawMin=Math.min.apply(null,vs.concat([0]));
+  var rawMax=Math.max.apply(null,vs.concat([0]));
+  if(rawMin===rawMax) rawMax=rawMin+(Math.abs(rawMin)||1);
+  var step=chartNiceStep((rawMax-rawMin)/3);
+  var lo=Math.floor(rawMin/step)*step, hi=Math.ceil(rawMax/step)*step;
+  if(lo===hi) hi=lo+step;
+  var ticks=[], v;
+  for(v=lo;v<=hi+step*.25;v+=step) ticks.push(Math.abs(v)<step/1000?0:v);
+  if(ticks.length>6){
+    step*=2; lo=Math.floor(rawMin/step)*step; hi=Math.ceil(rawMax/step)*step; ticks=[];
+    for(v=lo;v<=hi+step*.25;v+=step) ticks.push(Math.abs(v)<step/1000?0:v);
+  }
+  return {min:lo,max:hi,ticks:ticks};
+}
+function chartShortNumber(v){
+  var a=Math.abs(v), opts={maximumFractionDigits:1};
+  if(a>=1000000) return (v/1000000).toLocaleString('de-DE',opts)+'M';
+  if(a>=1000) return (v/1000).toLocaleString('de-DE',opts)+'k';
+  if(a>0&&a<10&&Math.round(a)!==a) return v.toLocaleString('de-DE',opts);
+  return n0(v);
+}
+function chartDateLong(d){
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return fmtDate(d);
+  if(/^\d{4}-\d{2}$/.test(d)){ var p=d.split('-'); return p[1]+'.'+p[0]; }
+  return d;
+}
+function chartDateShort(d){
+  var p=d.split('-');
+  if(p.length===3) return p[2]+'.'+p[1]+'.';
+  if(p.length===2) return p[1]+'.'+p[0].slice(2);
+  return d;
+}
+function chartGrid(scale,Y){
+  return scale.ticks.map(function(v){
+    var y=Y(v).toFixed(1), cls=Math.abs(v)<1e-9?'chart-zero':'chart-grid';
+    return '<line class="'+cls+'" x1="0" y1="'+y+'" x2="'+CW+'" y2="'+y+'"/>';
+  }).join('');
+}
+function chartYAxis(scale,Y,unit){
+  return '<span class="chart-y-unit">'+esc(unit||'')+'</span>'+
+    scale.ticks.map(function(v){
+      return '<span class="chart-y-label" style="top:'+(Y(v)/CH*100).toFixed(2)+'%">'+
+        esc(chartShortNumber(v))+'</span>';
+    }).join('');
+}
+function chartXLabels(data,points,every,line){
+  var idx=[], seen={}, i;
+  if(line){
+    idx=[0,Math.floor((data.length-1)/2),data.length-1];
+  }else{
+    for(i=0;i<data.length;i+=every) idx.push(i);
+    idx.push(data.length-1);
+  }
+  idx=idx.filter(function(k){
+    if(seen[k]) return false;
+    seen[k]=true; return true;
+  });
+  if(!line&&idx.length>1){
+    var last=idx[idx.length-1], prev=idx[idx.length-2];
+    if(points[last].x-points[prev].x<44) idx.splice(idx.length-2,1);
+  }
+  return idx.map(function(k){
+    var cls=k===0?' first':(k===data.length-1?' last':'');
+    return '<span class="chart-x-label'+cls+'" style="left:'+(points[k].x/CW*100).toFixed(2)+'%">'+
+      esc(chartDateShort(data[k].date))+'</span>';
+  }).join('');
+}
+function chartMarkup(st,marks,scale,Y,every,line){
+  var p=st.points[st.selected], col=p.color||st.color;
+  return '<div class="chart-shell" id="'+st.id+'" data-chart-shell="'+st.id+'">'+
+    '<div class="chart-readout" id="'+st.id+'-readout" role="status" aria-live="polite" aria-atomic="true">'+
+      '<span data-chart-date>'+esc(chartDateLong(p.date))+'</span>'+
+      '<strong class="tnum" data-chart-value>'+esc(st.fmt(p.value))+'</strong></div>'+
+    '<div class="chart-frame"><div class="chart-y-axis" aria-hidden="true">'+
+      chartYAxis(scale,Y,st.unit)+'</div><div class="chart-plot">'+
+      '<svg class="chart interactive-chart" data-chart-id="'+st.id+'" viewBox="0 0 '+CW+' '+CH+
+        '" preserveAspectRatio="none" role="img" tabindex="0" aria-describedby="'+st.id+'-readout"'+
+        ' aria-label="'+esc(st.label+'，'+chartDateLong(p.date)+'，'+st.fmt(p.value))+'"'+
+        ' onpointerdown="chartPointerDown(event,\''+st.id+'\')"'+
+        ' onpointermove="chartPointerMove(event,\''+st.id+'\')"'+
+        ' onpointerup="chartPointerUp(event,\''+st.id+'\')"'+
+        ' onpointercancel="chartPointerCancel(event)"'+
+        ' onkeydown="chartKey(event,\''+st.id+'\')">'+
+        chartGrid(scale,Y)+marks+
+        '<g class="chart-focus" aria-hidden="true">'+
+          '<line class="chart-focus-line" x1="'+p.x+'" y1="0" x2="'+p.x+'" y2="'+CH+'"/>'+
+          '<circle class="chart-focus-dot" cx="'+p.x+'" cy="'+p.y+'" r="4" fill="var(--card)" stroke="'+col+'"/>'+
+        '</g></svg>'+
+      '<div class="chart-x-axis" aria-hidden="true">'+chartXLabels(st.data,st.points,every,line)+'</div>'+
+    '</div></div></div>';
+}
+function selectChartPoint(id,index){
+  var st=chartStore[id], shell=document.getElementById(id);
+  if(!st||!shell) return;
+  index=Math.max(0,Math.min(st.points.length-1,index));
+  st.selected=index;
+  var p=st.points[index], svg=shell.querySelector('svg');
+  shell.querySelector('[data-chart-date]').textContent=chartDateLong(p.date);
+  shell.querySelector('[data-chart-value]').textContent=st.fmt(p.value);
+  var line=svg.querySelector('.chart-focus-line'), dot=svg.querySelector('.chart-focus-dot');
+  line.setAttribute('x1',p.x); line.setAttribute('x2',p.x);
+  dot.setAttribute('cx',p.x); dot.setAttribute('cy',p.y);
+  dot.setAttribute('stroke',p.color||st.color);
+  var bars=svg.querySelectorAll('.chart-bar');
+  Array.prototype.forEach.call(bars,function(b){
+    b.classList.toggle('selected',parseInt(b.getAttribute('data-bar-index'),10)===index);
+  });
+  svg.setAttribute('aria-label',st.label+'，'+chartDateLong(p.date)+'，'+st.fmt(p.value));
+}
+function chartPointFromPointer(e,id){
+  var st=chartStore[id], svg=e.currentTarget;
+  if(!st||!svg) return;
+  var r=svg.getBoundingClientRect();
+  if(!r.width) return;
+  var x=Math.max(0,Math.min(CW,(e.clientX-r.left)/r.width*CW));
+  var best=0, dist=Infinity;
+  st.points.forEach(function(p,i){
+    var d=Math.abs(p.x-x); if(d<dist){dist=d;best=i;}
+  });
+  selectChartPoint(id,best);
+}
+function chartPointerDown(e,id){
+  e.currentTarget._chartDragging=true;
+  try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(err){}
+  chartPointFromPointer(e,id);
+}
+function chartPointerMove(e,id){
+  if(e.pointerType==='mouse'||e.currentTarget._chartDragging) chartPointFromPointer(e,id);
+}
+function chartPointerUp(e,id){
+  chartPointFromPointer(e,id);
+  e.currentTarget._chartDragging=false;
+}
+function chartPointerCancel(e){ e.currentTarget._chartDragging=false; }
+function chartKey(e,id){
+  var st=chartStore[id], next;
+  if(!st) return;
+  if(e.key==='ArrowLeft') next=st.selected-1;
+  else if(e.key==='ArrowRight') next=st.selected+1;
+  else if(e.key==='Home') next=0;
+  else if(e.key==='End') next=st.points.length-1;
+  else return;
+  e.preventDefault(); selectChartPoint(id,next);
+}
+function lineChart(data,color,fmt,unit,label){
+  if(data.length<2) return '<p class="dim">数据不足</p>';
+  color=color||'var(--gold)'; fmt=fmt||n0; unit=unit||''; label=label||'趋势图';
+  var scale=chartScale(data.map(function(d){return d.value;}));
+  var top=18,bottom=6,span=scale.max-scale.min;
+  var X=function(i){ return 2+(i/(data.length-1))*(CW-4); };
+  var Y=function(v){ return top+((scale.max-v)/span)*(CH-top-bottom); };
+  var points=data.map(function(p,i){
+    return {x:X(i),y:Y(p.value),value:p.value,date:p.date,color:color};
+  });
+  var d=points.map(function(p,i){
+    return (i?'L':'M')+p.x.toFixed(1)+','+p.y.toFixed(1);
+  }).join(' ');
+  var base=Y(0);
+  var area=d+' L'+points[points.length-1].x.toFixed(1)+','+base.toFixed(1)+
+    ' L'+points[0].x.toFixed(1)+','+base.toFixed(1)+' Z';
+  var marks='<path d="'+area+'" fill="'+color+'" opacity=".13"/>'+
+    '<path d="'+d+'" stroke="'+color+'" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>';
+  var id='chart-'+(++chartSeq), selected=data.length-1;
+  chartStore[id]={id:id,data:data,points:points,selected:selected,color:color,fmt:fmt,unit:unit,label:label};
+  return chartMarkup(chartStore[id],marks,scale,Y,1,true);
+}
+function barChart(data,fmt,colorFn,every,unit,label){
   if(!data.length) return '<p class="dim">暂无数据</p>';
   fmt=fmt||n0; every=every||Math.max(1,Math.ceil(data.length/6));
-  var H=150, padB=20, h=H-padB;
-  var vs=data.map(function(d){return d.value;});
-  var mn=Math.min.apply(null,vs.concat([0])), mx=Math.max.apply(null,vs.concat([0]));
-  var span=(mx-mn)||1, step=CW/data.length, bw=step*0.62;
-  var Y=function(v){ return h-((v-mn)/span)*(h-6)-3; };
-  var zy=Y(0), out='';
+  unit=unit||''; label=label||'柱状图';
+  var scale=chartScale(data.map(function(d){return d.value;}));
+  var top=18,bottom=6,span=scale.max-scale.min,step=CW/data.length,bw=step*.62;
+  var Y=function(v){ return top+((scale.max-v)/span)*(CH-top-bottom); };
+  var zy=Y(0), selected=data.length-1, points=[], marks='';
   data.forEach(function(p,i){
-    var y=Y(p.value), top=Math.min(y,zy), bh=Math.max(1.5,Math.abs(zy-y));
+    var y=Y(p.value), barTop=Math.min(y,zy), bh=Math.max(1.5,Math.abs(zy-y));
     var col=colorFn?colorFn(p.value):(p.value<0?'var(--red)':'var(--gold)');
-    out+='<rect x="'+(i*step+(step-bw)/2).toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bw.toFixed(1)+
+    var x=i*step+step/2;
+    points.push({x:x,y:y,value:p.value,date:p.date,color:col});
+    marks+='<rect class="chart-bar'+(i===selected?' selected':'')+'" data-bar-index="'+i+
+      '" x="'+(x-bw/2).toFixed(1)+'" y="'+barTop.toFixed(1)+'" width="'+bw.toFixed(1)+
       '" height="'+bh.toFixed(1)+'" rx="2" fill="'+col+'" opacity=".92"/>';
   });
-  data.forEach(function(p,i){
-    if(i%every) return;
-    var lab=p.date.length>7?p.date.slice(2,7):p.date.slice(2);
-    out+='<text x="'+(i*step+step/2).toFixed(1)+'" y="'+(H-6)+'" font-size="8" fill="var(--dim)" text-anchor="middle">'+lab+'</text>';
-  });
-  return '<svg class="chart" viewBox="0 0 '+CW+' '+H+'" height="'+H+'">'+
-    '<line x1="0" y1="'+zy+'" x2="'+CW+'" y2="'+zy+'" stroke="var(--line)"/>'+out+'</svg>'+
-    '<div class="between"><span class="dim">最低 '+fmt(mn)+'</span><span class="dim">最高 '+fmt(mx)+'</span></div>';
+  var id='chart-'+(++chartSeq);
+  chartStore[id]={id:id,data:data,points:points,selected:selected,color:'var(--gold)',
+    fmt:fmt,unit:unit,label:label};
+  return chartMarkup(chartStore[id],marks,scale,Y,every,false);
 }
 
 /* ================= 底部导航 ================= */
@@ -821,6 +994,9 @@ async function lockVault(){
   if(!vaultStarted) return;
   try{ await saveQueue; }catch(e){}
   closeSheet();
+  clearChartState();
+  document.getElementById('main').innerHTML='';
+  document.getElementById('nav').innerHTML='';
   vaultKey=null; S=null;
   showUnlock();
 }
@@ -1402,10 +1578,10 @@ function viewMeter(kind){
   if(iv.length){
     out+=card(h2('每期月均消耗 (kWh / 30天)')+barChart(
       iv.map(function(i){return {date:i.to,value:Math.max(0,Math.round(i.avg30))};}),
-      function(v){return n0(v)+' kWh';}));
+      function(v){return n0(v)+' kWh';},null,null,'kWh','每期月均消耗'));
     out+=card(h2('每期费用 (€)')+barChart(
       iv.map(function(i){return {date:i.to,value:Math.round(i.cost)};}),
-      function(v){return n0(v)+' €';}, function(){return 'var(--blue)';}));
+      function(v){return n0(v)+' €';}, function(){return 'var(--blue)';},null,'€','每期费用'));
   }
 
   var bad=iv.filter(function(i){return i.anomaly;});
@@ -1525,7 +1701,7 @@ function viewSave(){
     return {k:a.id,label:a.name};})),accSel,'setAcc');
 
   out+=card(h2('余额走势',badge(accSel==='all'?'EUR 账户合计':(sel?sel.currency:''),'dim'))+
-    lineChart(balanceSeries(S.txs,ids)));
+    lineChart(balanceSeries(S.txs,ids),null,function(v){return n2(v)+' €';},'€','余额走势'));
 
   var mn=monthlyNet(S.txs,ids).slice(-18);
   var yr=today().slice(0,4);
@@ -1534,7 +1710,8 @@ function viewSave(){
   var cashRel=rel.filter(function(t){return !t.valuationOnly;});
   var din=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
   var dout=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
-  out+=card(h2('月度净流入')+barChart(mn,n0,function(v){return v<0?'var(--red)':'var(--green)';},3)+hr()+
+  out+=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' €';},
+    function(v){return v<0?'var(--red)':'var(--green)';},3,'€','月度净流入')+hr()+
     '<div class="stats">'+stat(yr+' 存入',n0(din),'','green')+
     stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
     stat('净额',n0(din+dout),'',din+dout>=0?'green':'red')+'</div>');
@@ -1829,6 +2006,7 @@ function exportShell(){
 /* ================= 渲染 ================= */
 function render(){
   var m=document.getElementById('main');
+  clearChartState();
   if(view==='home') m.innerHTML=viewHome();
   else if(view==='power') m.innerHTML=viewMeter('power');
   else if(view==='gas') m.innerHTML=viewMeter('gas');
