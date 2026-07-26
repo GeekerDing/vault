@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head>
+<html lang="zh-CN">
+<head>
 <meta charset="utf-8">
 <title>金库</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
@@ -36,6 +37,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(14,17,22,.86);
   display:flex;align-items:center;justify-content:space-between;gap:10px}
 header h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.3px}
 header .hbtn{color:var(--dim);font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;background:var(--card2)}
+.header-actions{display:flex;align-items:center;gap:7px}
 
 /* ---------- 布局 ---------- */
 main{padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
@@ -128,13 +130,55 @@ nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;
   box-shadow:0 8px 28px rgba(0,0,0,.5);opacity:0;pointer-events:none;
   transition:opacity .2s;max-width:88vw;text-align:center}
 .toast.show{opacity:1}
+
+/* ---------- 安全锁屏 ---------- */
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;
+  align-items:center;justify-content:center;padding:24px}
+body.locked{overflow:hidden}
+body.locked .lock{display:flex}
+body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
+.lockbox{width:min(100%,390px);display:flex;flex-direction:column;gap:14px}
+.vaultmark{width:66px;height:66px;border:3px solid var(--gold);border-radius:50%;
+  display:grid;place-items:center;color:var(--gold);font-size:25px;font-weight:800;margin-bottom:4px}
+.lockbox h1{font-size:28px;margin:0}.lockbox p{margin:0;line-height:1.6}
+.lockbox input{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+  padding:13px;color:var(--tx);font-size:16px;width:100%}
+.lockbox input:focus{outline:0;border-color:var(--gold)}
+.lock-error{min-height:18px;color:var(--red);font-size:12px}
+.lock-actions{display:flex;flex-direction:column;gap:9px}
+
+/* ---------- 导入与识别 ---------- */
+.filepick{position:relative;overflow:hidden}
+.filepick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.import-list{display:flex;flex-direction:column;gap:6px;max-height:42vh;overflow:auto}
+.import-row{display:grid;grid-template-columns:24px 76px 1fr auto;align-items:center;gap:8px;
+  padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
+.import-row input{width:18px;height:18px}.import-row .note{min-width:0;overflow-wrap:anywhere}
+.ocr-preview{width:100%;max-height:230px;object-fit:contain;background:#050607;border-radius:10px}
+.progress{height:6px;background:var(--card2);border-radius:6px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--gold);width:0;transition:width .2s}
 </style>
 </head>
 <body>
-<header><h1>金库</h1><button class="hbtn" onclick="openSettings()">设置</button></header>
-<main id="main"></main>
-<nav id="nav"></nav>
-<div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">×</button></div><div class="body" id="sheetBody"></div></div>
+<div class="lock" id="lock" aria-live="polite">
+  <div class="lockbox">
+    <div class="vaultmark">¥</div>
+    <h1 id="lockTitle">打开金库</h1>
+    <p class="dim" id="lockText"></p>
+    <div id="lockFields"></div>
+    <div class="lock-error" id="lockError"></div>
+    <div class="lock-actions" id="lockActions"></div>
+  </div>
+</div>
+<div class="app-shell">
+  <header><h1>金库</h1><div class="header-actions">
+    <button class="hbtn" onclick="lockVault()">锁定</button>
+    <button class="hbtn" onclick="openSettings()">设置</button>
+  </div></header>
+  <main id="main"></main>
+  <nav id="nav"></nav>
+</div>
+<div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">&times;</button></div><div class="body" id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
 <script>
 var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
@@ -304,18 +348,9 @@ function buildIcs(contracts){
 }
 /* ================= 状态与存储 ================= */
 var KEY='scrooge.vault.v1';
+var ENC_KEY='scrooge.vault.encrypted.v2';
+var DEVICE_KEY='scrooge.vault.device.v1';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
-
-function load(){
-  try{
-    var raw=localStorage.getItem(KEY);
-    S = raw ? Object.assign({},SEED,JSON.parse(raw)) : JSON.parse(JSON.stringify(SEED));
-  }catch(e){ S=JSON.parse(JSON.stringify(SEED)); }
-}
-function save(){
-  try{ localStorage.setItem(KEY,JSON.stringify(S)); }
-  catch(e){ toast('保存失败：存储空间可能已满'); }
-}
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -362,6 +397,13 @@ function field(o){
         ' placeholder="'+esc(o.ph||'')+'"'+(o.oninput?' oninput="'+o.oninput+'"':'')+'>';
   return '<div class="field"><label for="'+o.id+'">'+esc(o.label)+'</label>'+input+
     '<span class="hint" id="'+o.id+'_hint">'+(o.hint||'')+'</span></div>';
+}
+function fileField(o){
+  return '<label class="btn ghost filepick">'+esc(o.label)+
+    '<input id="'+o.id+'" type="file" accept="'+esc(o.accept||'*/*')+'"'+
+    (o.capture?' capture="'+esc(o.capture)+'"':'')+
+    (o.onchange?' onchange="'+o.onchange+'"':'')+'></label>'+
+    (o.hint?'<span class="dim">'+o.hint+'</span>':'');
 }
 function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
 function fnum(id){ var v=val(id).replace(',','.'); var n=parseFloat(v); return isFinite(n)?n:NaN; }
@@ -516,6 +558,635 @@ function viewHome(){
     row({label:'储蓄目标 / 月',value:eur(b.sparZiel),tone:'gold'}));
   return out;
 }
+/* ================= 加密存储与设备解锁 ================= */
+var KDF_ITERATIONS=310000;
+var vaultKey=null, vaultEnvelope=null, pendingState=null;
+var saveQueue=Promise.resolve(), hiddenAt=0, vaultStarted=false;
+
+function copyState(x){ return JSON.parse(JSON.stringify(x)); }
+function randomBytes(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return a; }
+function bytesToB64(bytes){
+  var s='', step=32768;
+  for(var i=0;i<bytes.length;i+=step)
+    s+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(i+step,bytes.length)));
+  return btoa(s);
+}
+function b64ToBytes(s){
+  var raw=atob(s), out=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
+  return out;
+}
+function b64Url(bytes){ return bytesToB64(bytes).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function b64UrlBytes(s){
+  s=s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4) s+='=';
+  return b64ToBytes(s);
+}
+function subtle(){
+  if(!window.crypto || !crypto.subtle) throw new Error('当前浏览器不支持加密，请使用最新版 Safari 或 Chrome');
+  return crypto.subtle;
+}
+async function deriveVaultKey(password,salt,iterations){
+  var raw=await subtle().importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
+  return subtle().deriveKey(
+    {name:'PBKDF2',salt:salt,iterations:iterations||KDF_ITERATIONS,hash:'SHA-256'},
+    raw,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptTextWithKey(text,key,kdf,format){
+  var iv=randomBytes(12);
+  var encrypted=await subtle().encrypt({name:'AES-GCM',iv:iv},key,new TextEncoder().encode(text));
+  return {
+    format:format,version:2,
+    kdf:{name:'PBKDF2',hash:'SHA-256',iterations:kdf.iterations,salt:kdf.salt},
+    cipher:{name:'AES-GCM',iv:bytesToB64(iv)},
+    data:bytesToB64(new Uint8Array(encrypted))
+  };
+}
+async function decryptTextWithKey(envelope,key){
+  if(!envelope || envelope.version!==2 || !envelope.kdf || !envelope.cipher || !envelope.data)
+    throw new Error('不是有效的加密金库文件');
+  var plain=await subtle().decrypt(
+    {name:'AES-GCM',iv:b64ToBytes(envelope.cipher.iv)},
+    key,b64ToBytes(envelope.data));
+  return new TextDecoder().decode(plain);
+}
+async function keyForEnvelope(password,envelope){
+  return deriveVaultKey(password,b64ToBytes(envelope.kdf.salt),envelope.kdf.iterations);
+}
+function assertState(p){
+  if(!p || !Array.isArray(p.accounts) || !Array.isArray(p.txs) ||
+     !Array.isArray(p.readings) || !Array.isArray(p.contracts))
+    throw new Error('备份内容结构不完整');
+  return p;
+}
+function freshKdf(){
+  return {iterations:KDF_ITERATIONS,salt:bytesToB64(randomBytes(16))};
+}
+
+async function persistSnapshot(snapshot,key,kdf){
+  var env=await encryptTextWithKey(snapshot,key,kdf,'scrooge-vault-local');
+  localStorage.setItem(ENC_KEY,JSON.stringify(env));
+  vaultEnvelope=env;
+  return env;
+}
+function save(){
+  if(!S || !vaultKey || !vaultEnvelope) return Promise.resolve(false);
+  var snapshot=JSON.stringify(S), key=vaultKey;
+  var kdf={iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
+  saveQueue=saveQueue.catch(function(){}).then(function(){
+    return persistSnapshot(snapshot,key,kdf);
+  }).catch(function(e){
+    toast('加密保存失败：'+e.message);
+    throw e;
+  });
+  return saveQueue;
+}
+
+function lockUi(title,text,fields,actions){
+  document.body.classList.add('locked');
+  document.getElementById('lockTitle').textContent=title;
+  document.getElementById('lockText').textContent=text;
+  document.getElementById('lockFields').innerHTML=fields||'';
+  document.getElementById('lockActions').innerHTML=actions||'';
+  document.getElementById('lockError').textContent='';
+}
+function setLockError(msg){ document.getElementById('lockError').textContent=msg||''; }
+function passwordInput(id,placeholder,enter){
+  return '<input id="'+id+'" type="password" autocomplete="current-password" placeholder="'+
+    esc(placeholder)+'"'+(enter?' onkeydown="if(event.key===\'Enter\') '+enter+'"':'')+'>';
+}
+function showSetup(){
+  lockUi('保护你的金库',
+    '设置主密码后，数据会用 AES‑GCM 加密保存。密码无法找回，请另外保存。',
+    '<div style="display:flex;flex-direction:column;gap:9px">'+
+      passwordInput('setup_pw','至少 8 位主密码')+
+      passwordInput('setup_pw2','再次输入主密码','setupVault()')+'</div>',
+    '<button class="btn" onclick="setupVault()">加密并进入</button>');
+}
+function hasDeviceUnlock(){
+  try{ return !!JSON.parse(localStorage.getItem(DEVICE_KEY)||'null'); }catch(e){ return false; }
+}
+function showUnlock(){
+  var device=hasDeviceUnlock()
+    ? '<button class="btn ghost" onclick="unlockWithDevice()">使用 Face ID / 设备解锁</button>' : '';
+  lockUi('打开金库','数据已在此设备加密。请输入主密码，或使用已启用的设备认证。',
+    passwordInput('unlock_pw','主密码','unlockWithPassword()'),
+    device+'<button class="btn" onclick="unlockWithPassword()">用主密码解锁</button>');
+  setTimeout(function(){ var e=document.getElementById('unlock_pw'); if(e)e.focus(); },50);
+}
+function unlockUi(){
+  document.body.classList.remove('locked');
+  setLockError('');
+  render();
+}
+async function setupVault(){
+  var p=val('setup_pw'), p2=val('setup_pw2');
+  if(p.length<8) return setLockError('主密码至少需要 8 位');
+  if(p!==p2) return setLockError('两次输入的密码不一致');
+  try{
+    var kdf=freshKdf();
+    vaultKey=await deriveVaultKey(p,b64ToBytes(kdf.salt),kdf.iterations);
+    vaultEnvelope={kdf:kdf};
+    S=assertState(pendingState||copyState(SEED));
+    await persistSnapshot(JSON.stringify(S),vaultKey,kdf);
+    localStorage.removeItem(KEY);
+    pendingState=null;
+    unlockUi();
+    toast('金库已加密');
+  }catch(e){ setLockError('加密失败：'+e.message); }
+}
+async function unlockWithPassword(){
+  var p=val('unlock_pw');
+  if(!p) return setLockError('请输入主密码');
+  setLockError('正在解密…');
+  try{
+    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var key=await keyForEnvelope(p,env);
+    var state=assertState(JSON.parse(await decryptTextWithKey(env,key)));
+    vaultEnvelope=env; vaultKey=key; S=Object.assign({},SEED,state);
+    unlockUi();
+  }catch(e){
+    vaultKey=null; S=null;
+    setLockError('密码不正确，或加密数据已损坏');
+  }
+}
+async function lockVault(){
+  if(!vaultStarted) return;
+  try{ await saveQueue; }catch(e){}
+  closeSheet();
+  vaultKey=null; S=null;
+  showUnlock();
+}
+
+async function initVault(){
+  vaultStarted=true;
+  document.body.classList.add('locked');
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden) hiddenAt=Date.now();
+    else if(hiddenAt && Date.now()-hiddenAt>5*60*1000) lockVault();
+  });
+  var raw=localStorage.getItem(ENC_KEY);
+  if(raw){
+    try{
+      vaultEnvelope=JSON.parse(raw);
+      if(vaultEnvelope.format!=='scrooge-vault-local') throw new Error('格式不符');
+      showUnlock();
+      return;
+    }catch(e){
+      lockUi('无法打开金库','本地加密数据格式异常。请从加密备份恢复。','','');
+      setLockError(e.message);
+      return;
+    }
+  }
+  try{
+    var plain=localStorage.getItem(KEY);
+    pendingState=plain ? assertState(Object.assign({},SEED,JSON.parse(plain))) : copyState(SEED);
+  }catch(e){ pendingState=copyState(SEED); }
+  showSetup();
+}
+
+async function encryptBackupPayload(state,password){
+  var kdf=freshKdf();
+  var key=await deriveVaultKey(password,b64ToBytes(kdf.salt),kdf.iterations);
+  return encryptTextWithKey(JSON.stringify(state),key,kdf,'scrooge-vault-backup');
+}
+async function decryptBackupPayload(envelope,password){
+  if(envelope.format!=='scrooge-vault-backup') throw new Error('不是金库加密备份');
+  var key=await keyForEnvelope(password,envelope);
+  return assertState(JSON.parse(await decryptTextWithKey(envelope,key)));
+}
+
+function openSecuritySettings(){
+  var device=hasDeviceUnlock();
+  openSheet('安全设置',
+    card('<h2 class="h2">本地加密</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '数据使用 PBKDF2‑SHA‑256 派生密钥，并用 AES‑256‑GCM 加密后保存。主密码不会存储。</p>','green')+
+    field({id:'old_pw',label:'当前主密码',type:'password'})+
+    field({id:'new_pw',label:'新主密码（至少 8 位）',type:'password'})+
+    field({id:'new_pw2',label:'再次输入新主密码',type:'password'})+
+    btn('更改主密码','changeMasterPassword()','ghost')+hr()+
+    card('<h2 class="h2">设备认证</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      (device?'已启用。打开金库时可调用 Face ID、Touch ID 或系统设备密码。':
+        '启用后可用 Face ID、Touch ID 或系统设备密码解锁；主密码仍是恢复手段。')+'</p>')+
+    (device?btn('停用设备解锁','disableDeviceUnlock()','danger'):
+      btn('启用 Face ID / 设备解锁','enableDeviceUnlock()')));
+}
+async function changeMasterPassword(){
+  var old=val('old_pw'), next=val('new_pw'), again=val('new_pw2');
+  if(next.length<8) return toast('新主密码至少需要 8 位');
+  if(next!==again) return toast('两次输入的新密码不一致');
+  try{
+    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var oldKey=await keyForEnvelope(old,env);
+    await decryptTextWithKey(env,oldKey);
+    var kdf=freshKdf();
+    var nextKey=await deriveVaultKey(next,b64ToBytes(kdf.salt),kdf.iterations);
+    await persistSnapshot(JSON.stringify(S),nextKey,kdf);
+    vaultKey=nextKey;
+    if(hasDeviceUnlock()) await storeDeviceKey(nextKey);
+    closeSheet(); toast('主密码已更改');
+  }catch(e){ toast('当前主密码不正确'); }
+}
+
+function openDeviceDb(){
+  return new Promise(function(resolve,reject){
+    var req=indexedDB.open('scrooge-vault-security',1);
+    req.onupgradeneeded=function(){ req.result.createObjectStore('keys'); };
+    req.onsuccess=function(){ resolve(req.result); };
+    req.onerror=function(){ reject(req.error); };
+  });
+}
+async function withDeviceStore(mode,fn){
+  var db=await openDeviceDb();
+  return new Promise(function(resolve,reject){
+    var tx=db.transaction('keys',mode), store=tx.objectStore('keys'), req=fn(store);
+    req.onsuccess=function(){ resolve(req.result); };
+    req.onerror=function(){ reject(req.error); };
+    tx.oncomplete=function(){ db.close(); };
+  });
+}
+function storeDeviceKey(key){ return withDeviceStore('readwrite',function(s){return s.put(key,'vault-key');}); }
+function readDeviceKey(){ return withDeviceStore('readonly',function(s){return s.get('vault-key');}); }
+function deleteDeviceKey(){ return withDeviceStore('readwrite',function(s){return s.delete('vault-key');}); }
+
+async function enableDeviceUnlock(){
+  if(!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials)
+    return toast('设备解锁需要 HTTPS 和最新版 Safari/Chrome');
+  try{
+    var userId=randomBytes(16);
+    var cred=await navigator.credentials.create({publicKey:{
+      challenge:randomBytes(32),
+      rp:{name:'金库'},
+      user:{id:userId,name:'vault-device',displayName:'金库设备'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',
+        residentKey:'discouraged'},
+      timeout:60000,attestation:'none'
+    }});
+    await storeDeviceKey(vaultKey);
+    localStorage.setItem(DEVICE_KEY,JSON.stringify({
+      credentialId:b64Url(new Uint8Array(cred.rawId)),userId:b64Url(userId)
+    }));
+    closeSheet(); toast('设备解锁已启用');
+  }catch(e){
+    toast(e.name==='NotAllowedError'?'设备认证已取消':'无法启用设备解锁：'+e.message);
+  }
+}
+async function unlockWithDevice(){
+  setLockError('正在请求设备认证…');
+  try{
+    var cfg=JSON.parse(localStorage.getItem(DEVICE_KEY));
+    var assertion=await navigator.credentials.get({publicKey:{
+      challenge:randomBytes(32),
+      allowCredentials:[{type:'public-key',id:b64UrlBytes(cfg.credentialId)}],
+      userVerification:'required',timeout:60000
+    }});
+    if(!assertion || b64Url(new Uint8Array(assertion.rawId))!==cfg.credentialId)
+      throw new Error('设备凭据不匹配');
+    var key=await readDeviceKey();
+    if(!key) throw new Error('设备密钥已丢失，请使用主密码');
+    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var state=assertState(JSON.parse(await decryptTextWithKey(env,key)));
+    vaultEnvelope=env; vaultKey=key; S=Object.assign({},SEED,state);
+    unlockUi();
+  }catch(e){
+    setLockError(e.name==='NotAllowedError'?'设备认证已取消':'设备解锁失败，请使用主密码');
+  }
+}
+async function disableDeviceUnlock(){
+  try{ await deleteDeviceKey(); }catch(e){}
+  localStorage.removeItem(DEVICE_KEY);
+  closeSheet(); toast('设备解锁已停用');
+}
+/* ================= 银行 CSV 导入 ================= */
+var bankImportRows=[];
+
+function parseDelimited(text,delimiter){
+  var rows=[], row=[], field='', quoted=false;
+  text=String(text||'').replace(/\r\n?/g,'\n');
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(quoted){
+      if(c==='"' && text[i+1]==='"'){ field+='"'; i++; }
+      else if(c==='"') quoted=false;
+      else field+=c;
+    }else if(c==='"') quoted=true;
+    else if(c===delimiter){ row.push(field); field=''; }
+    else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+    else field+=c;
+  }
+  if(field || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(function(r){return r.some(function(x){return String(x).trim();});});
+}
+function normHeader(s){
+  return String(s||'').replace(/^\uFEFF/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function findHeaderIndex(rows){
+  for(var i=0;i<Math.min(rows.length,40);i++){
+    var hs=rows[i].map(normHeader).join('|');
+    var hasDate=/(buchung|valuta|wertstellung|datum|date)/.test(hs);
+    var hasAmount=/(betrag|umsatz|amount|soll|haben)/.test(hs);
+    if(hasDate&&hasAmount) return i;
+  }
+  return -1;
+}
+function pickColumn(headers,patterns,excluded){
+  for(var i=0;i<headers.length;i++){
+    if(excluded&&excluded.indexOf(i)>=0) continue;
+    for(var j=0;j<patterns.length;j++) if(patterns[j].test(headers[i])) return i;
+  }
+  return -1;
+}
+function parseBankDate(v){
+  v=String(v||'').trim();
+  var m=v.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if(m) return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  return m?m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'):'';
+}
+function parseBankAmount(v){
+  var s=String(v==null?'':v).trim(), neg=/^\(.*\)$/.test(s)||/-\s*$/.test(s);
+  s=s.replace(/[()€$£¥\s']/g,'').replace(/-$/,'');
+  if(s[0]==='-'){ neg=true; s=s.slice(1); }
+  if(s[0]==='+') s=s.slice(1);
+  var comma=s.lastIndexOf(','), dot=s.lastIndexOf('.');
+  if(comma>=0&&dot>=0){
+    if(comma>dot) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
+  }else if(comma>=0) s=s.replace(/\./g,'').replace(',','.');
+  else if((s.match(/\./g)||[]).length>1) s=s.replace(/\./g,'');
+  var n=parseFloat(s);
+  return isFinite(n)?(neg?-Math.abs(n):n):NaN;
+}
+function uniqueText(values){
+  var seen={}, out=[];
+  values.forEach(function(v){
+    v=String(v||'').replace(/\s+/g,' ').trim();
+    var k=v.toLowerCase();
+    if(v&&!seen[k]){seen[k]=1;out.push(v);}
+  });
+  return out.join(' · ').slice(0,500);
+}
+function parseBankMatrix(rows){
+  var hi=findHeaderIndex(rows);
+  if(hi<0) throw new Error('找不到日期和金额列，请导出 CSV 格式的账单');
+  var headers=rows[hi].map(normHeader);
+  var dateCol=pickColumn(headers,[/^buchung(stag)?$/,/\bbuchung\b/,/^datum$/,/\bdate\b/,/wertstellung/,/valuta/]);
+  var amountCol=pickColumn(headers,[/^betrag$/,/\bbetrag\b/,/^umsatz$/,/\bamount\b/]);
+  var debitCol=pickColumn(headers,[/^soll$/,/\bdebit\b/]);
+  var creditCol=pickColumn(headers,[/^haben$/,/\bcredit\b/]);
+  if(dateCol<0 || (amountCol<0&&debitCol<0&&creditCol<0))
+    throw new Error('账单列无法识别');
+  var noteCols=[];
+  [
+    /auftraggeber/,/empfanger/,/begunstigter/,/zahlungspflichtiger/,
+    /verwendungszweck/,/buchungstext/,/beschreibung/,/description/,/^name$/
+  ].forEach(function(p){
+    var idx=pickColumn(headers,[p],noteCols);
+    if(idx>=0&&[dateCol,amountCol,debitCol,creditCol].indexOf(idx)<0) noteCols.push(idx);
+  });
+  var out=[];
+  rows.slice(hi+1).forEach(function(r){
+    var date=parseBankDate(r[dateCol]);
+    var amount=amountCol>=0?parseBankAmount(r[amountCol]):NaN;
+    if(!isFinite(amount)){
+      var debit=debitCol>=0?parseBankAmount(r[debitCol]):NaN;
+      var credit=creditCol>=0?parseBankAmount(r[creditCol]):NaN;
+      if(isFinite(credit)&&credit!==0) amount=Math.abs(credit);
+      else if(isFinite(debit)&&debit!==0) amount=-Math.abs(debit);
+    }
+    if(!date||!isFinite(amount)||amount===0) return;
+    var note=uniqueText(noteCols.map(function(i){return r[i];}));
+    out.push({date:date,amount:amount,note:note||'银行账单导入',selected:true});
+  });
+  if(!out.length) throw new Error('没有找到可导入的交易');
+  return out;
+}
+function parseBankCsvText(text){
+  var semi=parseDelimited(text,';'), comma=parseDelimited(text,',');
+  var a=findHeaderIndex(semi), b=findHeaderIndex(comma);
+  return parseBankMatrix(a>=0&&(b<0||semi[a].length>=comma[b].length)?semi:comma);
+}
+function decodeBankFile(buffer){
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(buffer);}
+  catch(e){return new TextDecoder('windows-1252').decode(buffer);}
+}
+function normalizedNote(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function importSignature(accountId,row){
+  return accountId+'|'+row.date+'|'+Number(row.amount).toFixed(2)+'|'+normalizedNote(row.note);
+}
+function shortHash(s){
+  var h=2166136261;
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16).padStart(8,'0');
+}
+function markBankDuplicates(){
+  var accountId=val('bank_acc'), seen={};
+  S.txs.forEach(function(t){
+    seen[importSignature(t.accountId,t)]=1;
+    if(t.importRef) seen[t.importRef]=1;
+  });
+  bankImportRows.forEach(function(r){
+    var wasDuplicate=r.duplicate;
+    r.signature=importSignature(accountId,r);
+    r.importRef='bank-'+shortHash(r.signature);
+    r.duplicate=!!(seen[r.signature]||seen[r.importRef]);
+    if(r.duplicate) r.selected=false;
+    else if(wasDuplicate) r.selected=true;
+    seen[r.signature]=1;
+  });
+}
+function openBankImport(){
+  bankImportRows=[];
+  var selected=accSel==='all'?(S.accounts.filter(function(a){return a.id==='ing';})[0]||S.accounts[0]).id:accSel;
+  openSheet('导入银行账单',
+    card('<h2 class="h2">ING / 银行 CSV</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '从网上银行导出 CSV 后在这里选择。账单只在当前设备解析，导入前可核对，重复记录会自动跳过。</p>','blue')+
+    field({id:'bank_acc',label:'导入到账户',type:'select',val:selected,
+      opts:S.accounts.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
+    fileField({id:'bank_file',label:'选择 CSV 账单',accept:'.csv,text/csv',
+      onchange:'readBankFile(this)',hint:'支持德式日期与小数格式，也兼容常见的逗号分隔 CSV。'})+
+    '<div id="bank_preview"><p class="empty">尚未选择文件</p></div>');
+  document.getElementById('bank_acc').addEventListener('change',renderBankPreview);
+}
+async function readBankFile(input){
+  var f=input.files&&input.files[0];
+  if(!f) return;
+  var box=document.getElementById('bank_preview');
+  box.innerHTML='<p class="empty">正在读取 '+esc(f.name)+'…</p>';
+  try{
+    bankImportRows=parseBankCsvText(decodeBankFile(await f.arrayBuffer()));
+    renderBankPreview();
+  }catch(e){
+    bankImportRows=[];
+    box.innerHTML=card('<p class="c-red" style="margin:0">'+esc(e.message)+'</p>','red');
+  }
+}
+function renderBankPreview(){
+  var box=document.getElementById('bank_preview');
+  if(!box||!bankImportRows.length) return;
+  markBankDuplicates();
+  var fresh=bankImportRows.filter(function(r){return !r.duplicate;}).length;
+  var dup=bankImportRows.length-fresh;
+  var account=S.accounts.filter(function(a){return a.id===val('bank_acc');})[0];
+  var rows=bankImportRows.slice(0,100).map(function(r,i){
+    return '<label class="import-row"><input type="checkbox" '+(r.selected?'checked ':'')+
+      (r.duplicate?'disabled ':'')+'onchange="toggleBankRow('+i+',this.checked)">'+
+      '<span class="dim">'+fmtDate(r.date)+'</span><span class="note">'+esc(r.note)+
+      (r.duplicate?'<br><span class="c-amber">重复，已跳过</span>':'')+'</span>'+
+      '<b class="tnum '+(r.amount<0?'c-red':'c-green')+'">'+
+      money(r.amount,account?account.currency:'EUR')+'</b></label>';
+  }).join('');
+  box.innerHTML=card(h2('导入预览',badge(fresh+' 条可导入','green'))+
+    '<p class="dim" style="margin:0">共识别 '+bankImportRows.length+' 条'+
+    (dup?'，其中 '+dup+' 条重复':'')+'。取消勾选可排除记录。</p>'+
+    '<div class="import-list">'+rows+'</div>'+
+    (bankImportRows.length>100?'<p class="dim">这里只预览前 100 条，其余记录仍会按默认选择导入。</p>':'')+
+    btn('导入已选记录','importBankRows()'));
+}
+function toggleBankRow(i,checked){ if(bankImportRows[i]&&!bankImportRows[i].duplicate) bankImportRows[i].selected=checked; }
+async function importBankRows(){
+  var accountId=val('bank_acc');
+  markBankDuplicates();
+  var chosen=bankImportRows.filter(function(r){return r.selected&&!r.duplicate;});
+  if(!chosen.length) return toast('没有可导入的记录');
+  chosen.forEach(function(r){
+    S.txs.push({id:uid(),accountId:accountId,date:r.date,amount:r.amount,note:r.note,importRef:r.importRef});
+  });
+  await save();
+  closeSheet(); render(); toast('已导入 '+chosen.length+' 条账单记录');
+}
+/* ================= 表计照片 OCR ================= */
+var tesseractLoader=null, ocrPreviewUrl='';
+
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(tesseractLoader) return tesseractLoader;
+  tesseractLoader=new Promise(function(resolve,reject){
+    var script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js';
+    script.onload=function(){ resolve(window.Tesseract); };
+    script.onerror=function(){ reject(new Error('OCR 组件下载失败，请检查网络')); };
+    document.head.appendChild(script);
+  });
+  return tesseractLoader;
+}
+async function prepareMeterImage(file){
+  var source, cleanup=function(){};
+  if(window.createImageBitmap) source=await createImageBitmap(file);
+  else{
+    source=await new Promise(function(resolve,reject){
+      var img=new Image(), url=URL.createObjectURL(file);
+      cleanup=function(){URL.revokeObjectURL(url);};
+      img.onload=function(){resolve(img);}; img.onerror=function(){reject(new Error('无法读取照片'));};
+      img.src=url;
+    });
+  }
+  var max=1800, scale=Math.min(1,max/Math.max(source.width,source.height));
+  var canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(source.width*scale));
+  canvas.height=Math.max(1,Math.round(source.height*scale));
+  var ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(source,0,0,canvas.width,canvas.height);
+  if(source.close) source.close();
+  cleanup();
+  var image=ctx.getImageData(0,0,canvas.width,canvas.height), d=image.data;
+  for(var i=0;i<d.length;i+=4){
+    var gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+    gray=Math.max(0,Math.min(255,(gray-128)*1.45+128));
+    d[i]=d[i+1]=d[i+2]=gray;
+  }
+  ctx.putImageData(image,0,0);
+  return new Promise(function(resolve,reject){
+    canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('无法处理照片'));},'image/jpeg',.9);
+  });
+}
+function meterNumber(token){
+  var s=String(token||'').replace(/[Oo]/g,'0').replace(/[^\d.,]/g,'');
+  if(!s) return NaN;
+  var separators=(s.match(/[.,]/g)||[]).length;
+  if(separators){
+    var last=Math.max(s.lastIndexOf('.'),s.lastIndexOf(',')), tail=s.length-last-1;
+    if(separators===1&&tail>0&&tail<=2)
+      s=s.slice(0,last).replace(/[.,]/g,'')+'.'+s.slice(last+1);
+    else s=s.replace(/[.,]/g,'');
+  }
+  var n=parseFloat(s);
+  return isFinite(n)?n:NaN;
+}
+function extractMeterCandidates(text,last){
+  var matches=String(text||'').replace(/[Oo]/g,'0').match(/\d[\d\s.,]{2,}\d/g)||[];
+  var seen={}, out=[];
+  matches.forEach(function(token){
+    var n=meterNumber(token), digits=String(token).replace(/\D/g,'').length;
+    if(!isFinite(n)||n<0||digits<4||digits>10) return;
+    var key=String(n);
+    if(seen[key]) return;
+    seen[key]=1;
+    var score=digits;
+    if(isFinite(last)){
+      if(n>=last) score+=50;
+      var delta=Math.abs(n-last);
+      if(delta<10000) score+=20;
+      if(delta<2000) score+=20;
+      score-=Math.min(20,delta/5000);
+    }
+    out.push({value:n,raw:token.trim(),score:score});
+  });
+  return out.sort(function(a,b){return b.score-a.score;});
+}
+function updateOcrProgress(message,progress){
+  var text=document.getElementById('ocr_status'), bar=document.getElementById('ocr_bar');
+  if(text) text.textContent=message;
+  if(bar) bar.style.width=Math.round((progress||0)*100)+'%';
+}
+function applyOcrCandidate(value){
+  var input=document.getElementById('rd_val');
+  if(input){ input.value=value; previewReading(); }
+}
+async function scanMeterPhoto(input){
+  var file=input.files&&input.files[0];
+  if(!file) return;
+  var result=document.getElementById('ocr_result');
+  if(ocrPreviewUrl) URL.revokeObjectURL(ocrPreviewUrl);
+  ocrPreviewUrl=URL.createObjectURL(file);
+  result.innerHTML='<img class="ocr-preview" src="'+ocrPreviewUrl+'" alt="待识别的表计照片">'+
+    '<div class="progress"><span id="ocr_bar"></span></div>'+
+    '<p class="dim" id="ocr_status" style="margin:0">正在准备照片…</p>';
+  try{
+    var T=await loadTesseract();
+    var prepared=await prepareMeterImage(file);
+    var worker=await T.createWorker('eng',1,{logger:function(m){
+      var labels={loading_tesseract_core:'加载识别引擎',initializing_tesseract:'初始化识别引擎',
+        loading_language_traineddata:'加载数字模型',initializing_api:'准备识别',
+        recognizing_text:'识别表盘数字'};
+      updateOcrProgress(labels[m.status]||'正在识别',m.progress||0);
+    }});
+    await worker.setParameters({
+      tessedit_char_whitelist:'0123456789., ',
+      tessedit_pageseg_mode:T.PSM&&T.PSM.SPARSE_TEXT?T.PSM.SPARSE_TEXT:'11'
+    });
+    var recognized=await worker.recognize(prepared);
+    await worker.terminate();
+    var m=pickMeter(window._addKind);
+    var rs=meterReadings(S.readings,m.id), last=rs.length?rs[rs.length-1].value:NaN;
+    var candidates=extractMeterCandidates(recognized.data.text,last);
+    if(!candidates.length){
+      updateOcrProgress('没有可靠识别到数字，请重拍或手动输入',1);
+      return;
+    }
+    applyOcrCandidate(candidates[0].value);
+    document.getElementById('ocr_status').textContent='已填入最可能的读数，请核对后保存';
+    document.getElementById('ocr_bar').style.width='100%';
+    result.insertAdjacentHTML('beforeend',
+      '<div class="chips" style="margin:0;padding:2px 0">'+candidates.slice(0,6).map(function(c){
+        return '<button class="chip" onclick="applyOcrCandidate('+c.value+')">'+n2(c.value)+'</button>';
+      }).join('')+'</div>');
+  }catch(e){
+    updateOcrProgress('识别失败：'+e.message,0);
+  }
+}
 /* ================= 电费 / 燃气 ================= */
 function pickMeter(kind){
   var ms=S.meters.filter(function(m){return m.kind===kind;});
@@ -608,15 +1279,18 @@ function addReading(){
   var m=pickMeter(kind);
   var rs=meterReadings(S.readings,m.id), last=rs[rs.length-1];
   var unit=m.unit==='m3'?'m³':'kWh';
+  window._addKind=kind;
   openSheet('录入 · '+m.label,
     (last?card('<span class="dim">上次读数</span><span class="h2 tnum">'+n2(last.value)+' '+unit+
       ' · '+fmtDate(last.date)+'</span>','blue'):'')+
+    fileField({id:'rd_photo',label:'拍照识别表盘',accept:'image/*',capture:'environment',
+      onchange:'scanMeterPhoto(this)',hint:'照片只在当前设备识别，不会上传。首次使用需要下载 OCR 组件。'})+
+    '<div id="ocr_result"></div>'+
     field({id:'rd_date',label:'日期',type:'date',val:today()})+
     field({id:'rd_val',label:'表读数 (Brutto, '+unit+')',type:'number',step:'any',
       inputmode:'decimal',ph:last?('≥ '+n2(last.value)):'例如 12345',oninput:'previewReading()'})+
     field({id:'rd_note',label:'备注（可选）',ph:'例如 年度 Ablesung'})+
     btn('保存','saveReading()'));
-  window._addKind=kind;
 }
 function previewReading(){
   var m=pickMeter(window._addKind);
@@ -719,7 +1393,8 @@ function viewSave(){
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
   out+=card(body);
-  out+=btn('＋ 记一笔','addTx()');
+  out+='<div class="btnrow">'+btn('＋ 记一笔','addTx()')+
+    btn('导入银行账单','openBankImport()','ghost')+'</div>';
   return out;
 }
 function addTx(){
@@ -904,7 +1579,23 @@ function exportIcs(){
     '已生成 '+withEnd.length+' 份合同的日历事件');
 }
 function exportBackup(){
-  saveFile('金库备份-'+today()+'.json',JSON.stringify(S,null,2),'application/json','备份已生成');
+  openSheet('导出加密备份',
+    card('<h2 class="h2">单独设置备份密码</h2><p class="dim" style="margin:0;line-height:1.6">'+
+      '导出的文件使用 AES‑256‑GCM 加密。建议使用与主密码不同的密码，并保存在密码管理器里。</p>','green')+
+    field({id:'backup_pw',label:'备份密码（至少 8 位）',type:'password'})+
+    field({id:'backup_pw2',label:'再次输入备份密码',type:'password'})+
+    btn('生成加密备份','makeEncryptedBackup()'));
+}
+async function makeEncryptedBackup(){
+  var p=val('backup_pw'), p2=val('backup_pw2');
+  if(p.length<8) return toast('备份密码至少需要 8 位');
+  if(p!==p2) return toast('两次输入的备份密码不一致');
+  try{
+    var env=await encryptBackupPayload(S,p);
+    closeSheet();
+    saveFile('金库加密备份-'+today()+'.vault.json',JSON.stringify(env,null,2),
+      'application/json','加密备份已生成');
+  }catch(e){ toast('备份失败：'+e.message); }
 }
 
 /* ================= 设置 ================= */
@@ -912,11 +1603,16 @@ function openSettings(){
   openSheet('设置与备份',
     card('<h2 class="h2">数据</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
-      S.contracts.length+' 份合同。<br>所有数据只存在这台设备的浏览器里，不会上传到任何服务器。'+
+      S.contracts.length+' 份合同。<br>数据已加密保存在这台设备的浏览器里，不会上传到任何服务器。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
-    btn('⬇︎ 导出 JSON 备份','exportBackup()')+
-    field({id:'imp',label:'从备份恢复（粘贴 JSON）',type:'textarea',ph:'{"version":1,...}'})+
+    btn('导出加密备份','exportBackup()')+
+    fileField({id:'imp_file',label:'选择备份文件',accept:'.json,.vault.json,application/json',
+      onchange:'readBackupFile(this)',hint:'支持新的加密备份，也兼容旧版明文 JSON。文件只在本机读取。'})+
+    field({id:'imp',label:'备份内容',type:'textarea',ph:'选择文件后会自动读取，也可以粘贴旧版 JSON'})+
+    field({id:'imp_pw',label:'备份密码（旧版明文备份留空）',type:'password'})+
     btn('覆盖恢复','doImport()','ghost')+
+    hr()+
+    btn('安全设置 / Face ID','openSecuritySettings()','ghost')+
     hr()+
     card('<h2 class="h2">放到 iPhone 主屏幕上托管用</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '下面这个按钮会生成一份<b>不含任何数据</b>的空壳 HTML。'+
@@ -926,13 +1622,27 @@ function openSettings(){
     hr()+
     btn('重置为 Excel 初始数据','doReset()','danger'));
 }
-function doImport(){
+async function readBackupFile(input){
+  var f=input.files&&input.files[0];
+  if(!f) return;
+  try{
+    document.getElementById('imp').value=await f.text();
+    toast('已读取 '+f.name);
+  }catch(e){ toast('无法读取文件：'+e.message); }
+}
+async function doImport(){
   var t=val('imp');
   if(!t) return toast('请先粘贴备份内容');
   try{
     var p=JSON.parse(t);
-    if(!p||!Array.isArray(p.accounts)) throw new Error('格式不符');
-    S=Object.assign({},SEED,p); save(); closeSheet(); render(); toast('已恢复');
+    if(p&&p.format==='scrooge-vault-backup'){
+      var password=val('imp_pw');
+      if(!password) return toast('请输入备份密码');
+      p=await decryptBackupPayload(p,password);
+    }
+    assertState(p);
+    S=Object.assign({},SEED,p);
+    await save(); closeSheet(); render(); toast('备份已恢复并加密保存');
   }catch(e){ toast('恢复失败：'+e.message); }
 }
 function doReset(){
@@ -967,10 +1677,10 @@ function render(){
   else m.innerHTML=viewCtr();
   renderNav();
 }
-load();
-save();   // 首次打开就落盘，之后的每次改动都会立即保存
-render();
+window.vaultReady=initVault().catch(function(e){
+  lockUi('无法启动金库','浏览器初始化失败。','','');
+  setLockError(e.message);
+});
 </script>
-
-
-</body></html>
+</body>
+</html>
