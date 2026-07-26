@@ -326,7 +326,7 @@ function balanceSeries(txs,ids){
 function monthlyNet(txs,ids){
   var m={};
   txs.forEach(function(t){
-    if(ids.indexOf(t.accountId)<0) return;
+    if(ids.indexOf(t.accountId)<0||t.valuationOnly) return;
     var k=t.date.slice(0,7); m[k]=(m[k]||0)+t.amount;
   });
   return Object.keys(m).sort().map(function(k){return {date:k,value:m[k]};});
@@ -1509,8 +1509,9 @@ function viewSave(){
   var yr=today().slice(0,4);
   var rel = accSel==='all' ? S.txs.filter(function(t){return eurIds.indexOf(t.accountId)>=0;})
                            : S.txs.filter(function(t){return t.accountId===accSel;});
-  var din=rel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
-  var dout=rel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
+  var cashRel=rel.filter(function(t){return !t.valuationOnly;});
+  var din=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
+  var dout=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
   out+=card(h2('月度净流入')+barChart(mn,n0,function(v){return v<0?'var(--red)':'var(--green)';},3)+hr()+
     '<div class="stats">'+stat(yr+' 存入',n0(din),'','green')+
     stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
@@ -1521,9 +1522,10 @@ function viewSave(){
   var body=h2('流水',badge(list.length+' 条','dim'));
   body+=shown.map(function(t){
     var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
-    return row({label:t.note||'（无备注）',sub:fmtDate(t.date)+' · '+a.name,
-      value:money(t.amount,a.currency),tone:t.amount<0?'red':'green',
-      right:'<button class="btn sm ghost" onclick="delTx(\''+t.id+'\')">删</button>'});
+    return row({label:t.note||'（无备注）',
+      sub:fmtDate(t.date)+' · '+a.name+(t.valuationOnly?' · 市值调整':''),
+      value:money(t.amount,a.currency),tone:t.valuationOnly?'blue':(t.amount<0?'red':'green'),
+      right:t.valuationOnly?'':'<button class="btn sm ghost" onclick="delTx(\''+t.id+'\')">删</button>'});
   }).join('');
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
