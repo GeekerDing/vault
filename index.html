@@ -969,9 +969,13 @@ function normHeader(s){
 }
 function findHeaderIndex(rows){
   for(var i=0;i<Math.min(rows.length,40);i++){
-    var hs=rows[i].map(normHeader).join('|');
-    var hasDate=/(buchung|valuta|wertstellung|datum|date)/.test(hs);
-    var hasAmount=/(betrag|umsatz|amount|soll|haben)/.test(hs);
+    var hs=rows[i].map(normHeader);
+    var hasDate=hs.some(function(h){
+      return /^(buchung(?:stag)?|valuta|wertstellung(?:sdatum)?|datum|date)(?:\s|$)/.test(h);
+    });
+    var hasAmount=hs.some(function(h){
+      return /^(betrag|umsatz|amount|soll|haben)(?:\s|$)/.test(h);
+    });
     if(hasDate&&hasAmount) return i;
   }
   return -1;
