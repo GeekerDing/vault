@@ -137,7 +137,7 @@ nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;
 <div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">×</button></div><div class="body" id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
 <script>
-var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],accounts:[{id:"ing",name:"ING 储蓄",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -729,7 +729,7 @@ function addTx(){
     field({id:'tx_date',label:'日期',type:'date',val:today()})+
     field({id:'tx_amt',label:'金额（存入为正，支出为负）',type:'number',step:'any',
       inputmode:'decimal',ph:'1000 或 -500'})+
-    field({id:'tx_note',label:'备注',ph:'例如 7月存 / 还信用卡'})+
+    field({id:'tx_note',label:'备注',ph:'例如 月度存款 / 信用卡还款'})+
     '<div class="btnrow">'+btn('+1000',"setAmt(1000)",'ghost')+btn('+2000',"setAmt(2000)",'ghost')+
     btn('+500',"setAmt(500)",'ghost')+'</div>'+
     btn('保存','saveTx()'));
@@ -943,7 +943,7 @@ function doReset(){
 function exportShell(){
   var html=document.documentElement.outerHTML;
   var empty='var SEED={version:1,fxRmbPerEur:8,properties:[],meters:[],readings:[],'+
-    'accounts:[{id:"ing",name:"ING 储蓄",currency:"EUR",note:""}],txs:[],contracts:[],'+
+    'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],'+
     'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
     'festkosten:[],sparZiel:0}};';
   var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
