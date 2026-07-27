@@ -430,7 +430,8 @@ function buildIcs(contracts){
     if(!c.endDate) return;
     var st=contractStatus(c);
     var mny=c.premium?(' · '+c.premium.toFixed(2)+' € / '+c.cycle):'';
-    var desc=[c.provider?('服务商：'+c.provider):'', c.tariff?('Tarif：'+c.tariff):'',
+    var desc=[c.provider?('服务商：'+c.provider):'', c.vehiclePlate?('车牌号：'+c.vehiclePlate):'',
+      c.tariff?('Tarif：'+c.tariff):'',
       c.premium?('保费：'+c.premium.toFixed(2)+' € ('+CYCLE_ZH[c.cycle]+')'):'',
       '合同期：'+fmtDate(c.startDate)+' – '+fmtDate(c.endDate),
       '退保通知期：'+c.noticeDays+' 天',
@@ -502,7 +503,7 @@ function field(o){
   var input = t==='textarea'
     ? '<textarea id="'+o.id+'" rows="3" placeholder="'+esc(o.ph||'')+'">'+esc(o.val||'')+'</textarea>'
     : t==='select'
-      ? '<select id="'+o.id+'">'+o.opts.map(function(op){
+      ? '<select id="'+o.id+'"'+(o.onchange?' onchange="'+o.onchange+'"':'')+'>'+o.opts.map(function(op){
           return '<option value="'+esc(op.k)+'"'+(op.k===o.val?' selected':'')+'>'+esc(op.label)+'</option>';}).join('')+'</select>'
       : '<input id="'+o.id+'" type="'+t+'" value="'+esc(o.val==null?'':o.val)+'"'+
         (o.step?' step="'+o.step+'"':'')+(o.inputmode?' inputmode="'+o.inputmode+'"':'')+
@@ -518,7 +519,22 @@ function fileField(o){
     (o.hint?'<span class="dim">'+o.hint+'</span>':'');
 }
 function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
-function fnum(id){ var v=val(id).replace(',','.'); var n=parseFloat(v); return isFinite(n)?n:NaN; }
+function parseDecimalInput(v){
+  var s=String(v==null?'':v).trim().replace(/[\s€'’]/g,'');
+  var comma=s.lastIndexOf(','), dot=s.lastIndexOf('.');
+  if(comma>=0&&dot>=0){
+    if(comma>dot) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
+  }else if(comma>=0){
+    s=s.replace(/\./g,'').replace(',','.');
+  }else if((s.match(/\./g)||[]).length>1){
+    var last=s.lastIndexOf('.');
+    s=s.slice(0,last).replace(/\./g,'')+s.slice(last);
+  }
+  var n=Number(s);
+  return s!==''&&isFinite(n)?n:NaN;
+}
+function fnum(id){ return parseDecimalInput(val(id)); }
 function icon(name,fill){
   return '<i class="'+(fill?'ph-fill':'ph')+' ph-'+name+'" aria-hidden="true"></i>';
 }
@@ -2078,6 +2094,8 @@ function viewMeter(kind){
     var p=S.properties.filter(function(q){return q.id===x.propertyId;})[0];
     return {k:x.id,label:p?p.name:x.label};
   }),m.id,'setMeter');
+  out+=btn(kind==='power'?'拍照 / 录入电表':'拍照 / 录入燃气表',
+    'addReading()','meter-entry',kind==='power'?'camera':'flame');
 
   var head='<div class="between"><div><span class="dim">最新读数 · '+
     (last?fmtDate(last.date):'—')+'</span><br><span class="big tnum c-gold">'+
@@ -2136,7 +2154,6 @@ function viewMeter(kind){
   if(rs.length) body+=row({label:fmtDate(rs[0].date)+'   '+n2(rs[0].value)+' '+unit,sub:'基准读数',
     right:'<button class="btn sm ghost" onclick="delReading(\''+rs[0].id+'\')">删</button>'});
   out+=card(body);
-  out+=btn('录入新读数','addReading()',null,'plus');
   return out;
 }
 
@@ -2308,6 +2325,28 @@ function saveFx(){
 /* ================= 合同与保险 ================= */
 var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','意外险','旅行险','税费','能源','通讯','其他'];
 var CYCLES=['jährlich','halbjährlich','quartal','monatlich','einmalig'];
+var CONTRACT_TYPES=[
+  {id:'kfz',name:'Kfz-Versicherung',label:'车险 · Kfz-Versicherung',category:'车险'},
+  {id:'building',name:'Wohngebäudeversicherung',label:'房屋险 · Wohngebäudeversicherung',category:'房屋险'},
+  {id:'household',name:'Hausratversicherung',label:'家财险 · Hausratversicherung',category:'家财险'},
+  {id:'liability',name:'Haftpflichtversicherung',label:'责任险 · Haftpflichtversicherung',category:'责任险'},
+  {id:'glass',name:'Glasversicherung',label:'玻璃险 · Glasversicherung',category:'房屋险'},
+  {id:'legal',name:'Rechtsschutzversicherung',label:'法律险 · Rechtsschutzversicherung',category:'法律险'},
+  {id:'health',name:'住院险 / Krankenhaus-Zusatz',label:'住院附加险 · Krankenhaus-Zusatz',category:'健康险'},
+  {id:'accident',name:'Unfallversicherung',label:'意外险 · Unfallversicherung',category:'意外险'},
+  {id:'travel',name:'Reiseversicherung',label:'旅行险 · Reiseversicherung',category:'旅行险'}
+];
+function contractTypeById(id){
+  return CONTRACT_TYPES.filter(function(t){return t.id===id;})[0]||null;
+}
+function contractTypeFor(c){
+  return CONTRACT_TYPES.filter(function(t){
+    return c.category===t.category&&c.name===t.name;
+  })[0]||null;
+}
+function normalizeVehiclePlate(s){
+  return String(s||'').toUpperCase().replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();
+}
 function setCat(k){ catSel=k; render(); }
 
 function viewCtr(){
@@ -2321,11 +2360,13 @@ function viewCtr(){
   var insY=S.contracts.filter(function(c){return INSURANCE.indexOf(c.category)>=0;})
     .reduce(function(s,c){return s+contractStatus(c).yearlyCost;},0);
   var att=list.filter(function(x){return ['expired','notice','soon'].indexOf(x.st.urgency)>=0;});
-  var miss=S.contracts.filter(function(c){return !c.premium||!c.endDate;});
+  var miss=S.contracts.filter(function(c){
+    return !c.premium||!c.endDate||(c.category==='车险'&&!c.vehiclePlate);
+  });
   var out='';
 
-  out+=card('<div class="stats">'+stat('年度保险支出',n0(insY),'€','gold')+
-    stat('所有合同年化',n0(yearly),'€',null,S.contracts.length+' 份合同')+
+  out+=card('<div class="stats">'+stat('年度保险支出',n2(insY),'€','gold')+
+    stat('所有合同年化',n2(yearly),'€',null,S.contracts.length+' 份合同')+
     stat('需要关注',String(att.length),'份',att.length?'red':'green')+'</div>','gold');
 
   if(att.length) out+=card(h2(icon('bell')+' 需要行动')+att.map(function(x){
@@ -2346,7 +2387,9 @@ function viewCtr(){
     var prop=S.properties.filter(function(p){return p.id===c.propertyId;})[0];
     var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(c.name)+'</h3>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+badge(c.category,'dim')+
-      (prop?badge(prop.name,'blue'):'')+(c.tariff?badge(c.tariff,'dim'):'')+'</div></div>'+
+      (prop?badge(prop.name,'blue'):'')+
+      (c.category==='车险'?badge(c.vehiclePlate||'车牌待补',c.vehiclePlate?'blue':'amber'):'')+
+      (c.tariff?badge(c.tariff,'dim'):'')+'</div></div>'+
       badge(st.label,URG_TONE[st.urgency])+'</div>'+hr()+
       row({label:fmtDate(c.startDate)+' → '+(c.endDate?fmtDate(c.endDate):'无固定到期'),
         sub:CYCLE_ZH[c.cycle]+(c.noticeDays>0?(' · 退保通知期 '+c.noticeDays+' 天'):'')+
@@ -2361,29 +2404,45 @@ function viewCtr(){
 
   if(miss.length) out+=card(h2('资料待补齐')+miss.map(function(c){
     return row({label:c.name,
-      sub:[!c.premium?'缺保费':'',!c.endDate?'缺到期日':''].filter(Boolean).join(' · '),
+      sub:[!c.premium?'缺保费':'',!c.endDate?'缺到期日':'',
+        c.category==='车险'&&!c.vehiclePlate?'缺车牌号':''].filter(Boolean).join(' · '),
       onclick:"editCtr('"+c.id+"')"});
   }).join(''),'amber');
 
-  out+=btn('新增合同','editCtr()',null,'plus');
+  out+='<div class="btnrow">'+btn('新增车险',"editCtr(null,'kfz')",'ghost','car')+
+    btn('新增合同','editCtr()',null,'plus')+'</div>';
   return out;
 }
 
-function editCtr(id){
+function editCtr(id,presetType){
   var c = id ? S.contracts.filter(function(x){return x.id===id;})[0]
     : {id:'',name:'',category:'其他',propertyId:null,provider:'',tariff:'',premium:null,
-       cycle:'jährlich',startDate:today(),endDate:null,autoRenew:true,noticeDays:30,notes:''};
+       vehiclePlate:'',cycle:'jährlich',startDate:today(),endDate:null,
+       autoRenew:true,noticeDays:30,notes:''};
+  var known=id?contractTypeFor(c):contractTypeById(presetType);
+  if(known&&!id){ c.name=known.name; c.category=known.category; }
+  var typeId=known?known.id:'custom';
   openSheet(id?'编辑合同':'新增合同',
-    field({id:'c_name',label:'名称',val:c.name})+
+    field({id:'c_name_type',label:'保险 / 合同名称',type:'select',val:typeId,
+      onchange:'contractNameChanged()',opts:CONTRACT_TYPES.map(function(t){
+        return {k:t.id,label:t.label};
+      }).concat([{k:'custom',label:'其他合同 · 手动填写'}])})+
+    '<div id="c_name_custom_wrap" style="'+(typeId==='custom'?'':'display:none')+'">'+
+      field({id:'c_name',label:'自定义名称',val:typeId==='custom'?c.name:''})+'</div>'+
     field({id:'c_cat',label:'类型',type:'select',val:c.category,
+      onchange:'contractCategoryChanged()',
       opts:CATS.map(function(k){return {k:k,label:k};})})+
+    '<div id="c_vehicle_wrap" style="'+(c.category==='车险'?'':'display:none')+'">'+
+      field({id:'c_vehicle',label:'车牌号（每辆车一份合同）',val:c.vehiclePlate||'',
+        ph:'例如 F-AB 1234'})+'</div>'+
     field({id:'c_prop',label:'关联房产',type:'select',val:c.propertyId||'none',
       opts:[{k:'none',label:'无 / 通用'}].concat(S.properties.map(function(p){
         return {k:p.id,label:p.name};}))})+
     field({id:'c_prov',label:'保险公司 / 服务商',val:c.provider})+
     field({id:'c_tar',label:'Tarif / Stufe',val:c.tariff})+
-    field({id:'c_prem',label:'保费 (€)',type:'number',step:'any',inputmode:'decimal',
-      val:c.premium==null?'':c.premium})+
+    field({id:'c_prem',label:'保费 (€)',type:'text',inputmode:'decimal',
+      val:c.premium==null?'':n2(c.premium),ph:'例如 1101,19',
+      hint:'支持小数逗号或小数点，保存到分。'})+
     field({id:'c_cyc',label:'缴费周期',type:'select',val:c.cycle,
       opts:CYCLES.map(function(k){return {k:k,label:CYCLE_ZH[k]};})})+
     field({id:'c_start',label:'生效日',type:'date',val:c.startDate})+
@@ -2398,17 +2457,35 @@ function editCtr(id){
     btn('保存',"saveCtr('"+(c.id||'')+"')")+
     (id?btn('删除此合同',"delCtr('"+c.id+"')",'danger'):''));
 }
+function contractNameChanged(){
+  var type=contractTypeById(val('c_name_type'));
+  var custom=document.getElementById('c_name_custom_wrap');
+  if(custom) custom.style.display=type?'none':'';
+  if(type){
+    var cat=document.getElementById('c_cat');
+    if(cat) cat.value=type.category;
+  }
+  contractCategoryChanged();
+}
+function contractCategoryChanged(){
+  var wrap=document.getElementById('c_vehicle_wrap');
+  if(wrap) wrap.style.display=val('c_cat')==='车险'?'':'none';
+}
 function saveCtr(id){
-  var name=val('c_name');
+  var type=contractTypeById(val('c_name_type'));
+  var name=type?type.name:val('c_name');
   if(!name) return toast('请填写合同名称');
   var st=val('c_start'), en=val('c_end');
   if(!isDate(st)) return toast('请选择生效日');
   if(en && !isDate(en)) return toast('到期日格式不对');
   var prem=fnum('c_prem'), nd=parseInt(val('c_notice'),10);
   var prop=val('c_prop');
-  var obj={id:id||uid(),name:name,category:val('c_cat'),
+  var category=val('c_cat');
+  var obj={id:id||uid(),name:name,category:category,
     propertyId:prop==='none'?null:prop, provider:val('c_prov'), tariff:val('c_tar'),
-    premium:isFinite(prem)?prem:null, cycle:val('c_cyc'), startDate:st, endDate:en||null,
+    vehiclePlate:category==='车险'?normalizeVehiclePlate(val('c_vehicle')):'',
+    premium:isFinite(prem)?Math.round((prem+Number.EPSILON)*100)/100:null,
+    cycle:val('c_cyc'), startDate:st, endDate:en||null,
     autoRenew:document.getElementById('c_auto').checked,
     noticeDays:isFinite(nd)?nd:0, notes:val('c_notes')};
   var i=-1;
