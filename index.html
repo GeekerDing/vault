@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://data-api.ecb.europa.eu; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; object-src 'none'">
 <title>Scrooge's Safe</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -293,7 +293,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 <div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">&times;</button></div><div class="body" id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
 <script>
-var SEED={version:2,fxRmbPerEur:8,appliedPatches:{},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -464,7 +464,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='ce7daec7c42c';
+var APP_BUILD='1fb023a6bad9';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -2301,6 +2301,18 @@ function saveTarif(id){
 }
 
 /* ================= 储蓄 ================= */
+var ECB_FX_URL='https://data-api.ecb.europa.eu/service/data/EXR/'+
+  'D.CNY.EUR.SP00.A?lastNObservations=1&format=csvdata';
+var officialFxQuote=null, officialFxLoading=false, officialFxError='';
+
+function fxText(value){
+  return Number(value).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4});
+}
+function fxSourceText(){
+  return S.fxRateSource==='ECB'&&S.fxRateDate
+    ? '当前采用 ECB 参考汇率 · '+fmtDate(S.fxRateDate)
+    : '当前采用手动汇率';
+}
 function setAcc(k){ accSel=k; showAllTx=false; render(); }
 function toggleAllTx(){ showAllTx=!showAllTx; render(); }
 
@@ -2313,9 +2325,10 @@ function viewSave(){
 
   out+=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
     '<button class="badge b-gold" onclick="editFx()" aria-label="编辑汇率" title="编辑汇率">'+
-      '汇率 1€ = '+n2(fx)+' ¥ '+icon('pencil-simple')+'</button></div>'+
+      '汇率 1€ = '+fxText(fx)+' ¥ '+icon('pencil-simple')+'</button></div>'+
     '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
-    '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>','gold');
+    '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>'+
+    '<span class="dim">'+esc(fxSourceText())+'</span>','gold');
 
   out+=card(h2('账户余额')+S.accounts.map(function(a){
     var b=accountBalance(S.txs,a.id);
@@ -2387,16 +2400,73 @@ function delTx(id){
   S.txs=S.txs.filter(function(x){return x.id!==id;});
   save(); render(); toast('已删除');
 }
+function officialFxMarkup(){
+  if(officialFxLoading)
+    return h2('欧洲央行参考汇率',badge('查询中','dim'))+
+      '<p class="dim" style="margin:0">正在获取最新工作日参考价…</p>';
+  if(officialFxQuote)
+    return h2('欧洲央行参考汇率',badge(fmtDate(officialFxQuote.date),'blue'))+
+      '<div class="between"><span class="big tnum c-blue">'+fxText(officialFxQuote.rate)+'</span>'+
+        '<span class="dim">人民币 / 欧元</span></div>'+
+      '<p class="dim" style="margin:0">ECB 每个工作日约 16:00（欧洲中部时间）更新，仅供参考。</p>'+
+      btn('采用此官方汇率','useOfficialFx()',null,'check');
+  return h2('欧洲央行参考汇率',badge('暂不可用','amber'))+
+    '<p class="dim" style="margin:0">'+esc(officialFxError||'联网后可查询最新参考价。')+'</p>'+
+    btn('重新查询','fetchOfficialFx()','ghost','arrows-clockwise');
+}
+function renderOfficialFx(){
+  var box=document.getElementById('fx_official');
+  if(box) box.innerHTML=officialFxMarkup();
+}
+function parseEcbFxCsv(text){
+  var rows=parseDelimited(text,',');
+  if(rows.length<2) throw new Error('ECB 返回的数据为空');
+  var header=rows[0].map(function(x){return String(x).replace(/^\uFEFF/,'').trim();});
+  var dateCol=header.indexOf('TIME_PERIOD'), rateCol=header.indexOf('OBS_VALUE');
+  if(dateCol<0||rateCol<0) throw new Error('ECB 返回的数据格式无法识别');
+  for(var i=rows.length-1;i>0;i--){
+    var date=String(rows[i][dateCol]||'').trim(), rate=Number(rows[i][rateCol]);
+    if(isDate(date)&&isFinite(rate)&&rate>0) return {date:date,rate:rate};
+  }
+  throw new Error('ECB 返回的数据没有有效汇率');
+}
+async function fetchOfficialFx(){
+  officialFxLoading=true; officialFxError=''; renderOfficialFx();
+  try{
+    if(navigator.onLine===false) throw new Error('当前离线，仍可使用已保存的汇率');
+    var response=await fetch(ECB_FX_URL,{cache:'no-store'});
+    if(!response.ok) throw new Error('ECB 服务暂时不可用');
+    officialFxQuote=parseEcbFxCsv(await response.text());
+  }catch(e){
+    officialFxQuote=null;
+    officialFxError=e.message||'无法获取官方汇率';
+  }
+  officialFxLoading=false; renderOfficialFx();
+  return officialFxQuote;
+}
 function editFx(){
   openSheet('汇率设置',
     field({id:'fx',label:'1 EUR = ? RMB',type:'number',step:'any',inputmode:'decimal',
       val:S.fxRmbPerEur,hint:'用于把招行 RMB 余额折算成欧元汇总'})+
-    btn('保存','saveFx()'));
+    '<div class="card blue" id="fx_official">'+officialFxMarkup()+'</div>'+
+    btn('保存手动汇率','saveFx()'));
+  return fetchOfficialFx();
+}
+function useOfficialFx(){
+  if(!officialFxQuote) return toast('请先查询官方汇率');
+  S.fxRmbPerEur=officialFxQuote.rate;
+  S.fxRateSource='ECB';
+  S.fxRateDate=officialFxQuote.date;
+  save(); closeSheet(); render();
+  toast('已采用 ECB '+fmtDate(officialFxQuote.date)+' 参考汇率');
 }
 function saveFx(){
   var v=fnum('fx');
-  if(isFinite(v)&&v>0){ S.fxRmbPerEur=v; save(); }
-  closeSheet(); render();
+  if(!isFinite(v)||v<=0) return toast('请输入有效汇率');
+  S.fxRmbPerEur=v;
+  S.fxRateSource='manual';
+  S.fxRateDate=null;
+  save(); closeSheet(); render(); toast('手动汇率已保存');
 }
 /* ================= 合同与保险 ================= */
 var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','意外险','旅行险','税费','能源','通讯','其他'];
@@ -2733,7 +2803,8 @@ function doReset(){
 /** 生成不含数据的空壳，用于公开托管 */
 function exportShell(){
   var html=document.documentElement.outerHTML;
-  var empty='var SEED={version:2,fxRmbPerEur:8,appliedPatches:{},properties:[],meters:[],readings:[],'+
+  var empty='var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,'+
+    'appliedPatches:{},properties:[],meters:[],readings:[],'+
     'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],'+
     'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
     'festkosten:[],sparZiel:0}};';
