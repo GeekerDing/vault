@@ -464,7 +464,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='d5ef35dcb3fa';
+var APP_BUILD='ce7daec7c42c';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -881,7 +881,7 @@ function viewHome(){
   }));
   if(missing.length) pending.push(activityRow({
     icon:'file-dashed',tone:'amber',label:'合同资料待补齐',
-    sub:'缺少保费、期限或保障对象',value:missing.length+' 份',onclick:"go('ctr')"
+    sub:'缺少保费或保障对象',value:missing.length+' 份',onclick:"go('ctr')"
   }));
   pending=pending.concat(readingPending);
 
@@ -2428,7 +2428,7 @@ function needsInsuredPerson(c){
   return PERSON_INSURANCE.indexOf(typeof c==='string'?c:c.category)>=0;
 }
 function contractMissingFields(c){
-  return [!c.premium?'缺保费':'',!c.endDate?'缺到期日':'',
+  return [!c.premium?'缺保费':'',
     c.category==='车险'&&!c.vehiclePlate?'缺车牌号':'',
     needsInsuredPerson(c)&&!c.insuredPerson?'缺受保人':''].filter(Boolean);
 }
