@@ -77,6 +77,8 @@ header .hbtn:active{background:var(--card2)}
 #syncButton[data-status="ok"]{color:var(--green)}
 #syncButton[data-status="warning"]{color:var(--amber)}
 #syncButton[data-status="error"]{color:var(--red)}
+#refreshButton[data-status="checking"] i{animation:sync-spin 1s linear infinite}
+#refreshButton[data-status="ready"]{color:var(--green)}
 @keyframes sync-spin{to{transform:rotate(360deg)}}
 .sync-state{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;
   background:var(--card2);font-size:21px}
@@ -460,7 +462,10 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
+var APP_BUILD='0275da200c89';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
+var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
+var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -535,6 +540,73 @@ function parseDecimalInput(v){
   return s!==''&&isFinite(n)?n:NaN;
 }
 function fnum(id){ return parseDecimalInput(val(id)); }
+function appUrlWith(key){
+  var u=new URL(location.href);
+  u.hash='';
+  u.search='';
+  u.searchParams.set(key,String(Date.now()));
+  return u.toString();
+}
+function setRefreshStatus(status,title){
+  appRefreshStatus=status;
+  appRefreshTitle=title||'重新加载最新版';
+  var b=document.getElementById('refreshButton');
+  if(!b) return;
+  b.dataset.status=status;
+  b.title=appRefreshTitle;
+  b.setAttribute('aria-label',appRefreshTitle);
+}
+function performAppReload(url){ location.replace(url); }
+async function refreshApp(auto){
+  if(navigator.onLine===false){
+    setRefreshStatus('idle','刷新应用');
+    if(!auto) toast('当前离线，联网后再刷新');
+    return false;
+  }
+  setRefreshStatus('checking','正在刷新');
+  try{ await saveQueue; }catch(e){}
+  updatePending=false;
+  performAppReload(appUrlWith('_refresh'));
+  return true;
+}
+async function checkForAppUpdate(force){
+  if(updateChecking||navigator.onLine===false) return false;
+  if(!force&&Date.now()-lastUpdateCheck<60000) return false;
+  updateChecking=true; lastUpdateCheck=Date.now();
+  setRefreshStatus('checking','正在检查更新');
+  try{
+    var response=await fetch(appUrlWith('_update'),{cache:'no-store'});
+    if(!response.ok) throw new Error('更新检查失败');
+    var html=await response.text();
+    var match=html.match(/var APP_BUILD=['"]([^'"]+)['"]/);
+    if(match&&match[1]!==APP_BUILD){
+      updatePending=true;
+      setRefreshStatus('ready','发现新版本，点击刷新');
+      var sheet=document.getElementById('sheet');
+      if(sheet&&sheet.classList.contains('open')){
+        toast('发现新版本，关闭当前编辑后自动刷新');
+        return true;
+      }
+      await refreshApp(true);
+      return true;
+    }
+    setRefreshStatus('idle','已是最新版本');
+    return false;
+  }catch(e){
+    setRefreshStatus('idle','刷新应用');
+    return false;
+  }finally{
+    updateChecking=false;
+  }
+}
+function initAppUpdates(){
+  if(appUpdatesStarted) return;
+  appUpdatesStarted=true;
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden) checkForAppUpdate(false);
+  });
+  window.addEventListener('online',function(){ checkForAppUpdate(false); });
+}
 function icon(name,fill){
   return '<i class="'+(fill?'ph-fill':'ph')+' ph-'+name+'" aria-hidden="true"></i>';
 }
@@ -771,6 +843,7 @@ function openSheet(title,html){
 function closeSheet(){
   document.getElementById('sheet').classList.remove('open');
   document.body.style.overflow='';
+  if(updatePending) setTimeout(function(){ refreshApp(true); },280);
 }
 
 /* ================= 概览 ================= */
@@ -1035,6 +1108,7 @@ async function lockVault(){
 
 async function initVault(){
   vaultStarted=true;
+  initAppUpdates();
   document.body.classList.add('locked');
   document.addEventListener('visibilitychange',function(){
     if(document.hidden) hiddenAt=Date.now();
@@ -2553,6 +2627,9 @@ function openSettings(){
       S.contracts.length+' 份合同。<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
     btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
+    '<button class="btn ghost" id="refreshButton" data-status="'+esc(appRefreshStatus)+
+      '" onclick="refreshApp()" aria-label="'+esc(appRefreshTitle)+'" title="'+esc(appRefreshTitle)+'">'+
+      icon('arrow-clockwise')+'重新加载最新版</button>'+
     btn('导出加密备份','exportBackup()',null,'lock-key')+
     fileField({id:'imp_file',label:'选择备份或更新文件',accept:'.json,.vault.json,.patch.json,application/json',
       onchange:'readBackupFile(this)',hint:'加密更新包只合并指定记录；完整备份会覆盖恢复。文件只在本机读取。'})+
