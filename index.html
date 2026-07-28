@@ -182,6 +182,10 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .mode-control button{min-height:38px;border-radius:4px;font-size:13px;color:var(--dim)}
 .mode-control button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px var(--shadow)}
 .retirement-rate-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.retirement-phase-key{display:flex;align-items:center;gap:14px;color:var(--dim);font-size:10px}
+.retirement-phase-key span{display:flex;align-items:center;gap:5px}
+.retirement-phase-key i{display:block;width:20px;height:0;border-top:2px solid var(--tx)}
+.retirement-phase-key i.forecast{border-top-style:dashed}
 .retirement-celebration{position:fixed;inset:0;z-index:140;display:none;overflow:hidden;
   align-items:center;justify-content:center;background:rgba(18,18,18,.96);color:#fff;padding:28px}
 .retirement-celebration.show{display:flex}
@@ -251,6 +255,14 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
   gap:10px;border-bottom:1px solid var(--line)}
 .chart-readout span{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chart-readout strong{font-size:14px;font-weight:700;white-space:nowrap}
+.chart-series-readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px 12px;padding:4px 0 6px}
+.chart-series-readout span{display:grid;grid-template-columns:8px minmax(0,1fr);
+  align-items:center;column-gap:6px;min-width:0}
+.chart-series-readout i{width:8px;height:8px;border-radius:2px;grid-row:1/3}
+.chart-series-readout b{font-size:10px;color:var(--dim);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-series-readout strong{font-size:11px;font-weight:650;white-space:nowrap}
 .chart-frame{display:grid;grid-template-columns:42px minmax(0,1fr);gap:6px;align-items:start}
 .chart-y-axis{height:138px;position:relative;color:var(--dim);font-size:9px;
   font-variant-numeric:tabular-nums}
@@ -265,12 +277,18 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
 .chart-focus-line{stroke:var(--dim);stroke-width:1;stroke-dasharray:3 3;
   vector-effect:non-scaling-stroke;pointer-events:none}
 .chart-focus-dot{stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+.retirement-series-line{pointer-events:none}
+.retirement-today-line{stroke:var(--dim);stroke-width:1;stroke-dasharray:2 3;opacity:.7}
 .chart-bar{vector-effect:non-scaling-stroke}
 .chart-bar.selected{stroke:var(--tx);stroke-width:1.5}
 .chart-x-axis{height:18px;position:relative;margin-top:3px;color:var(--dim);
   font-size:9px;font-variant-numeric:tabular-nums}
 .chart-x-label{position:absolute;top:0;line-height:1;transform:translateX(-50%);white-space:nowrap}
 .chart-x-label.first{transform:none}.chart-x-label.last{transform:translateX(-100%)}
+.chart-x-label.today{color:var(--blue);font-weight:700}
+@media (max-width:440px){
+  .chart-series-readout{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%);z-index:80;background:var(--tx);color:var(--inverse);
   padding:11px 17px;border-radius:6px;font-size:13px;font-weight:600;
@@ -551,7 +569,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='194b70ff3d9b';
+var APP_BUILD='12537b934bcb';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -766,6 +784,7 @@ function chartXLabels(data,points,every,line){
   var idx=[], seen={}, i;
   if(line){
     idx=[0,Math.floor((data.length-1)/2),data.length-1];
+    data.forEach(function(point,k){if(point.today) idx.push(k);});
   }else{
     for(i=0;i<data.length;i+=every) idx.push(i);
     idx.push(data.length-1);
@@ -774,27 +793,60 @@ function chartXLabels(data,points,every,line){
     if(seen[k]) return false;
     seen[k]=true; return true;
   });
+  idx.sort(function(a,b){return a-b;});
+  if(line){
+    var todayIndex=data.findIndex(function(point){return point.today;});
+    if(todayIndex>=0) idx=idx.filter(function(k){
+      return k===todayIndex||Math.abs(points[k].x-points[todayIndex].x)>=44;
+    });
+  }
   if(!line&&idx.length>1){
     var last=idx[idx.length-1], prev=idx[idx.length-2];
     if(points[last].x-points[prev].x<44) idx.splice(idx.length-2,1);
   }
   return idx.map(function(k){
-    var cls=k===0?' first':(k===data.length-1?' last':'');
+    var cls=(k===0?' first':(k===data.length-1?' last':''))+(data[k].today?' today':'');
     return '<span class="chart-x-label'+cls+'" style="left:'+(points[k].x/CW*100).toFixed(2)+'%">'+
       esc(chartDateShort(data[k].date))+'</span>';
   }).join('');
+}
+function chartPointDate(st,index){
+  var point=st.data[index], prefix=point.phase==='actual'?'实际 · ':
+    (point.phase==='forecast'?'预测 · ':'');
+  return prefix+chartDateLong(point.date);
+}
+function chartSeriesReadout(st,index){
+  if(!st.series||!st.series.length) return '';
+  var point=st.data[index];
+  return '<div class="chart-series-readout" data-chart-series-readout>'+
+    st.series.map(function(series){
+      var value=series.key==='total'?point.value:(point.values[series.key]||0);
+      return '<span data-series-key="'+esc(series.key)+'">'+
+        '<i style="background:'+series.color+'" aria-hidden="true"></i>'+
+        '<b>'+esc(series.label)+'</b>'+
+        '<strong class="tnum" data-series-value>'+esc(st.fmt(value))+'</strong></span>';
+    }).join('')+'</div>';
+}
+function chartAriaLabel(st,index){
+  var point=st.data[index], text=st.label+'，'+chartPointDate(st,index)+'，'+st.fmt(point.value);
+  if(st.series) text+='，'+st.series.map(function(series){
+    var value=series.key==='total'?point.value:(point.values[series.key]||0);
+    return series.label+' '+st.fmt(value);
+  }).join('，');
+  return text;
 }
 function chartMarkup(st,marks,scale,Y,every,line){
   var p=st.points[st.selected], col=p.color||st.color;
   return '<div class="chart-shell" id="'+st.id+'" data-chart-shell="'+st.id+'">'+
     '<div class="chart-readout" id="'+st.id+'-readout" role="status" aria-live="polite" aria-atomic="true">'+
-      '<span data-chart-date>'+esc(chartDateLong(p.date))+'</span>'+
+      '<span data-chart-date>'+esc(chartPointDate(st,st.selected))+'</span>'+
       '<strong class="tnum" data-chart-value>'+esc(st.fmt(p.value))+'</strong></div>'+
+    chartSeriesReadout(st,st.selected)+
     '<div class="chart-frame"><div class="chart-y-axis" aria-hidden="true">'+
       chartYAxis(scale,Y,st.unit)+'</div><div class="chart-plot">'+
       '<svg class="chart interactive-chart" data-chart-id="'+st.id+'" viewBox="0 0 '+CW+' '+CH+
         '" preserveAspectRatio="none" role="img" tabindex="0" aria-describedby="'+st.id+'-readout"'+
-        ' aria-label="'+esc(st.label+'，'+chartDateLong(p.date)+'，'+st.fmt(p.value))+'"'+
+        ' aria-label="'+esc(chartAriaLabel(st,st.selected))+'"'+
         ' onpointerdown="chartPointerDown(event,\''+st.id+'\')"'+
         ' onpointermove="chartPointerMove(event,\''+st.id+'\')"'+
         ' onpointerup="chartPointerUp(event,\''+st.id+'\')"'+
@@ -814,8 +866,10 @@ function selectChartPoint(id,index){
   index=Math.max(0,Math.min(st.points.length-1,index));
   st.selected=index;
   var p=st.points[index], svg=shell.querySelector('svg');
-  shell.querySelector('[data-chart-date]').textContent=chartDateLong(p.date);
+  shell.querySelector('[data-chart-date]').textContent=chartPointDate(st,index);
   shell.querySelector('[data-chart-value]').textContent=st.fmt(p.value);
+  var seriesReadout=shell.querySelector('[data-chart-series-readout]');
+  if(seriesReadout) seriesReadout.outerHTML=chartSeriesReadout(st,index);
   var line=svg.querySelector('.chart-focus-line'), dot=svg.querySelector('.chart-focus-dot');
   line.setAttribute('x1',p.x); line.setAttribute('x2',p.x);
   dot.setAttribute('cx',p.x); dot.setAttribute('cy',p.y);
@@ -824,7 +878,7 @@ function selectChartPoint(id,index){
   Array.prototype.forEach.call(bars,function(b){
     b.classList.toggle('selected',parseInt(b.getAttribute('data-bar-index'),10)===index);
   });
-  svg.setAttribute('aria-label',st.label+'，'+chartDateLong(p.date)+'，'+st.fmt(p.value));
+  svg.setAttribute('aria-label',chartAriaLabel(st,index));
 }
 function chartPointFromPointer(e,id){
   var st=chartStore[id], svg=e.currentTarget;
@@ -2811,6 +2865,117 @@ function retirementProjectionSeries(assets,months){
     value:retirementAssetsBalanceAfter(assets,months)});
   return out;
 }
+function retirementEmptyTypeValues(){
+  return {deposit:0,stock:0,gold:0,rental:0,other:0};
+}
+function retirementTypeValuesTotal(values){
+  return Object.keys(values).reduce(function(sum,type){return sum+values[type];},0);
+}
+function retirementProjectionBreakdown(assets,months){
+  if(months==null||months<=0) return [];
+  var offsets=[0];
+  for(var m=12;m<months;m+=12) offsets.push(m);
+  offsets.push(months);
+  return offsets.map(function(offset){
+    var values=retirementEmptyTypeValues();
+    assets.forEach(function(asset){
+      values[asset.type]=(values[asset.type]||0)+
+        retirementBalanceAfter(asset.balance,asset.monthly,asset.rate,offset);
+    });
+    return {
+      date:retirementMonthKey(offset),value:retirementTypeValuesTotal(values),
+      values:values,phase:offset===0?'actual':'forecast',today:offset===0
+    };
+  });
+}
+function retirementHistoricalBreakdown(plan){
+  var ids=retirementAccountIds(plan), accountMap={}, fx=S.fxRmbPerEur>0?S.fxRmbPerEur:1;
+  S.accounts.forEach(function(account){accountMap[account.id]=account;});
+  return [-60,-48,-36,-24,-12,0].map(function(offset){
+    var month=retirementMonthKey(offset), cutoff=offset===0?today():month+'-31';
+    var balances={}, values=retirementEmptyTypeValues();
+    ids.forEach(function(id){balances[id]=0;});
+    S.txs.forEach(function(tx){
+      if(ids.indexOf(tx.accountId)>=0&&String(tx.date||'')<=cutoff)
+        balances[tx.accountId]+=Number(tx.amount||0);
+    });
+    ids.forEach(function(id){
+      var account=accountMap[id], config=plan.assetConfigs[id]||retirementDefaultAssetConfig(account);
+      var value=account&&account.currency==='RMB'?balances[id]/fx:balances[id];
+      values[config.type]=(values[config.type]||0)+value;
+    });
+    return {
+      date:offset===0?retirementMonthKey(0):month,
+      value:retirementTypeValuesTotal(values),values:values,phase:'actual',today:offset===0
+    };
+  });
+}
+function retirementMonthsBetweenKeys(from,to){
+  var a=String(from).slice(0,7).split('-'), b=String(to).slice(0,7).split('-');
+  return (Number(b[0])-Number(a[0]))*12+Number(b[1])-Number(a[1]);
+}
+function retirementGrowthChart(plan,assets,months){
+  var forecast=retirementProjectionBreakdown(assets,months);
+  if(forecast.length<2) return '<p class="dim">数据不足</p>';
+  var history=retirementHistoricalBreakdown(plan);
+  var data=history.concat(forecast.slice(1));
+  var colors={
+    deposit:'var(--blue)',stock:'var(--green)',gold:'var(--amber)',
+    rental:'var(--red)',other:'var(--dim)',total:'var(--tx)'
+  };
+  var series=Object.keys(RETIREMENT_ASSET_TYPES).filter(function(type){
+    return data.some(function(point){return Math.abs(point.values[type]||0)>.001;});
+  }).map(function(type){
+    return {key:type,label:RETIREMENT_ASSET_TYPES[type].label,color:colors[type]};
+  });
+  series.push({key:'total',label:'合计',color:colors.total});
+  var scaleValues=[];
+  data.forEach(function(point){
+    scaleValues.push(point.value);
+    Object.keys(point.values).forEach(function(type){scaleValues.push(point.values[type]);});
+  });
+  var scale=chartScale(scaleValues), top=18,bottom=6,span=scale.max-scale.min;
+  var firstDate=data[0].date, totalMonths=Math.max(1,
+    retirementMonthsBetweenKeys(firstDate,data[data.length-1].date));
+  var X=function(date){
+    return 2+retirementMonthsBetweenKeys(firstDate,date)/totalMonths*(CW-4);
+  };
+  var Y=function(value){return top+((scale.max-value)/span)*(CH-top-bottom);};
+  var points=data.map(function(point){
+    return {x:X(point.date),y:Y(point.value),value:point.value,date:point.date,color:colors.total};
+  });
+  var todayIndex=data.findIndex(function(point){return point.today;});
+  var marks=series.map(function(item){
+    function pathFor(start,end){
+      return data.slice(start,end).map(function(point,i){
+        var value=item.key==='total'?point.value:(point.values[item.key]||0);
+        return (i?'L':'M')+X(point.date).toFixed(1)+','+Y(value).toFixed(1);
+      }).join(' ');
+    }
+    return '<path class="retirement-series-line actual" data-series-line="'+item.key+
+      '-actual" d="'+pathFor(0,todayIndex+1)+'" stroke="'+item.color+
+      '" stroke-width="'+(item.key==='total'?'2.8':'1.8')+
+      '" fill="none" opacity="'+(item.key==='total'?'1':'.88')+
+      '" vector-effect="non-scaling-stroke"/>'+
+      '<path class="retirement-series-line forecast" data-series-line="'+item.key+
+      '-forecast" d="'+pathFor(todayIndex,data.length)+'" stroke="'+item.color+
+      '" stroke-width="'+(item.key==='total'?'2.8':'1.8')+
+      '" fill="none" opacity="'+(item.key==='total'?'1':'.88')+
+      '" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>';
+  }).join('');
+  var todayX=X(data[todayIndex].date).toFixed(1);
+  marks+='<line class="retirement-today-line" x1="'+todayX+'" y1="0" x2="'+todayX+
+    '" y2="'+CH+'" vector-effect="non-scaling-stroke"/>';
+  var id='chart-'+(++chartSeq);
+  chartStore[id]={
+    id:id,data:data,points:points,selected:todayIndex,color:colors.total,
+    fmt:function(value){return n0(value)+' €';},unit:'€',
+    label:'退休资产分类增长路径',series:series
+  };
+  return '<div class="retirement-phase-key" aria-label="实线为已记录资产，虚线为未来估算">'+
+    '<span><i class="actual"></i>已记录</span><span><i class="forecast"></i>未来估算</span></div>'+
+    chartMarkup(chartStore[id],marks,scale,Y,1,true);
+}
 function retirementYearsText(months){
   if(months==null) return '无法达到';
   if(months===0) return '已经达到';
@@ -2879,10 +3044,10 @@ function viewRetirement(){
     retirementScenario('基准','base',plan,pool,'blue')+
     retirementScenario('乐观','optimistic',plan,pool,'green'));
 
-  var series=retirementProjectionSeries(baseAssets,baseMonths);
+  var series=retirementProjectionBreakdown(baseAssets,baseMonths);
   out+=card(h2('基准增长路径',badge('股票 '+fxText(rates.base)+'%','blue'))+
     (series.length>1
-      ? lineChart(series,'var(--blue)',function(v){return n0(v)+' €';},'€','退休资金增长路径')
+      ? retirementGrowthChart(plan,baseAssets,baseMonths)
       : '<p class="empty">'+(baseMonths===0?'目标已经达到':'当前设置无法生成达到目标的路径')+'</p>'));
 
   var contributions=retirementContributions(plan);
