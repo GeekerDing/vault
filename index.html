@@ -113,6 +113,7 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .b-green{background:var(--greenS);color:var(--green)} .b-red{background:var(--redS);color:var(--red)}
 .b-amber{background:var(--amberS);color:var(--amber)} .b-blue{background:var(--blueS);color:var(--blue)}
 .c-gold{color:var(--gold)} .c-green{color:var(--green)} .c-red{color:var(--red)}
+.c-amber{color:var(--amber)}
 .c-dim{color:var(--dim)} .c-blue{color:var(--blue)}
 .empty{padding:22px;text-align:center;color:var(--dim);font-size:13px}
 
@@ -155,6 +156,18 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
   border:1px solid var(--line);font-size:19px;flex:0 0 auto}
 .retirement-back:active{background:var(--card2)}
 .retirement-date{font-size:34px;font-weight:750;line-height:1.08}
+.retirement-scenario-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:3px;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:3px}
+.retirement-scenario-control button{height:48px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1px;border-radius:4px;color:var(--dim);min-width:0}
+.retirement-scenario-control button b{font-size:13px;font-weight:650}
+.retirement-scenario-control button small{font-size:9px;white-space:nowrap}
+.retirement-scenario-control button.on{background:var(--card);box-shadow:0 1px 3px var(--shadow)}
+.retirement-scenario-control button.on.amber{color:var(--amber)}
+.retirement-scenario-control button.on.blue{color:var(--blue)}
+.retirement-scenario-control button.on.green{color:var(--green)}
+.retirement-scenario-result{display:flex;flex-direction:column;gap:3px;
+  animation:retirement-scenario-in .32s ease-out both}
 .retirement-progress{height:8px;background:var(--card);border:1px solid var(--line);
   border-radius:4px;overflow:hidden}
 .retirement-progress span{display:block;height:100%;background:var(--blue);border-radius:3px}
@@ -211,6 +224,10 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
   12%{opacity:1}
   100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy)))
     scale(1) rotate(var(--rot))}
+}
+@keyframes retirement-scenario-in{
+  from{opacity:.25;transform:translateY(3px)}
+  to{opacity:1;transform:translateY(0)}
 }
 @media (max-width:440px){
   .retirement-heading{align-items:flex-start}
@@ -286,8 +303,12 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
 .chart-x-label{position:absolute;top:0;line-height:1;transform:translateX(-50%);white-space:nowrap}
 .chart-x-label.first{transform:none}.chart-x-label.last{transform:translateX(-100%)}
 .chart-x-label.today{color:var(--blue);font-weight:700}
+.retirement-phase-key+.chart-shell{animation:retirement-scenario-in .38s ease-out both}
 @media (max-width:440px){
   .chart-series-readout{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){
+  .retirement-scenario-result,.retirement-phase-key+.chart-shell{animation:none}
 }
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%);z-index:80;background:var(--tx);color:var(--inverse);
@@ -398,7 +419,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   </div>
 </div>
 <script>
-var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -569,7 +590,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='12537b934bcb';
+var APP_BUILD='785eb5d47341';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -2643,6 +2664,7 @@ function retirementDefaultPlan(){
     accountIds:null,
     contributionMode:'auto',
     manualMonthlyContribution:1500,
+    selectedScenario:'base',
     rates:{conservative:3,base:5,optimistic:7},
     assetConfigs:{},
     milestone:{highestReached:0,active:0,remainingUnlocks:0}
@@ -2689,6 +2711,8 @@ function retirementPlanState(){
     contributionMode:p.contributionMode==='manual'?'manual':'auto',
     manualMonthlyContribution:isFinite(p.manualMonthlyContribution)&&p.manualMonthlyContribution>=0
       ? Number(p.manualMonthlyContribution):d.manualMonthlyContribution,
+    selectedScenario:['conservative','base','optimistic'].indexOf(p.selectedScenario)>=0
+      ? p.selectedScenario:d.selectedScenario,
     rates:{
       conservative:isFinite(rates.conservative)?Number(rates.conservative):d.rates.conservative,
       base:isFinite(rates.base)?Number(rates.base):d.rates.base,
@@ -2718,8 +2742,9 @@ function retirementPool(plan){
 }
 function retirementMonthKey(offset,from){
   var p=String(from||today()).slice(0,7).split('-');
-  var d=new Date(Date.UTC(Number(p[0]),Number(p[1])-1+offset,1));
-  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+  var total=Number(p[0])*12+Number(p[1])-1+Number(offset||0);
+  var year=Math.floor(total/12), month=total-year*12+1;
+  return year+'-'+String(month).padStart(2,'0');
 }
 function retirementAutoContributions(plan){
   var ids=retirementAccountIds(plan);
@@ -2727,8 +2752,10 @@ function retirementAutoContributions(plan){
   S.accounts.forEach(function(a){accountMap[a.id]=a;});
   ids.forEach(function(id){out[id]=0;});
   var fx=S.fxRmbPerEur>0?S.fxRmbPerEur:1;
+  var start=retirementMonthKey(-12), end=retirementMonthKey(-1);
   var hasHistory=S.txs.some(function(t){
-    return ids.indexOf(t.accountId)>=0&&!t.valuationOnly;
+    var month=String(t.date||'').slice(0,7);
+    return ids.indexOf(t.accountId)>=0&&!t.valuationOnly&&month>=start&&month<=end;
   });
   if(!hasHistory){
     var fallback=Number(S.budget&&S.budget.sparZiel)||0;
@@ -2738,7 +2765,6 @@ function retirementAutoContributions(plan){
     if(fallbackId) out[fallbackId]=fallback;
     return out;
   }
-  var start=retirementMonthKey(-12), end=retirementMonthKey(-1);
   var raw={};
   ids.forEach(function(id){raw[id]=0;});
   S.txs.forEach(function(t){
@@ -2803,21 +2829,15 @@ function retirementMonthlyContribution(plan){
   return Object.keys(values).reduce(function(sum,id){return sum+values[id];},0);
 }
 function retirementMonthsToTarget(current,monthly,annualPct,target){
-  target=target||RETIREMENT_TARGET;
-  if(current>=target) return 0;
-  var monthlyRate=Number(annualPct)/100/12, balance=Number(current), contribution=Number(monthly);
-  if(!isFinite(balance)||!isFinite(contribution)||!isFinite(monthlyRate)) return null;
-  for(var month=1;month<=1200;month++){
-    balance=balance*(1+monthlyRate)+contribution;
-    if(!isFinite(balance)||balance < -target*10) return null;
-    if(balance>=target) return month;
-  }
-  return null;
+  return retirementAssetsMonthsToTarget([{
+    balance:Number(current),monthly:Number(monthly),rate:Number(annualPct),type:'other'
+  }],target||RETIREMENT_TARGET);
 }
 function retirementBalanceAfter(current,monthly,annualPct,months){
-  var rate=Number(annualPct)/100/12, balance=Number(current);
-  for(var i=0;i<months;i++) balance=balance*(1+rate)+Number(monthly);
-  return balance;
+  var rate=Number(annualPct)/100/12, balance=Number(current), contribution=Number(monthly);
+  if(!rate) return balance+contribution*months;
+  var growth=Math.pow(1+rate,months);
+  return balance*growth+contribution*(growth-1)/rate;
 }
 function retirementAssetRate(plan,accountId,scenario){
   var config=plan.assetConfigs[accountId]||{};
@@ -2843,11 +2863,42 @@ function retirementAssetsBalanceAfter(assets,months){
 }
 function retirementAssetsMonthsToTarget(assets,target){
   target=target||RETIREMENT_TARGET;
-  var current=assets.reduce(function(sum,asset){return sum+asset.balance;},0);
+  assets=assets.map(function(asset){
+    return {
+      balance:Number(asset.balance),monthly:Number(asset.monthly),rate:Number(asset.rate),
+      type:asset.type
+    };
+  });
+  if(assets.some(function(asset){
+    return !isFinite(asset.balance)||!isFinite(asset.monthly)||!isFinite(asset.rate);
+  })) return null;
+  var current=retirementAssetsBalanceAfter(assets,0);
   if(current>=target) return 0;
-  for(var month=1;month<=1200;month++){
+  var monotonic=assets.every(function(asset){
+    return asset.balance>=0&&asset.monthly>=0&&asset.rate>=0;
+  });
+  if(monotonic){
+    var canGrow=assets.some(function(asset){
+      return asset.monthly>0||(asset.balance>0&&asset.rate>0);
+    });
+    if(!canGrow) return null;
+    var low=0, high=1, highBalance=retirementAssetsBalanceAfter(assets,high);
+    while(highBalance<target&&high<134217728){
+      low=high; high*=2;
+      highBalance=retirementAssetsBalanceAfter(assets,high);
+    }
+    if(highBalance<target) return null;
+    while(low+1<high){
+      var middle=Math.floor((low+high)/2);
+      if(retirementAssetsBalanceAfter(assets,middle)>=target) high=middle;
+      else low=middle;
+    }
+    return high;
+  }
+  var simulated=assets.map(function(asset){return Object.assign({},asset);});
+  for(var month=1;month<=12000;month++){
     current=0;
-    assets.forEach(function(asset){
+    simulated.forEach(function(asset){
       asset.balance=asset.balance*(1+asset.rate/100/12)+asset.monthly;
       current+=asset.balance;
     });
@@ -2859,7 +2910,8 @@ function retirementAssetsMonthsToTarget(assets,target){
 function retirementProjectionSeries(assets,months){
   if(months==null||months<=0) return [];
   var out=[{date:retirementMonthKey(0),value:retirementAssetsBalanceAfter(assets,0)}];
-  for(var m=12;m<months;m+=12)
+  var step=Math.max(12,Math.ceil(months/72/12)*12);
+  for(var m=step;m<months;m+=step)
     out.push({date:retirementMonthKey(m),value:retirementAssetsBalanceAfter(assets,m)});
   out.push({date:retirementMonthKey(months),
     value:retirementAssetsBalanceAfter(assets,months)});
@@ -2873,8 +2925,8 @@ function retirementTypeValuesTotal(values){
 }
 function retirementProjectionBreakdown(assets,months){
   if(months==null||months<=0) return [];
-  var offsets=[0];
-  for(var m=12;m<months;m+=12) offsets.push(m);
+  var offsets=[0], step=Math.max(12,Math.ceil(months/72/12)*12);
+  for(var m=step;m<months;m+=step) offsets.push(m);
   offsets.push(months);
   return offsets.map(function(offset){
     var values=retirementEmptyTypeValues();
@@ -2987,16 +3039,28 @@ function retirementDateText(months){
   var p=retirementMonthKey(months).split('-');
   return p[1]+'.'+p[0];
 }
-function retirementScenario(label,scenario,plan,pool,tone){
-  var rate=plan.rates[scenario];
-  var months=retirementAssetsMonthsToTarget(
-    retirementProjectionAssets(plan,pool,scenario),RETIREMENT_TARGET);
-  return row({
-    label:label+' · 股票年化 '+fxText(rate)+'%',
-    sub:months==null?'按当前投入和收益率无法达到':'预计 '+retirementDateText(months),
-    value:retirementYearsText(months),
-    tone:months==null?'red':tone
-  });
+function retirementScenarioMeta(scenario){
+  return {
+    conservative:{label:'保守',tone:'amber'},
+    base:{label:'基准',tone:'blue'},
+    optimistic:{label:'乐观',tone:'green'}
+  }[scenario]||{label:'基准',tone:'blue'};
+}
+function retirementScenarioControl(plan){
+  return '<div class="retirement-scenario-control" role="group" aria-label="退休收益情景">'+
+    ['conservative','base','optimistic'].map(function(scenario){
+      var meta=retirementScenarioMeta(scenario), selected=plan.selectedScenario===scenario;
+      return '<button type="button" class="'+(selected?'on '+meta.tone:'')+
+        '" aria-pressed="'+(selected?'true':'false')+'" onclick="setRetirementScenario(\''+
+        scenario+'\')"><b>'+meta.label+'</b><small>股票 '+fxText(plan.rates[scenario])+'%</small></button>';
+    }).join('')+'</div>';
+}
+function setRetirementScenario(scenario){
+  if(['conservative','base','optimistic'].indexOf(scenario)<0) return;
+  var plan=retirementPlanState();
+  if(plan.selectedScenario===scenario) return;
+  plan.selectedScenario=scenario;
+  save(); render();
 }
 function retirementMilestoneProgress(total){
   var safe=Math.max(0,total), reached=Math.min(10,Math.floor(safe/RETIREMENT_MILESTONE));
@@ -3008,9 +3072,12 @@ function retirementMilestoneProgress(total){
 function viewRetirement(){
   var plan=retirementPlanState(), pool=retirementPool(plan);
   var monthly=retirementMonthlyContribution(plan), rates=plan.rates;
-  var baseAssets=retirementProjectionAssets(plan,pool,'base');
-  var baseMonths=retirementAssetsMonthsToTarget(
-    retirementProjectionAssets(plan,pool,'base'),RETIREMENT_TARGET);
+  var scenario=plan.selectedScenario, scenarioMeta=retirementScenarioMeta(scenario);
+  var scenarioAssets=retirementProjectionAssets(plan,pool,scenario);
+  var scenarioMonths=retirementAssetsMonthsToTarget(
+    retirementProjectionAssets(plan,pool,scenario),RETIREMENT_TARGET);
+  var scenarioEndValue=scenarioMonths==null?null:
+    retirementAssetsBalanceAfter(scenarioAssets,scenarioMonths);
   var progress=Math.max(0,Math.min(100,pool.total/RETIREMENT_TARGET*100));
   var gap=Math.max(0,RETIREMENT_TARGET-pool.total);
   var next=Math.min(RETIREMENT_TARGET,
@@ -3024,12 +3091,17 @@ function viewRetirement(){
     btn('调整计划','editRetirementPlan()','ghost sm','sliders-horizontal')+'</section>';
 
   out+=card('<div class="between"><span class="dim">100 万欧元目标</span>'+
-      badge(progress.toLocaleString('de-DE',{maximumFractionDigits:1})+'%','blue')+'</div>'+
-    '<span class="retirement-date '+(baseMonths==null?'c-red':'c-blue')+'">'+
-      esc(retirementYearsText(baseMonths))+'</span>'+
-    '<span class="dim">'+(baseMonths==null
-      ? '按当前投入和基准收益率无法达到'
-      : (baseMonths===0?'目标已经完成':'基准情景预计 '+retirementDateText(baseMonths)+' 达到'))+'</span>'+
+      badge(scenarioMeta.label+'情景 · '+
+        progress.toLocaleString('de-DE',{maximumFractionDigits:1})+'%',scenarioMeta.tone)+'</div>'+
+    retirementScenarioControl(plan)+
+    '<div class="retirement-scenario-result">'+
+    '<span class="retirement-date '+(scenarioMonths==null?'c-red':'c-'+scenarioMeta.tone)+'">'+
+      esc(retirementYearsText(scenarioMonths))+'</span>'+
+    '<span class="dim">'+(scenarioMonths==null
+      ? '按当前投入和所选收益率无法达到'
+      : (scenarioMonths===0?'目标已经完成':
+        scenarioMeta.label+'情景预计 '+retirementDateText(scenarioMonths)+' 达到 · 首次跨过时 '+
+          n0(scenarioEndValue)+' €'))+'</span></div>'+
     '<div class="retirement-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" '+
       'aria-valuenow="'+progress.toFixed(1)+'"><span style="width:'+progress.toFixed(2)+'%"></span></div>'+
     '<div class="stats">'+
@@ -3037,18 +3109,14 @@ function viewRetirement(){
       stat('距离目标',n0(gap),'€',gap?'':'green')+
       stat(plan.contributionMode==='auto'?'近12月月均':'计划月投',
         n0(monthly),'€',monthly>=0?'blue':'red')+
-    '</div>','blue');
+    '</div>',scenarioMeta.tone);
 
-  out+=card(h2('三档情景',badge('分类计算','dim'))+
-    retirementScenario('保守','conservative',plan,pool,'dim')+
-    retirementScenario('基准','base',plan,pool,'blue')+
-    retirementScenario('乐观','optimistic',plan,pool,'green'));
-
-  var series=retirementProjectionBreakdown(baseAssets,baseMonths);
-  out+=card(h2('基准增长路径',badge('股票 '+fxText(rates.base)+'%','blue'))+
+  var series=retirementProjectionBreakdown(scenarioAssets,scenarioMonths);
+  out+=card(h2(scenarioMeta.label+'增长路径',
+      badge('股票 '+fxText(rates[scenario])+'%',scenarioMeta.tone))+
     (series.length>1
-      ? retirementGrowthChart(plan,baseAssets,baseMonths)
-      : '<p class="empty">'+(baseMonths===0?'目标已经达到':'当前设置无法生成达到目标的路径')+'</p>'));
+      ? retirementGrowthChart(plan,scenarioAssets,scenarioMonths)
+      : '<p class="empty">'+(scenarioMonths===0?'目标已经达到':'当前设置无法生成达到目标的路径')+'</p>'));
 
   var contributions=retirementContributions(plan);
   out+=card(h2('退休资金池',badge(pool.items.length+' 个账户','dim'))+
@@ -3067,7 +3135,7 @@ function viewRetirement(){
   out+=card(h2('下一个里程碑',badge(next>=RETIREMENT_TARGET?'最终目标':n0(next)+' €','blue'))+
     retirementMilestoneProgress(pool.total)+
     row({label:pool.total>=RETIREMENT_TARGET?'100 万欧元目标已完成':'距离 '+n0(next)+' €',
-      sub:'每跨过 10 万欧元，接下来 5 次解锁会出现庆祝彩蛋',
+      sub:'每跨过 10 万欧元，即完成一个新的退休里程碑',
       value:pool.total>=RETIREMENT_TARGET?'完成':n0(nextGap)+' €',
       tone:pool.total>=RETIREMENT_TARGET?'green':'blue'}));
 
@@ -3569,7 +3637,7 @@ function exportShell(){
   var html=document.documentElement.outerHTML;
   var empty='var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,'+
     'appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",'+
-    'manualMonthlyContribution:1500,rates:{conservative:3,base:5,optimistic:7},'+
+    'manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},'+
     'assetConfigs:{},'+
     'milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],'+
     'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],'+
