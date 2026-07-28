@@ -23,7 +23,7 @@
 :root{
   color-scheme:light dark;
   --bg:#FFFFFF; --card:#FFFFFF; --card2:#F7F7F5; --line:#E9E9E7;
-  --tx:#191919; --dim:#787774;
+  --tx:#191919; --dim:#6F6E6B;
   --gold:#191919; --goldS:#F7F7F5;
   --green:#0F7B3E; --greenS:#EDF7F1;
   --red:#D44C47; --redS:#FCEDEC;
@@ -31,7 +31,9 @@
   --blue:#2383E2; --blueS:#EAF3FB;
   --inverse:#FFFFFF; --field:#FFFFFF; --field-line:#D7D7D5;
   --header:rgba(255,255,255,.94); --nav-bg:rgba(255,255,255,.96);
-  --muted-icon:#9B9A97; --shadow:rgba(0,0,0,.18);
+  --muted-icon:#6F6E6B; --shadow:rgba(0,0,0,.18);
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-drawer:cubic-bezier(.32,.72,0,1);
   --nav:65px;
 }
 @media (prefers-color-scheme:dark){
@@ -57,6 +59,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheet>.body::-webkit-scrollbar{
 body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 input,select,textarea{font:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+[tabindex]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .ph,.ph-fill{font-size:1.25em;line-height:1;display:inline-flex}
 .tnum{font-variant-numeric:tabular-nums}
 
@@ -68,10 +72,10 @@ header{position:sticky;top:0;z-index:20;background:var(--header);
 .brand{display:flex;align-items:center;gap:9px;min-width:0}
 .brand img{width:30px;height:30px;object-fit:cover;border-radius:7px;flex:0 0 auto}
 header h1{margin:0;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header .hbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--tx);
-  border-radius:6px;font-size:18px}
+header .hbtn{width:44px;height:44px;display:grid;place-items:center;color:var(--tx);
+  border-radius:6px;font-size:18px;transition:transform .14s var(--ease-out)}
 header .hbtn:active{background:var(--card2)}
-.header-actions{display:flex;align-items:center;gap:2px}
+.header-actions{display:flex;align-items:center;gap:0}
 #syncButton{position:relative}
 #syncButton[data-status="syncing"] i{animation:sync-spin 1s linear infinite}
 #syncButton[data-status="ok"]{color:var(--green)}
@@ -100,13 +104,14 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .hr{height:1px;background:var(--line);margin:2px 0}
 .stats{display:flex;flex-wrap:wrap;gap:14px}
 .stat{flex:1 1 96px;min-width:92px;display:flex;flex-direction:column;gap:2px}
-.stat .v{font-size:21px;font-weight:700}
+.stat .v{font-size:21px;font-weight:700;white-space:nowrap}
 .stat .v small{font-size:11px;color:var(--dim);font-weight:400}
 .row{display:flex;align-items:center;gap:10px;padding:8px 0;text-align:left;width:100%}
 .row .l{flex:1;min-width:0}
 .row .l b{font-weight:400;font-size:14px;display:block;overflow-wrap:anywhere}
 .row .v{font-weight:600;font-size:14px;white-space:nowrap}
-.row.tap:active{opacity:.55}
+.row.tap{transition:transform .14s var(--ease-out),opacity .14s ease}
+.row.tap:active{opacity:.72;transform:scale(.99)}
 .badge{display:inline-block;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:650;white-space:nowrap}
 .insurance-subject{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .b-gold{background:var(--goldS);color:var(--gold)} .b-dim{background:var(--card2);color:var(--dim)}
@@ -120,11 +125,12 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 /* ---------- 按钮 ---------- */
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;
   padding:12px 16px;border-radius:6px;font-weight:650;font-size:14px;
-  background:var(--tx);color:var(--inverse);min-height:44px}
-.btn:active{opacity:.72}
+  background:var(--tx);color:var(--inverse);min-height:44px;
+  transition:transform .14s var(--ease-out),opacity .14s ease}
+.btn:active,header .hbtn:active,.x:active,.retirement-back:active{transform:scale(.97)}
 .btn.ghost{background:var(--field);color:var(--tx);border:1px solid var(--line)}
 .btn.danger{background:var(--redS);color:var(--red)}
-.btn.sm{padding:8px 11px;font-size:13px;border-radius:5px;min-height:34px}
+.btn.sm{padding:8px 11px;font-size:13px;border-radius:5px;min-height:44px}
 .btnrow{display:flex;gap:8px}
 .btnrow>*{flex:1}
 
@@ -133,7 +139,9 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
   -ms-overflow-style:none;margin:0 -18px;padding-left:18px;padding-right:18px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;padding:7px 12px;border-radius:6px;background:var(--card2);
-  color:var(--tx);font-size:13px;font-weight:600;border:1px solid transparent}
+  color:var(--tx);font-size:13px;font-weight:600;border:1px solid transparent;
+  min-height:44px;transition:transform .14s var(--ease-out)}
+.chip:active{transform:scale(.97)}
 .chip.on{background:var(--tx);color:var(--inverse)}
 
 /* ---------- 表单 ---------- */
@@ -147,19 +155,32 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .field input[type=date]{min-height:46px}
 .switch{display:flex;align-items:center;justify-content:space-between;
   background:var(--card2);border-radius:5px;padding:12px}
+.settings-actions{display:grid;gap:8px}
+.settings-section{border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.settings-section>summary{list-style:none;min-height:48px;padding:12px 14px;display:flex;
+  align-items:center;justify-content:space-between;font-weight:650;cursor:pointer}
+.settings-section>summary::-webkit-details-marker{display:none}
+.settings-section>summary::after{content:"+";font-size:20px;color:var(--dim);font-weight:400}
+.settings-section[open]>summary::after{content:"−"}
+.settings-section[open]>summary{border-bottom:1px solid var(--line)}
+.settings-section-body{display:flex;flex-direction:column;gap:12px;padding:14px}
+.settings-section.danger>summary{color:var(--red)}
 
 /* ---------- 秘密退休计划 ---------- */
 .retirement-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .retirement-heading>div{display:flex;align-items:center;gap:9px;min-width:0}
 .retirement-heading h1{font-size:22px;line-height:1.2;margin:1px 0 0}
-.retirement-back{width:38px;height:38px;display:grid;place-items:center;border-radius:6px;
-  border:1px solid var(--line);font-size:19px;flex:0 0 auto}
+.retirement-back{width:44px;height:44px;display:grid;place-items:center;border-radius:6px;
+  border:1px solid var(--line);font-size:19px;flex:0 0 auto;
+  transition:transform .14s var(--ease-out)}
 .retirement-back:active{background:var(--card2)}
 .retirement-date{font-size:34px;font-weight:750;line-height:1.08}
 .retirement-scenario-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   gap:3px;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:3px}
 .retirement-scenario-control button{height:48px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:1px;border-radius:4px;color:var(--dim);min-width:0}
+  align-items:center;justify-content:center;gap:1px;border-radius:4px;color:var(--dim);min-width:0;
+  transition:transform .14s var(--ease-out),background-color .18s ease,color .18s ease}
+.retirement-scenario-control button:active{transform:scale(.97)}
 .retirement-scenario-control button b{font-size:13px;font-weight:650}
 .retirement-scenario-control button small{font-size:9px;white-space:nowrap}
 .retirement-scenario-control button.on{background:var(--card);box-shadow:0 1px 3px var(--shadow)}
@@ -167,10 +188,11 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .retirement-scenario-control button.on.blue{color:var(--blue)}
 .retirement-scenario-control button.on.green{color:var(--green)}
 .retirement-scenario-result{display:flex;flex-direction:column;gap:3px;
-  animation:retirement-scenario-in .32s ease-out both}
+  animation:retirement-scenario-in .2s var(--ease-out) both}
 .retirement-progress{height:8px;background:var(--card);border:1px solid var(--line);
   border-radius:4px;overflow:hidden}
 .retirement-progress span{display:block;height:100%;background:var(--blue);border-radius:3px}
+.retirement-progress-label{font-size:12px}
 .retirement-milestones{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;height:10px}
 .retirement-milestones span{display:block;background:var(--line);border-radius:2px}
 .retirement-milestones span.done{background:var(--green)}
@@ -192,7 +214,9 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .retirement-asset-fields .hint{grid-column:1/-1;margin:0}
 .mode-control{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--card2);
   border:1px solid var(--line);border-radius:6px;padding:3px}
-.mode-control button{min-height:38px;border-radius:4px;font-size:13px;color:var(--dim)}
+.mode-control button{min-height:44px;border-radius:4px;font-size:13px;color:var(--dim);
+  transition:transform .14s var(--ease-out),background-color .18s ease,color .18s ease}
+.mode-control button:active{transform:scale(.97)}
 .mode-control button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px var(--shadow)}
 .retirement-rate-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
 .retirement-phase-key{display:flex;align-items:center;gap:14px;color:var(--dim);font-size:10px}
@@ -231,7 +255,7 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 }
 @media (max-width:440px){
   .retirement-heading{align-items:flex-start}
-  .retirement-heading>.btn{width:40px;min-width:40px;padding:0;font-size:0}
+  .retirement-heading>.btn{width:44px;min-width:44px;padding:0;font-size:0}
   .retirement-heading>.btn .ph{font-size:18px}
   .retirement-rate-grid{grid-template-columns:1fr}
   .retirement-asset-fields{grid-template-columns:1fr}
@@ -245,15 +269,18 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 /* ---------- 弹层 ---------- */
 .sheet{position:fixed;inset:0;z-index:50;background:var(--bg);
   display:flex;flex-direction:column;transform:translateY(100%);
-  transition:transform .26s cubic-bezier(.3,.8,.3,1)}
-.sheet.open{transform:translateY(0)}
+  visibility:hidden;pointer-events:none;
+  transition:transform .24s var(--ease-drawer),visibility 0s linear .24s}
+.sheet.open{transform:translateY(0);visibility:visible;pointer-events:auto;
+  transition:transform .24s var(--ease-drawer),visibility 0s}
 .sheet>.top{display:flex;align-items:center;justify-content:space-between;
   padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;border-bottom:1px solid var(--line)}
 .sheet>.top .h2{font-size:18px}
 .sheet>.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:16px 16px calc(40px + env(safe-area-inset-bottom));
   display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
-.x{color:var(--tx);font-size:25px;line-height:1;width:36px;height:36px;border-radius:6px}
+.x{color:var(--tx);font-size:25px;line-height:1;width:44px;height:44px;border-radius:6px;
+  transition:transform .14s var(--ease-out)}
 .x:active{background:var(--card2)}
 
 /* ---------- 底部导航 ---------- */
@@ -262,7 +289,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;
   border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 2px 7px;color:var(--muted-icon);font-size:10px;font-weight:600;min-width:0}
+  padding:8px 2px 7px;color:var(--muted-icon);font-size:11px;font-weight:600;min-width:0}
 nav button.on{color:var(--tx)}
 nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify-content:center}
 
@@ -281,12 +308,12 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chart-series-readout strong{font-size:11px;font-weight:650;white-space:nowrap}
 .chart-frame{display:grid;grid-template-columns:42px minmax(0,1fr);gap:6px;align-items:start}
-.chart-y-axis{height:138px;position:relative;color:var(--dim);font-size:9px;
+.chart-y-axis{height:156px;position:relative;color:var(--dim);font-size:11px;
   font-variant-numeric:tabular-nums}
 .chart-y-unit{position:absolute;top:0;right:0;font-weight:650;color:var(--tx)}
 .chart-y-label{position:absolute;right:0;line-height:1;transform:translateY(-50%);white-space:nowrap}
 .chart-plot{min-width:0}
-.chart{width:100%;height:138px;display:block;overflow:visible;touch-action:pan-y;
+.chart{width:100%;height:156px;display:block;overflow:visible;touch-action:pan-y;
   cursor:crosshair;border-radius:4px}
 .chart:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .chart-grid{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
@@ -299,11 +326,11 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
 .chart-bar{vector-effect:non-scaling-stroke}
 .chart-bar.selected{stroke:var(--tx);stroke-width:1.5}
 .chart-x-axis{height:18px;position:relative;margin-top:3px;color:var(--dim);
-  font-size:9px;font-variant-numeric:tabular-nums}
+  font-size:11px;font-variant-numeric:tabular-nums}
 .chart-x-label{position:absolute;top:0;line-height:1;transform:translateX(-50%);white-space:nowrap}
 .chart-x-label.first{transform:none}.chart-x-label.last{transform:translateX(-100%)}
 .chart-x-label.today{color:var(--blue);font-weight:700}
-.retirement-phase-key+.chart-shell{animation:retirement-scenario-in .38s ease-out both}
+.retirement-phase-key+.chart-shell{animation:retirement-scenario-in .22s var(--ease-out) both}
 @media (max-width:440px){
   .chart-series-readout{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -314,8 +341,11 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
   transform:translateX(-50%);z-index:80;background:var(--tx);color:var(--inverse);
   padding:11px 17px;border-radius:6px;font-size:13px;font-weight:600;
   box-shadow:0 8px 24px var(--shadow);opacity:0;pointer-events:none;
-  transition:opacity .2s;max-width:88vw;text-align:center}
-.toast.show{opacity:1}
+  transition:opacity .18s ease;max-width:88vw;text-align:center;
+  display:flex;align-items:center;gap:12px}
+.toast.show{opacity:1;pointer-events:auto}
+.toast-action{color:inherit;text-decoration:underline;text-underline-offset:3px;font-weight:750;
+  min-height:32px;padding:0 2px}
 
 /* ---------- 安全锁屏 ---------- */
 .lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;
@@ -341,7 +371,8 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .import-row input{width:18px;height:18px}.import-row .note{min-width:0;overflow-wrap:anywhere}
 .ocr-preview{width:100%;max-height:230px;object-fit:contain;background:var(--card2);border-radius:6px}
 .progress{height:6px;background:var(--card2);border-radius:6px;overflow:hidden}
-.progress>span{display:block;height:100%;background:var(--tx);width:0;transition:width .2s}
+.progress>span{display:block;height:100%;background:var(--tx);width:100%;
+  transform:scaleX(0);transform-origin:left;transition:transform .2s var(--ease-out)}
 
 /* ---------- 今天 ---------- */
 .today-head{padding:2px 0 7px}
@@ -378,6 +409,28 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
   nav{left:50%;right:auto;width:640px;transform:translateX(-50%);border-left:1px solid var(--line);border-right:1px solid var(--line)}
 }
+@media (min-width:900px){
+  body{padding-bottom:0}
+  .app-shell{width:min(1080px,100%);min-height:100vh;margin:0 auto;border-left:1px solid var(--line);
+    border-right:1px solid var(--line)}
+  header{padding-left:24px;padding-right:24px}
+  main{max-width:none;margin-left:180px;padding:24px;display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  main>*{min-width:0}
+  main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,
+  main>.retirement-heading,main>.retirement-disclaimer{grid-column:1/-1}
+  nav{top:63px;bottom:0;left:50%;right:auto;width:180px;
+    transform:translateX(-540px);border-top:0;border-left:1px solid var(--line);
+    border-right:1px solid var(--line);flex-direction:column;align-items:stretch;
+    gap:4px;padding:16px 10px;background:var(--nav-bg)}
+  nav button{flex:0 0 auto;min-height:48px;flex-direction:row;justify-content:flex-start;
+    gap:10px;padding:8px 12px;border-radius:6px;font-size:13px}
+  nav button.on{background:var(--card2)}
+  .sheet{left:auto;width:min(560px,100vw);transform:translateX(100%);
+    box-shadow:-12px 0 36px var(--shadow)}
+  .sheet.open{transform:translateX(0)}
+  .chart,.chart-y-axis{height:180px}
+}
 </style>
 </head>
 <body>
@@ -403,8 +456,11 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   <main id="main"></main>
   <nav id="nav"></nav>
 </div>
-<div class="sheet" id="sheet"><div class="top"><h2 class="h2" id="sheetTitle"></h2><button class="x" onclick="closeSheet()">&times;</button></div><div class="body" id="sheetBody"></div></div>
-<div class="toast" id="toast"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-hidden="true"
+  aria-labelledby="sheetTitle" tabindex="-1" inert><div class="top"><h2 class="h2" id="sheetTitle"></h2>
+  <button class="x" onclick="closeSheet()" aria-label="关闭">&times;</button></div>
+  <div class="body" id="sheetBody"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <div class="retirement-celebration" id="retirementCelebration" role="dialog" aria-modal="true"
   aria-labelledby="retirementCelebrationTitle">
   <button class="retirement-celebration-close" onclick="hideRetirementCelebration()"
@@ -523,21 +579,42 @@ function monthlyNet(txs,ids){
 var CYCLE_N={'jährlich':1,'halbjährlich':2,'quartal':4,'monatlich':12,'einmalig':0};
 var CYCLE_ZH={'jährlich':'每年','halbjährlich':'每半年','quartal':'每季度','monatlich':'每月','einmalig':'一次性'};
 
+function contractIsFixedTerm(c){
+  if(c.fixedTerm===true) return true;
+  if(c.fixedTerm===false) return false;
+  return !c.autoRenew&&!!c.endDate;
+}
+function contractRenewalDate(c){
+  if(contractIsFixedTerm(c)) return null;
+  return c.renewalDate||c.endDate||null;
+}
+function contractCalendarDate(c){
+  return contractIsFixedTerm(c)?(c.endDate||null):contractRenewalDate(c);
+}
+
 /** 合同倒计时 */
 function contractStatus(c,now){
   now=now||today();
   var yearly=(c.premium||0)*(CYCLE_N[c.cycle]||0);
-  if(!c.endDate) return {daysToEnd:null,noticeDeadline:null,daysToNotice:null,
-    urgency:'open', label:c.autoRenew?'自动续约 · 无固定到期':'无到期日', yearlyCost:yearly};
-  var dEnd=daysBetween(now,c.endDate);
-  var nd=c.noticeDays>0 ? addDays(c.endDate,-c.noticeDays) : c.endDate;
+  var fixed=contractIsFixedTerm(c), eventDate=contractCalendarDate(c);
+  if(!eventDate) return {daysToEnd:null,noticeDeadline:null,daysToNotice:null,
+    eventDate:null,eventKind:fixed?'end':'renewal',urgency:'open',
+    label:fixed?'未填写固定到期日':'自动续约 · 无固定到期',yearlyCost:yearly};
+  var dEnd=daysBetween(now,eventDate);
+  if(!fixed&&c.noticeDays<=0) return {
+    daysToEnd:dEnd,noticeDeadline:null,daysToNotice:null,eventDate:eventDate,
+    eventKind:'renewal',urgency:'open',label:'自动续约 · 无固定到期',yearlyCost:yearly
+  };
+  var nd=c.noticeDays>0 ? addDays(eventDate,-c.noticeDays) : eventDate;
   var dNotice=daysBetween(now,nd);
   var u,label;
-  if(dEnd<0){ u='expired'; label='已过期 '+Math.abs(dEnd)+' 天'; }
-  else if(dNotice<=0){ u='notice'; label='退保期已过 · '+dEnd+' 天后到期'; }
+  if(fixed&&dEnd<0){ u='expired'; label='已过期 '+Math.abs(dEnd)+' 天'; }
+  else if(!fixed&&dEnd<0){ u='open'; label='续约日期待更新'; }
+  else if(dNotice<=0){ u='notice'; label='退保期已过 · '+dEnd+' 天后'+(fixed?'到期':'续约'); }
   else if(dNotice<=45){ u='soon'; label=dNotice+' 天内需决定退保'; }
-  else { u='ok'; label=dEnd+' 天后到期'; }
-  return {daysToEnd:dEnd,noticeDeadline:nd,daysToNotice:dNotice,urgency:u,label:label,yearlyCost:yearly};
+  else { u='ok'; label=dEnd+' 天后'+(fixed?'到期':'续约'); }
+  return {daysToEnd:dEnd,noticeDeadline:nd,daysToNotice:dNotice,eventDate:eventDate,
+    eventKind:fixed?'end':'renewal',urgency:u,label:label,yearlyCost:yearly};
 }
 var URG_RANK={notice:0,expired:1,soon:2,ok:3,open:4};
 var URG_TONE={expired:'red',notice:'red',soon:'amber',ok:'green',open:'blue'};
@@ -556,14 +633,15 @@ function buildIcs(contracts){
   var alarm=function(trig,desc){ return ['BEGIN:VALARM','ACTION:DISPLAY',
     'TRIGGER:'+trig,'DESCRIPTION:'+icsEsc(desc),'END:VALARM']; };
   contracts.forEach(function(c){
-    if(!c.endDate) return;
-    var st=contractStatus(c);
+    var st=contractStatus(c), eventDate=st.eventDate;
+    if(!eventDate) return;
+    var isRenewal=st.eventKind==='renewal';
     var mny=c.premium?(' · '+c.premium.toFixed(2)+' € / '+c.cycle):'';
     var desc=[c.provider?('服务商：'+c.provider):'', c.vehiclePlate?('车牌号：'+c.vehiclePlate):'',
       c.insuredPerson?('受保人：'+c.insuredPerson):'',
       c.tariff?('Tarif：'+c.tariff):'',
       c.premium?('保费：'+c.premium.toFixed(2)+' € ('+CYCLE_ZH[c.cycle]+')'):'',
-      '合同期：'+fmtDate(c.startDate)+' – '+fmtDate(c.endDate),
+      (isRenewal?'下次续约：':'合同期：'+fmtDate(c.startDate)+' – ')+fmtDate(eventDate),
       '退保通知期：'+c.noticeDays+' 天',
       c.autoRenew?'自动续约：是（不退保则自动延长）':'自动续约：否',
       c.notes?('备注：'+c.notes):''].filter(Boolean).join('\n');
@@ -578,10 +656,10 @@ function buildIcs(contracts){
         ['END:VEVENT']);
     }
     L=L.concat(['BEGIN:VEVENT','UID:'+c.id+'-end@scrooge','DTSTAMP:'+icsStamp(),
-      'DTSTART;VALUE=DATE:'+ds(c.endDate),
-      'SUMMARY:'+icsEsc(c.category)+' 到期：'+icsEsc(c.name)+icsEsc(mny),
-      'DESCRIPTION:'+icsEsc(desc)],
-      alarm('-P7D',c.name+' 7 天后到期'), ['END:VEVENT']);
+        'DTSTART;VALUE=DATE:'+ds(eventDate),
+        'SUMMARY:'+icsEsc(c.category)+(isRenewal?' 续约：':' 到期：')+icsEsc(c.name)+icsEsc(mny),
+        'DESCRIPTION:'+icsEsc(desc)],
+      alarm('-P7D',c.name+' 7 天后'+(isRenewal?'续约':'到期')), ['END:VEVENT']);
   });
   L.push('END:VCALENDAR');
   return L.join('\r\n');
@@ -590,7 +668,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='785eb5d47341';
+var APP_BUILD='a77fdc727f4e';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -598,11 +676,43 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-var toastT;
-function toast(msg){
+var toastT, pendingUndo=null, undoT=null;
+function toast(msg,actionLabel,actionFn){
   var el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('show');
-  clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600);
+  el.innerHTML='';
+  var text=document.createElement('span');
+  text.textContent=msg; el.appendChild(text);
+  if(actionLabel&&actionFn){
+    var action=document.createElement('button');
+    action.className='toast-action'; action.textContent=actionLabel;
+    action.onclick=function(){
+      clearTimeout(toastT);
+      el.classList.remove('show');
+      actionFn();
+    };
+    el.appendChild(action);
+  }
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(function(){el.classList.remove('show');},actionLabel?5000:2600);
+}
+function removeWithUndo(collection,id,label){
+  var list=S&&S[collection], index=list?list.findIndex(function(x){return x.id===id;}):-1;
+  if(index<0) return false;
+  clearTimeout(undoT);
+  pendingUndo={collection:collection,index:index,item:copyState(list[index])};
+  list.splice(index,1);
+  save(); render();
+  toast('已删除'+(label?(' · '+label):''),'撤销',undoPendingDelete);
+  undoT=setTimeout(function(){pendingUndo=null;},5200);
+  return true;
+}
+function undoPendingDelete(){
+  if(!pendingUndo||!S||!S[pendingUndo.collection]) return;
+  clearTimeout(undoT);
+  var undo=pendingUndo; pendingUndo=null;
+  S[undo.collection].splice(Math.min(undo.index,S[undo.collection].length),0,undo.item);
+  save(); render(); toast('已恢复');
 }
 
 /* ================= 小工具 ================= */
@@ -989,11 +1099,12 @@ var TABS=[
   {k:'save',  label:'储蓄', icon:'piggy-bank'},
   {k:'ctr',   label:'合同', icon:'file-text'}
 ];
-var saveSecretTaps=[];
+var saveSecretTaps=[], sheetTrigger=null, sheetClearT=null;
 function renderNav(){
   document.getElementById('nav').innerHTML=TABS.map(function(t){
     var selected=view===t.k||(view==='retire'&&t.k==='save');
-    return '<button class="'+(selected?'on':'')+'" onclick="navGo(\''+t.k+'\')">'+
+    return '<button type="button" class="'+(selected?'on':'')+'"'+
+      (selected?' aria-current="page"':'')+' onclick="navGo(\''+t.k+'\')">'+
       icon(t.icon,selected)+'<span>'+t.label+'</span></button>';
   }).join('');
 }
@@ -1013,16 +1124,50 @@ function go(v){ view=v; showAllTx=false; render(); window.scrollTo(0,0); }
 
 /* ================= 弹层 ================= */
 function openSheet(title,html){
+  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell');
+  clearTimeout(sheetClearT);
+  if(!sheet.classList.contains('open')) sheetTrigger=document.activeElement;
   document.getElementById('sheetTitle').textContent=title;
   document.getElementById('sheetBody').innerHTML=html;
-  document.getElementById('sheet').classList.add('open');
+  sheet.removeAttribute('inert');
+  sheet.setAttribute('aria-hidden','false');
+  if(shell) shell.setAttribute('inert','');
+  sheet.classList.add('open');
   document.body.style.overflow='hidden';
+  setTimeout(function(){ if(sheet.classList.contains('open')) sheet.focus(); },0);
 }
 function closeSheet(){
-  document.getElementById('sheet').classList.remove('open');
+  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell');
+  if(!sheet) return;
+  sheet.classList.remove('open');
+  sheet.setAttribute('aria-hidden','true');
+  sheet.setAttribute('inert','');
+  if(shell) shell.removeAttribute('inert');
   document.body.style.overflow='';
+  var restore=sheetTrigger; sheetTrigger=null;
+  sheetClearT=setTimeout(function(){
+    if(!sheet.classList.contains('open')) document.getElementById('sheetBody').innerHTML='';
+    if(restore&&restore.isConnected&&restore.focus) restore.focus();
+  },250);
   if(updatePending) setTimeout(function(){ refreshApp(true); },280);
 }
+document.addEventListener('keydown',function(event){
+  var sheet=document.getElementById('sheet');
+  if(event.key==='Escape'&&sheet&&sheet.classList.contains('open')){
+    event.preventDefault(); closeSheet(); return;
+  }
+  if(event.key!=='Tab'||!sheet||!sheet.classList.contains('open')) return;
+  var focusable=Array.prototype.slice.call(sheet.querySelectorAll(
+    'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+  )).filter(function(el){return !el.hasAttribute('inert')&&el.offsetParent!==null;});
+  if(!focusable.length) return;
+  var first=focusable[0], last=focusable[focusable.length-1];
+  if(event.shiftKey&&document.activeElement===first){
+    event.preventDefault(); last.focus();
+  }else if(!event.shiftKey&&document.activeElement===last){
+    event.preventDefault(); first.focus();
+  }
+});
 
 /* ================= 概览 ================= */
 function viewHome(){
@@ -2263,7 +2408,7 @@ function meterDecimalRules(m){
 function updateOcrProgress(message,progress){
   var text=document.getElementById('ocr_status'), bar=document.getElementById('ocr_bar');
   if(text) text.textContent=message;
-  if(bar) bar.style.width=Math.round((progress||0)*100)+'%';
+  if(bar) bar.style.transform='scaleX('+Math.max(0,Math.min(1,progress||0))+')';
 }
 function applyOcrCandidate(value){
   var input=document.getElementById('rd_val');
@@ -2313,7 +2458,7 @@ async function scanMeterPhoto(input){
     }
     applyOcrCandidate(candidates[0].value);
     document.getElementById('ocr_status').textContent='已填入最可能的读数，请核对后保存';
-    document.getElementById('ocr_bar').style.width='100%';
+    document.getElementById('ocr_bar').style.transform='scaleX(1)';
     result.insertAdjacentHTML('beforeend',
       '<div class="chips" style="margin:0;padding:2px 0">'+candidates.slice(0,6).map(function(c){
         return '<button class="chip" onclick="applyOcrCandidate('+c.value+')">'+
@@ -2334,6 +2479,7 @@ function setMeter(id){
   var m=S.meters.filter(function(x){return x.id===id;})[0];
   if(m){ meterSel[m.kind]=id; render(); }
 }
+function meterValueText(value){ return n0(Math.floor(Number(value)||0)); }
 
 function viewMeter(kind){
   var ms=S.meters.filter(function(m){return m.kind===kind;});
@@ -2353,7 +2499,7 @@ function viewMeter(kind){
 
   var head='<div class="between"><div><span class="dim">最新读数 · '+
     (last?fmtDate(last.date):'—')+'</span><br><span class="big tnum c-gold">'+
-    (last?n2(last.value):'—')+' <small class="dim" style="font-size:13px">'+unit+
+    (last?meterValueText(last.value):'—')+' <small class="dim" style="font-size:13px">'+unit+
     '</small></span></div>'+badge(kind==='power'?'电':'气','gold')+'</div>';
   if(li){
     head+=hr()+'<span class="dim">上一期间 '+fmtDate(li.from)+' → '+fmtDate(li.to)+' · '+li.days+' 天</span>'+
@@ -2401,12 +2547,12 @@ function viewMeter(kind){
     '<span class="dim">表号 '+esc(m.serial||'—')+(m.reference?(' · 客户号 '+esc(m.reference)):'')+'</span>'+hr();
   if(!rs.length) body+='<p class="empty">还没有抄表记录</p>';
   iv.slice().reverse().forEach(function(i){
-    body+=row({label:fmtDate(i.to)+'   '+n2(i.value)+' '+unit,
+    body+=row({label:fmtDate(i.to)+'   '+meterValueText(i.value)+' '+unit,
       sub:'+'+n2(i.netRaw)+' '+unit+' · '+i.days+' 天 · 月均 '+n0(i.avg30)+' kWh · '+n2(i.cost)+' €',
-      right:'<button class="btn sm ghost" onclick="delReading(\''+i.readingId+'\')">删</button>'});
+      onclick:"openReadingDetail('"+i.readingId+"')"});
   });
-  if(rs.length) body+=row({label:fmtDate(rs[0].date)+'   '+n2(rs[0].value)+' '+unit,sub:'基准读数',
-    right:'<button class="btn sm ghost" onclick="delReading(\''+rs[0].id+'\')">删</button>'});
+  if(rs.length) body+=row({label:fmtDate(rs[0].date)+'   '+meterValueText(rs[0].value)+' '+unit,
+    sub:'基准读数',onclick:"openReadingDetail('"+rs[0].id+"')"});
   out+=card(body);
   return out;
 }
@@ -2418,7 +2564,7 @@ function addReading(){
   var unit=m.unit==='m3'?'m³':'kWh';
   window._addKind=kind;
   openSheet('录入 · '+m.label,
-    (last?card('<span class="dim">上次读数</span><span class="h2 tnum">'+n2(last.value)+' '+unit+
+    (last?card('<span class="dim">上次读数</span><span class="h2 tnum">'+meterValueText(last.value)+' '+unit+
       ' · '+fmtDate(last.date)+'</span>','blue'):'')+
     fileField({id:'rd_photo',label:'拍照识别表盘',accept:'image/*',capture:'environment',
       onchange:'scanMeterPhoto(this)',hint:'照片只在当前设备识别，不会上传。首次使用需要下载 OCR 组件。'})+
@@ -2450,11 +2596,28 @@ function saveReading(){
   S.readings.push({id:uid(),meterId:m.id,date:d,value:v,note:val('rd_note')});
   save(); closeSheet(); render(); toast('已保存');
 }
+function openReadingDetail(id){
+  var r=S.readings.filter(function(x){return x.id===id;})[0];
+  if(!r) return;
+  var m=S.meters.filter(function(x){return x.id===r.meterId;})[0];
+  var unit=m&&m.unit==='m3'?'m³':'kWh';
+  var iv=m?intervals(meterReadings(S.readings,m.id),m).filter(function(x){
+    return x.readingId===id;
+  })[0]:null;
+  openSheet('抄表记录',
+    card('<span class="dim">'+fmtDate(r.date)+'</span>'+
+      '<span class="big tnum">'+meterValueText(r.value)+' <small class="dim" style="font-size:13px">'+
+        unit+'</small></span>'+
+      (iv?'<div class="stats">'+stat('本期用量',n2(iv.netRaw),unit,iv.anomaly?'red':'')+
+        stat('折算费用',n2(iv.cost),'€',iv.cost<0?'green':'')+'</div>':'')+
+      (r.note?'<p class="dim" style="margin:0">'+esc(r.note)+'</p>':''))+
+    btn('删除这条读数',"delReading('"+id+"')",'danger','trash'));
+}
 function delReading(id){
   var r=S.readings.filter(function(x){return x.id===id;})[0];
-  if(!r || !confirm('删除 '+fmtDate(r.date)+' 的读数 '+n2(r.value)+'？')) return;
-  S.readings=S.readings.filter(function(x){return x.id!==id;});
-  save(); render(); toast('已删除');
+  if(!r) return;
+  closeSheet();
+  removeWithUndo('readings',id,fmtDate(r.date)+' 抄表记录');
 }
 function editTarif(){
   var m=pickMeter(view==='gas'?'gas':'power');
@@ -2542,7 +2705,7 @@ function viewSave(){
     return row({label:t.note||'（无备注）',
       sub:fmtDate(t.date)+' · '+a.name+(t.valuationOnly?' · 市值调整':''),
       value:money(t.amount,a.currency),tone:t.valuationOnly?'blue':(t.amount<0?'red':'green'),
-      right:t.valuationOnly?'':'<button class="btn sm ghost" onclick="delTx(\''+t.id+'\')">删</button>'});
+      onclick:"openTxDetail('"+t.id+"')"});
   }).join('');
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
@@ -2556,27 +2719,52 @@ function addTx(){
     field({id:'tx_acc',label:'账户',type:'select',val:accSel==='all'?S.accounts[0].id:accSel,
       opts:S.accounts.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
     field({id:'tx_date',label:'日期',type:'date',val:today()})+
-    field({id:'tx_amt',label:'金额（存入为正，支出为负）',type:'number',step:'any',
-      inputmode:'decimal',ph:'1000 或 -500'})+
+    '<div class="field"><label>收支类型</label>'+
+      '<div class="mode-control tx-mode-control" role="group" aria-label="收支类型">'+
+        '<button type="button" class="on" aria-pressed="true" onclick="setTxType(\'income\')">存入</button>'+
+        '<button type="button" aria-pressed="false" onclick="setTxType(\'expense\')">支出</button>'+
+      '</div><input id="tx_type" type="hidden" value="income"></div>'+
+    field({id:'tx_amt',label:'金额',type:'number',step:'any',
+      inputmode:'decimal',ph:'例如 500'})+
     field({id:'tx_note',label:'备注',ph:'例如 月度存款 / 信用卡还款'})+
-    '<div class="btnrow">'+btn('+1000',"setAmt(1000)",'ghost')+btn('+2000',"setAmt(2000)",'ghost')+
-    btn('+500',"setAmt(500)",'ghost')+'</div>'+
+    '<div class="btnrow">'+btn('500',"setAmt(500)",'ghost')+btn('1000',"setAmt(1000)",'ghost')+
+    btn('2000',"setAmt(2000)",'ghost')+'</div>'+
     btn('保存','saveTx()'));
+}
+function setTxType(type){
+  type=type==='expense'?'expense':'income';
+  document.getElementById('tx_type').value=type;
+  Array.prototype.forEach.call(document.querySelectorAll('.tx-mode-control button'),function(button,i){
+    var on=(type==='income'&&i===0)||(type==='expense'&&i===1);
+    button.classList.toggle('on',on);
+    button.setAttribute('aria-pressed',on?'true':'false');
+  });
 }
 function setAmt(v){ document.getElementById('tx_amt').value=v; }
 function saveTx(){
   var d=val('tx_date'), a=fnum('tx_amt');
   if(!isDate(d)) return toast('请选择日期');
-  if(!isFinite(a)||a===0) return toast('请输入金额，存入为正、支出为负');
+  if(!isFinite(a)||a===0) return toast('请输入有效金额');
+  a=Math.abs(a)*(val('tx_type')==='expense'?-1:1);
   S.txs.push({id:uid(),accountId:val('tx_acc'),date:d,amount:a,note:val('tx_note')});
   save(); closeSheet(); render(); toast('已记录');
 }
+function openTxDetail(id){
+  var t=S.txs.filter(function(x){return x.id===id;})[0];
+  if(!t) return;
+  var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
+  openSheet(t.valuationOnly?'市值调整':'流水详情',
+    card('<span class="dim">'+fmtDate(t.date)+' · '+esc(a.name)+'</span>'+
+      '<span class="big tnum '+(t.amount<0?'c-red':'c-green')+'">'+
+        esc(money(t.amount,a.currency))+'</span>'+
+      '<p style="margin:0">'+esc(t.note||'无备注')+'</p>')+
+    (t.valuationOnly?'':btn('删除这条流水',"delTx('"+id+"')",'danger','trash')));
+}
 function delTx(id){
   var t=S.txs.filter(function(x){return x.id===id;})[0];
-  var a=S.accounts.filter(function(x){return x.id===t.accountId;})[0];
-  if(!confirm('删除 '+fmtDate(t.date)+' '+money(t.amount,a.currency)+'？')) return;
-  S.txs=S.txs.filter(function(x){return x.id!==id;});
-  save(); render(); toast('已删除');
+  if(!t) return;
+  closeSheet();
+  removeWithUndo('txs',id,fmtDate(t.date)+' 流水');
 }
 function officialFxMarkup(){
   if(officialFxLoading)
@@ -3091,8 +3279,9 @@ function viewRetirement(){
     btn('调整计划','editRetirementPlan()','ghost sm','sliders-horizontal')+'</section>';
 
   out+=card('<div class="between"><span class="dim">100 万欧元目标</span>'+
-      badge(scenarioMeta.label+'情景 · '+
-        progress.toLocaleString('de-DE',{maximumFractionDigits:1})+'%',scenarioMeta.tone)+'</div>'+
+      '<span class="retirement-target-badge">'+
+        badge(scenarioMeta.label+' · '+(scenarioMonths==null?'无法达到':
+          retirementDateText(scenarioMonths)),scenarioMeta.tone)+'</span></div>'+
     retirementScenarioControl(plan)+
     '<div class="retirement-scenario-result">'+
     '<span class="retirement-date '+(scenarioMonths==null?'c-red':'c-'+scenarioMeta.tone)+'">'+
@@ -3102,6 +3291,8 @@ function viewRetirement(){
       : (scenarioMonths===0?'目标已经完成':
         scenarioMeta.label+'情景预计 '+retirementDateText(scenarioMonths)+' 达到 · 首次跨过时 '+
           n0(scenarioEndValue)+' €'))+'</span></div>'+
+    '<div class="between retirement-progress-label"><span class="dim">当前资产进度</span>'+
+      '<strong class="tnum">'+progress.toLocaleString('de-DE',{maximumFractionDigits:1})+'%</strong></div>'+
     '<div class="retirement-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" '+
       'aria-valuenow="'+progress.toFixed(1)+'"><span style="width:'+progress.toFixed(2)+'%"></span></div>'+
     '<div class="stats">'+
@@ -3356,8 +3547,9 @@ function viewCtr(){
 
   if(att.length) out+=card(h2(icon('bell')+' 需要行动')+att.map(function(x){
     return row({label:x.c.name,
-      sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)+' · 到期 '+fmtDate(x.c.endDate)):
-        ('到期 '+fmtDate(x.c.endDate)),
+      sub:x.st.noticeDeadline?('退保截止 '+fmtDate(x.st.noticeDeadline)+' · '+
+        (x.st.eventKind==='renewal'?'续约 ':'到期 ')+fmtDate(x.st.eventDate)):
+        ((x.st.eventKind==='renewal'?'续约 ':'到期 ')+fmtDate(x.st.eventDate)),
       value:x.st.label,tone:'red',onclick:"editCtr('"+x.c.id+"')"});
   }).join(''),'red');
 
@@ -3378,9 +3570,12 @@ function viewCtr(){
         ' insurance-subject">'+esc(c.insuredPerson?('受保人 · '+c.insuredPerson):'受保人待补')+'</span>':'')+
       (c.tariff?badge(c.tariff,'dim'):'')+'</div></div>'+
       badge(st.label,URG_TONE[st.urgency])+'</div>'+hr()+
-      row({label:fmtDate(c.startDate)+' → '+(c.endDate?fmtDate(c.endDate):'无固定到期'),
+      row({label:fmtDate(c.startDate)+' → '+(contractIsFixedTerm(c)&&c.endDate
+          ?fmtDate(c.endDate):'无固定到期'),
         sub:CYCLE_ZH[c.cycle]+(c.noticeDays>0?(' · 退保通知期 '+c.noticeDays+' 天'):'')+
-          (c.autoRenew?' · 自动续约':''),
+          (c.autoRenew?' · 自动续约':'')+
+          (!contractIsFixedTerm(c)&&contractRenewalDate(c)
+            ?(' · 下次续约 '+fmtDate(contractRenewalDate(c))):''),
         value:c.premium?(n2(c.premium)+' €'):'待补',tone:c.premium?'gold':'dim'});
     if(c.premium && c.cycle!=='jährlich' && c.cycle!=='einmalig')
       body+='<span class="dim">年化 '+eur(st.yearlyCost)+'</span>';
@@ -3404,10 +3599,10 @@ function editCtr(id,presetType){
   var c = id ? S.contracts.filter(function(x){return x.id===id;})[0]
     : {id:'',name:'',category:'其他',propertyId:null,provider:'',tariff:'',premium:null,
        vehiclePlate:'',insuredPerson:'',cycle:'jährlich',startDate:today(),endDate:null,
-       autoRenew:true,noticeDays:30,notes:''};
+       renewalDate:null,fixedTerm:false,autoRenew:true,noticeDays:30,notes:''};
   var known=id?contractTypeFor(c):contractTypeById(presetType);
   if(known&&!id){ c.name=known.name; c.category=known.category; }
-  var typeId=known?known.id:'custom';
+  var typeId=known?known.id:'custom', termMode=contractIsFixedTerm(c)?'fixed':'auto';
   openSheet(id?'编辑合同':'新增合同',
     field({id:'c_name_type',label:'保险 / 合同名称',type:'select',val:typeId,
       onchange:'contractNameChanged()',opts:CONTRACT_TYPES.map(function(t){
@@ -3435,16 +3630,36 @@ function editCtr(id,presetType){
     field({id:'c_cyc',label:'缴费周期',type:'select',val:c.cycle,
       opts:CYCLES.map(function(k){return {k:k,label:CYCLE_ZH[k]};})})+
     field({id:'c_start',label:'生效日',type:'date',val:c.startDate})+
-    field({id:'c_end',label:'到期日',type:'date',val:c.endDate||'',
-      hint:'留空 = 自动续约、无固定到期'})+
+    '<div class="field"><label>期限方式</label>'+
+      '<div class="mode-control contract-term-control" role="group" aria-label="合同期限方式">'+
+        '<button type="button" class="'+(termMode==='auto'?'on':'')+'" aria-pressed="'+
+          (termMode==='auto'?'true':'false')+'" onclick="setContractTermMode(\'auto\')">自动续约</button>'+
+        '<button type="button" class="'+(termMode==='fixed'?'on':'')+'" aria-pressed="'+
+          (termMode==='fixed'?'true':'false')+'" onclick="setContractTermMode(\'fixed\')">固定期限</button>'+
+      '</div><input id="c_term_mode" type="hidden" value="'+termMode+'"></div>'+
+    '<div id="c_renewal_wrap" style="'+(termMode==='auto'?'':'display:none')+'">'+
+      field({id:'c_renewal',label:'下次续约日（可选）',type:'date',
+        val:contractRenewalDate(c)||'',hint:'用于年度续约和退保窗口提醒，不代表合同到期。'})+'</div>'+
+    '<div id="c_end_wrap" style="'+(termMode==='fixed'?'':'display:none')+'">'+
+      field({id:'c_end',label:'固定到期日',type:'date',
+        val:termMode==='fixed'?(c.endDate||''):'',hint:'只有合同确定终止时才填写。'})+'</div>'+
     field({id:'c_notice',label:'退保通知期（天）',type:'number',inputmode:'numeric',
       val:c.noticeDays,hint:'德国常见：车险 30 天、房屋/家财险 90 天'})+
-    '<div class="switch"><span>自动续约</span><input type="checkbox" id="c_auto" '+
-      (c.autoRenew?'checked':'')+' style="width:auto;transform:scale(1.4)"></div>'+
     field({id:'c_notes',label:'注意事项 / 备注',type:'textarea',val:c.notes,
       ph:'免赔额、理赔电话、保单号、涨价情况…'})+
     btn('保存',"saveCtr('"+(c.id||'')+"')")+
     (id?btn('删除此合同',"delCtr('"+c.id+"')",'danger'):''));
+}
+function setContractTermMode(mode){
+  mode=mode==='fixed'?'fixed':'auto';
+  document.getElementById('c_term_mode').value=mode;
+  document.getElementById('c_renewal_wrap').style.display=mode==='auto'?'':'none';
+  document.getElementById('c_end_wrap').style.display=mode==='fixed'?'':'none';
+  Array.prototype.forEach.call(document.querySelectorAll('.contract-term-control button'),function(button,i){
+    var on=(mode==='auto'&&i===0)||(mode==='fixed'&&i===1);
+    button.classList.toggle('on',on);
+    button.setAttribute('aria-pressed',on?'true':'false');
+  });
 }
 function contractNameChanged(){
   var type=contractTypeById(val('c_name_type'));
@@ -3467,9 +3682,12 @@ function saveCtr(id){
   var type=contractTypeById(val('c_name_type'));
   var name=type?type.name:val('c_name');
   if(!name) return toast('请填写合同名称');
-  var st=val('c_start'), en=val('c_end');
+  var st=val('c_start'), termMode=val('c_term_mode');
+  var en=termMode==='fixed'?val('c_end'):'';
+  var renewal=termMode==='auto'?val('c_renewal'):'';
   if(!isDate(st)) return toast('请选择生效日');
-  if(en && !isDate(en)) return toast('到期日格式不对');
+  if(termMode==='fixed'&&!isDate(en)) return toast('固定期限合同需要填写到期日');
+  if(renewal && !isDate(renewal)) return toast('续约日格式不对');
   var prem=fnum('c_prem'), nd=parseInt(val('c_notice'),10);
   var prop=val('c_prop');
   var category=val('c_cat');
@@ -3478,8 +3696,8 @@ function saveCtr(id){
     vehiclePlate:category==='车险'?normalizeVehiclePlate(val('c_vehicle')):'',
     insuredPerson:needsInsuredPerson(category)?val('c_insured'):'',
     premium:isFinite(prem)?Math.round((prem+Number.EPSILON)*100)/100:null,
-    cycle:val('c_cyc'), startDate:st, endDate:en||null,
-    autoRenew:document.getElementById('c_auto').checked,
+    cycle:val('c_cyc'), startDate:st, endDate:en||null,renewalDate:renewal||null,
+    fixedTerm:termMode==='fixed',autoRenew:termMode!=='fixed',
     noticeDays:isFinite(nd)?nd:0, notes:val('c_notes')};
   var i=-1;
   S.contracts.forEach(function(c,k){ if(c.id===id) i=k; });
@@ -3489,8 +3707,8 @@ function saveCtr(id){
 function delCtr(id){
   var c=S.contracts.filter(function(x){return x.id===id;})[0];
   if(!confirm('删除合同「'+c.name+'」？')) return;
-  S.contracts=S.contracts.filter(function(x){return x.id!==id;});
-  save(); closeSheet(); render(); toast('已删除');
+  closeSheet();
+  removeWithUndo('contracts',id,c.name);
 }
 
 /* ================= 文件导出 ================= */
@@ -3513,10 +3731,10 @@ function saveFile(name,text,mime,utiHint){
   toast(utiHint||'已生成 '+name);
 }
 function exportIcs(){
-  var withEnd=S.contracts.filter(function(c){return c.endDate;});
-  if(!withEnd.length) return toast('没有带到期日的合同可导出');
-  saveFile('scrooge-contracts.ics',buildIcs(withEnd),'text/calendar',
-    '已生成 '+withEnd.length+' 份合同的日历事件');
+  var calendared=S.contracts.filter(function(c){return contractCalendarDate(c);});
+  if(!calendared.length) return toast('没有带续约日或到期日的合同可导出');
+  saveFile('scrooge-contracts.ics',buildIcs(calendared),'text/calendar',
+    '已生成 '+calendared.length+' 份合同的日历事件');
 }
 function exportBackup(){
   openSheet('导出加密备份',
@@ -3545,26 +3763,32 @@ function openSettings(){
       '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
       S.contracts.length+' 份合同。<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
-    btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
-    '<button class="btn ghost" id="refreshButton" data-status="'+esc(appRefreshStatus)+
-      '" onclick="refreshApp()" aria-label="'+esc(appRefreshTitle)+'" title="'+esc(appRefreshTitle)+'">'+
-      icon('arrow-clockwise')+'重新加载最新版</button>'+
-    btn('导出加密备份','exportBackup()',null,'lock-key')+
-    fileField({id:'imp_file',label:'选择备份或更新文件',accept:'.json,.vault.json,.patch.json,application/json',
-      onchange:'readBackupFile(this)',hint:'加密更新包只合并指定记录；完整备份会覆盖恢复。文件只在本机读取。'})+
-    field({id:'imp',label:'备份 / 更新内容',type:'textarea',ph:'选择文件后会自动读取，也可以粘贴加密内容'})+
-    field({id:'imp_pw',label:'备份 / 更新密码（旧版明文备份留空）',type:'password'})+
-    btn('导入备份或更新','doImport()','ghost')+
-    hr()+
-    btn('安全设置 / Face ID','openSecuritySettings()','ghost','fingerprint')+
-    hr()+
-    card('<h2 class="h2">放到 iPhone 主屏幕上托管用</h2><p class="dim" style="margin:0;line-height:1.6">'+
-      '下面这个按钮会生成一份<b>不含任何数据</b>的空壳 HTML。'+
-      '要把 App 放到网上（才能"添加到主屏幕"）时上传这一份，'+
-      '你的财务数据就不会出现在网上。装好后在手机上用上面的「导出备份 → 导入备份或更新」把数据搬进去。</p>')+
-    btn('导出空壳版 HTML（不含数据）','exportShell()','ghost','download-simple')+
-    hr()+
-    btn('重置为 Excel 初始数据','doReset()','danger'));
+    '<div class="settings-actions">'+
+      btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
+      btn('安全设置 / Face ID','openSecuritySettings()','ghost','fingerprint')+
+      btn('导出加密备份','exportBackup()',null,'lock-key')+
+      '<button class="btn ghost" id="refreshButton" data-status="'+esc(appRefreshStatus)+
+        '" onclick="refreshApp()" aria-label="'+esc(appRefreshTitle)+'" title="'+esc(appRefreshTitle)+'">'+
+        icon('arrow-clockwise')+'重新加载最新版</button>'+
+    '</div>'+
+    '<details class="settings-section"><summary>恢复与导入</summary><div class="settings-section-body">'+
+      fileField({id:'imp_file',label:'选择备份或更新文件',
+        accept:'.json,.vault.json,.patch.json,application/json',
+        onchange:'readBackupFile(this)',
+        hint:'加密更新包只合并指定记录；完整备份会覆盖恢复。文件只在本机读取。'})+
+      field({id:'imp',label:'备份 / 更新内容',type:'textarea',
+        ph:'选择文件后会自动读取，也可以粘贴加密内容'})+
+      field({id:'imp_pw',label:'备份 / 更新密码（旧版明文备份留空）',type:'password'})+
+      btn('导入备份或更新','doImport()','ghost')+
+    '</div></details>'+
+    '<details class="settings-section"><summary>高级托管工具</summary><div class="settings-section-body">'+
+      '<p class="dim" style="margin:0;line-height:1.6">生成一份不含任何家庭数据的空壳 HTML，用于重新部署主屏幕应用。</p>'+
+      btn('导出空壳版 HTML（不含数据）','exportShell()','ghost','download-simple')+
+    '</div></details>'+
+    '<details class="settings-section danger"><summary>危险操作</summary><div class="settings-section-body">'+
+      '<p class="dim" style="margin:0">重置会丢弃之后新增的所有记录，请先导出加密备份。</p>'+
+      btn('重置为 Excel 初始数据','doReset()','danger')+
+    '</div></details>');
 }
 async function readBackupFile(input){
   var f=input.files&&input.files[0];
@@ -3634,7 +3858,28 @@ function doReset(){
 }
 /** 生成不含数据的空壳，用于公开托管 */
 function exportShell(){
-  var html=document.documentElement.outerHTML;
+  var clone=document.documentElement.cloneNode(true);
+  var main=clone.querySelector('#main');
+  var nav=clone.querySelector('#nav');
+  var sheet=clone.querySelector('#sheet');
+  var sheetBody=clone.querySelector('#sheetBody');
+  var toastBox=clone.querySelector('#toast');
+  if(main){
+    main.innerHTML='';
+    main.removeAttribute('data-view');
+  }
+  if(nav) nav.innerHTML='';
+  if(sheet){
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden','true');
+    sheet.setAttribute('inert','');
+  }
+  if(sheetBody) sheetBody.innerHTML='';
+  if(toastBox){
+    toastBox.classList.remove('show');
+    toastBox.innerHTML='';
+  }
+  var html=clone.outerHTML;
   var empty='var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,'+
     'appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",'+
     'manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},'+
@@ -3646,11 +3891,6 @@ function exportShell(){
   var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
   if(i<0||j<0||j<i) return toast('无法定位数据段，请手动删除 var SEED');
   var shell=html.slice(0,i)+empty+'\n'+html.slice(j);
-  // 去掉运行时注入的内容，保证空壳干净
-  shell=shell.replace(/<main id="main">[\s\S]*?<\/main>/,'<main id="main"></main>')
-             .replace(/<nav id="nav">[\s\S]*?<\/nav>/,'<nav id="nav"></nav>')
-             .replace(/<div class="body" id="sheetBody">[\s\S]*?<\/div>\s*<\/div>/,
-                      '<div class="body" id="sheetBody"></div></div>');
   saveFile('Scrooges-Safe-空壳版.html','<!DOCTYPE html>\n'+shell,'text/html','空壳版已生成（不含数据）');
 }
 
@@ -3658,6 +3898,7 @@ function exportShell(){
 function render(){
   var m=document.getElementById('main');
   clearChartState();
+  m.setAttribute('data-view',view);
   if(view==='home') m.innerHTML=viewHome();
   else if(view==='power') m.innerHTML=viewMeter('power');
   else if(view==='gas') m.innerHTML=viewMeter('gas');
