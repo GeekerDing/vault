@@ -370,6 +370,14 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
 .import-row input{width:18px;height:18px}.import-row .note{min-width:0;overflow-wrap:anywhere}
 .ocr-preview{width:100%;max-height:230px;object-fit:contain;background:var(--card2);border-radius:6px}
+.ocr-window-review{display:grid;gap:7px;padding:10px;background:var(--card2);border:1px solid var(--line);
+  border-radius:6px}
+.ocr-window-review>span{font-size:12px;font-weight:700;color:var(--dim)}
+.ocr-window-review>small{font-size:11px;line-height:1.45;color:var(--dim)}
+.ocr-window-preview{display:block;width:100%;height:104px;object-fit:contain;background:#d8d8d5;
+  border-radius:4px}
+.ocr-suggestion-label{display:block;margin-top:2px;color:var(--dim);font-size:11px}
+.ocr-suggestions{margin:0;padding:0}
 .progress{height:6px;background:var(--card2);border-radius:6px;overflow:hidden}
 .progress>span{display:block;height:100%;background:var(--tx);width:100%;
   transform:scaleX(0);transform-origin:left;transition:transform .2s var(--ease-out)}
@@ -668,7 +676,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='a77fdc727f4e';
+var APP_BUILD='f34dff5f6192';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1322,6 +1330,15 @@ function assertState(p){
   if(!p || !Array.isArray(p.accounts) || !Array.isArray(p.txs) ||
      !Array.isArray(p.readings) || !Array.isArray(p.contracts))
     throw new Error('备份内容结构不完整');
+  (p.meters||[]).forEach(function(meter){
+    if(meter.id==='m-karl-power'){
+      meter.ocrIntegerDigits=6;
+      meter.ocrDecimals=1;
+    }else if(meter.id==='m-karl-gas'){
+      meter.ocrIntegerDigits=5;
+      meter.ocrDecimals=2;
+    }
+  });
   return p;
 }
 function freshKdf(){
@@ -2289,7 +2306,7 @@ async function importBankRows(){
   closeSheet(); render(); toast('已导入 '+chosen.length+' 条账单记录');
 }
 /* ================= 表计照片 OCR ================= */
-var tesseractLoader=null, ocrPreviewUrl='';
+var tesseractLoader=null, ocrPreviewUrl='', ocrWindowPreviewUrl='';
 
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
@@ -2316,7 +2333,8 @@ async function loadMeterImage(file){
   }
   return {source:source,cleanup:cleanup};
 }
-function meterCanvas(source,rect,maxWidth,upscale){
+function meterCanvas(source,rect,maxWidth,upscale,options){
+  options=options||{};
   var sx=Math.round(source.width*rect.x), sy=Math.round(source.height*rect.y);
   var sw=Math.max(1,Math.round(source.width*rect.w)), sh=Math.max(1,Math.round(source.height*rect.h));
   var scale=Math.min(upscale||1,maxWidth/sw);
@@ -2324,26 +2342,163 @@ function meterCanvas(source,rect,maxWidth,upscale){
   canvas.width=Math.max(1,Math.round(sw*scale));
   canvas.height=Math.max(1,Math.round(sh*scale));
   var ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
   ctx.drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
   var image=ctx.getImageData(0,0,canvas.width,canvas.height), d=image.data;
+  var histogram=new Array(256).fill(0), contrast=options.contrast||1.7;
   for(var i=0;i<d.length;i+=4){
     var gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-    gray=Math.max(0,Math.min(255,(gray-128)*1.7+128));
+    histogram[Math.max(0,Math.min(255,Math.round(gray)))]++;
+    gray=Math.max(0,Math.min(255,(gray-128)*contrast+128));
     d[i]=d[i+1]=d[i+2]=gray;
+  }
+  if(options.binary){
+    var total=d.length/4,sum=0,sumB=0,wB=0,best=0,threshold=128,maxVariance=-1;
+    for(var h=0;h<256;h++) sum+=h*histogram[h];
+    for(var level=0;level<256;level++){
+      wB+=histogram[level];
+      if(!wB) continue;
+      var wF=total-wB;
+      if(!wF) break;
+      sumB+=level*histogram[level];
+      var meanB=sumB/wB,meanF=(sum-sumB)/wF;
+      var variance=wB*wF*(meanB-meanF)*(meanB-meanF);
+      if(variance>maxVariance){maxVariance=variance;threshold=level;}
+    }
+    for(var p=0;p<d.length;p+=4){
+      var binary=d[p]>threshold?0:255;
+      d[p]=d[p+1]=d[p+2]=binary;
+    }
+  }else if(options.invert){
+    for(var q=0;q<d.length;q+=4) d[q]=d[q+1]=d[q+2]=255-d[q];
   }
   ctx.putImageData(image,0,0);
   return new Promise(function(resolve,reject){
-    canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('无法处理照片'));},'image/jpeg',.9);
+    canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('无法处理照片'));},'image/jpeg',.95);
   });
 }
-async function prepareMeterImages(file){
+function detectMeterWindow(source){
+  var scale=Math.min(1,640/source.width),w=Math.max(1,Math.round(source.width*scale));
+  var h=Math.max(1,Math.round(source.height*scale)),canvas=document.createElement('canvas');
+  canvas.width=w; canvas.height=h;
+  var ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(source,0,0,w,h);
+  var data=ctx.getImageData(0,0,w,h).data,mask=new Uint8Array(w*h);
+  var x0=Math.floor(w*.1),x1=Math.ceil(w*.9),y0=Math.floor(h*.12),y1=Math.ceil(h*.56);
+  for(var y=y0;y<y1;y++) for(var x=x0;x<x1;x++){
+    var index=y*w+x,p=index*4,r=data[p],g=data[p+1],b=data[p+2];
+    if(r>105&&g<125&&r-g>38&&r-b>28) mask[index]=1;
+  }
+  var queue=new Int32Array(w*h),best=null,jumps=[-1,1,-w,w,-w-1,-w+1,w-1,w+1,-2,2,-2*w,2*w];
+  for(var start=y0*w+x0;start<y1*w;start++){
+    var startX=start%w;
+    if(startX<x0||startX>=x1||!mask[start]) continue;
+    var head=0,tail=0,minX=startX,maxX=startX,minY=Math.floor(start/w),maxY=minY,count=0;
+    queue[tail++]=start; mask[start]=0;
+    while(head<tail){
+      var at=queue[head++],ax=at%w,ay=Math.floor(at/w); count++;
+      minX=Math.min(minX,ax);maxX=Math.max(maxX,ax);minY=Math.min(minY,ay);maxY=Math.max(maxY,ay);
+      for(var j=0;j<jumps.length;j++){
+        var next=at+jumps[j],nx=next%w,ny=Math.floor(next/w);
+        if(next<0||next>=mask.length||nx<x0||nx>=x1||ny<y0||ny>=y1||
+          Math.abs(nx-ax)>2||Math.abs(ny-ay)>2||!mask[next]) continue;
+        mask[next]=0; queue[tail++]=next;
+      }
+    }
+    var bw=maxX-minX+1,bh=maxY-minY+1,cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+    if(count<12||bw<3||bh<7||bw>w*.075||bh>h*.04) continue;
+    var score=count*2+bh+bw-Math.abs(cx-w*.58)*.12-Math.abs(cy-h*.34)*.04;
+    if(!best||score>best.score) best={x:minX,y:minY,w:bw,h:bh,score:score};
+  }
+  if(!best) return null;
+  var right=Math.min(w,best.x+best.w+best.h*.15);
+  var windowWidth=Math.max(best.w*7.5,best.h*5,w*.22);
+  if(best.h>h*.03) windowWidth=Math.min(windowWidth,w*.32);
+  var left=Math.max(0,right-Math.min(windowWidth,w*.45));
+  var scanTop=Math.max(0,Math.floor(best.y+best.h*.25));
+  var scanBottom=Math.min(h,Math.ceil(best.y+best.h*2.15)),lightRun=0;
+  var requiredLight=Math.max(14,Math.round(w*.028));
+  for(var scanX=Math.floor(right-best.w*.7);scanX>Math.max(0,right-w*.5);scanX--){
+    var dark=0,samples=0;
+    for(var scanY=scanTop;scanY<scanBottom;scanY+=2){
+      var pixel=(scanY*w+scanX)*4;
+      var luminance=.299*data[pixel]+.587*data[pixel+1]+.114*data[pixel+2];
+      if(luminance<105) dark++;samples++;
+    }
+    if(samples&&dark/samples<.28) lightRun++; else lightRun=0;
+    if(lightRun>=requiredLight){
+      var scannedLeft=scanX+lightRun,scannedWidth=right-scannedLeft;
+      if(scannedWidth>=w*.18&&scannedWidth<=w*.43&&scannedWidth>=windowWidth*.8) left=scannedLeft;
+      break;
+    }
+  }
+  var top=Math.max(0,best.y-best.h*.35);
+  var bottom=Math.min(h,Math.min(Math.max(best.y+best.h*2.3,top+h*.05),top+h*.07));
+  if(right-left<w*.14||bottom-top<h*.018) return null;
+  return {x:left/w,y:top/h,w:(right-left)/w,h:(bottom-top)/h,confidence:best.score};
+}
+function detectGasMeterWindow(source){
+  var scale=Math.min(1,640/source.width),w=Math.max(1,Math.round(source.width*scale));
+  var h=Math.max(1,Math.round(source.height*scale)),canvas=document.createElement('canvas');
+  canvas.width=w;canvas.height=h;
+  var ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(source,0,0,w,h);
+  var data=ctx.getImageData(0,0,w,h).data,mask=new Uint8Array(w*h);
+  var x0=Math.floor(w*.1),x1=Math.ceil(w*.9),y0=Math.floor(h*.2),y1=Math.ceil(h*.68);
+  for(var y=y0;y<y1;y++) for(var x=x0;x<x1;x++){
+    var pixel=(y*w+x)*4,luma=.299*data[pixel]+.587*data[pixel+1]+.114*data[pixel+2];
+    if(luma<58) mask[y*w+x]=1;
+  }
+  var queue=new Int32Array(w*h),jumps=[-1,1,-w,w,-w-1,-w+1,w-1,w+1],best=null;
+  for(var start=y0*w+x0;start<y1*w;start++){
+    var startX=start%w;
+    if(startX<x0||startX>=x1||!mask[start]) continue;
+    var head=0,tail=0,minX=startX,maxX=startX,minY=Math.floor(start/w),maxY=minY,count=0;
+    queue[tail++]=start;mask[start]=0;
+    while(head<tail){
+      var at=queue[head++],ax=at%w,ay=Math.floor(at/w);count++;
+      minX=Math.min(minX,ax);maxX=Math.max(maxX,ax);minY=Math.min(minY,ay);maxY=Math.max(maxY,ay);
+      for(var j=0;j<jumps.length;j++){
+        var next=at+jumps[j],nx=next%w,ny=Math.floor(next/w);
+        if(next<0||next>=mask.length||nx<x0||nx>=x1||ny<y0||ny>=y1||
+          Math.abs(nx-ax)>1||Math.abs(ny-ay)>1||!mask[next]) continue;
+        mask[next]=0;queue[tail++]=next;
+      }
+    }
+    var bw=maxX-minX+1,bh=maxY-minY+1,fill=count/(bw*bh),cy=(minY+maxY)/2;
+    if(bw<w*.24||bw>w*.7||bh<h*.018||bh>h*.11||bw/bh<4||fill<.38) continue;
+    var score=bw*3+count*.08-Math.abs(cy-h*.46)*.35;
+    if(!best||score>best.score) best={x:minX,y:minY,w:bw,h:bh,score:score};
+  }
+  if(!best) return null;
+  var padX=Math.max(4,best.w*.025),padY=Math.max(3,best.h*.28);
+  var left=Math.max(0,best.x-padX),top=Math.max(0,best.y-padY);
+  var right=Math.min(w,best.x+best.w+padX),bottom=Math.min(h,best.y+best.h+padY);
+  return {x:left/w,y:top/h,w:(right-left)/w,h:(bottom-top)/h,confidence:best.score};
+}
+async function prepareMeterImages(file,meter){
   var loaded=await loadMeterImage(file), source=loaded.source;
   try{
-    return await Promise.all([
-      meterCanvas(source,{x:0,y:0,w:1,h:1},1800,1),
-      meterCanvas(source,{x:.18,y:.16,w:.64,h:.32},1800,4),
-      meterCanvas(source,{x:.08,y:.30,w:.84,h:.34},1800,4)
-    ]);
+    var detected=detectMeterWindow(source),passes=[];
+    if(!detected&&meter&&meter.kind==='gas'){
+      detected=detectGasMeterWindow(source);
+      if(!detected) detected={x:.15,y:.42,w:.57,h:.1,confidence:0};
+    }
+    if(detected){
+      passes.push({rect:detected,upscale:5,options:{contrast:2.1},weight:280,
+        mode:'raw',label:'数字窗',trusted:true,preview:true});
+      passes.push({rect:detected,upscale:5,options:{contrast:1.7,binary:true},weight:250,
+        mode:'raw',label:'数字窗增强图',trusted:true});
+    }
+    passes.push({rect:{x:.14,y:.14,w:.72,h:.4},upscale:3,options:{contrast:1.9},
+      weight:45,mode:'sparse',label:'表盘区域'});
+    passes.push({rect:{x:0,y:0,w:1,h:1},upscale:1,options:{contrast:1.7},
+      weight:0,mode:'sparse',label:'整张照片'});
+    return await Promise.all(passes.map(async function(pass){
+      pass.blob=await meterCanvas(source,pass.rect,1800,pass.upscale,pass.options);
+      return pass;
+    }));
   }finally{
     if(source.close) source.close();
     loaded.cleanup();
@@ -2391,7 +2546,6 @@ function extractMeterCandidates(text,last,decimalPlaces,wholeOnly){
       if(isFinite(last)){
         var delta=Math.abs(n-last), range=Math.max(50,Math.abs(last)*.03);
         score+=120/(1+delta/range);
-        if(n>=last) score+=15;
         if(n>=last*.5&&n<=last*2+5000) score+=25;
         if(n>last*5+10000) score-=80;
         if(integerDigits===String(Math.floor(last)).length) score+=18;
@@ -2400,6 +2554,40 @@ function extractMeterCandidates(text,last,decimalPlaces,wholeOnly){
     });
   });
   return out.sort(function(a,b){return b.score-a.score;});
+}
+function rankMeterCandidates(recognitions,last,decimalPlaces,wholeOnly){
+  var merged={};
+  recognitions.forEach(function(recognition){
+    extractMeterCandidates(recognition.text,last,decimalPlaces,wholeOnly).forEach(function(candidate){
+      var key=String(candidate.value),weighted=candidate.score+(recognition.weight||0)+
+        Math.max(0,recognition.confidence||0)*.2;
+      if(!merged[key]) merged[key]={value:candidate.value,raw:candidate.raw,score:weighted,hits:1,
+        trustedHits:recognition.trusted?1:0,
+        trustedConfidence:recognition.trusted?Math.max(0,recognition.confidence||0):0};
+      else{
+        merged[key].score=Math.max(merged[key].score,weighted)+70;
+        merged[key].hits++;
+        if(recognition.trusted){
+          merged[key].trustedHits++;
+          merged[key].trustedConfidence=Math.max(merged[key].trustedConfidence,
+            Math.max(0,recognition.confidence||0));
+        }
+      }
+    });
+  });
+  return Object.keys(merged).map(function(key){
+    var candidate=merged[key];
+    candidate.plausible=meterCandidatePlausible(candidate.value,last);
+    candidate.safeToFill=candidate.plausible&&candidate.trustedHits>0&&candidate.trustedConfidence>=45;
+    return candidate;
+  }).sort(function(a,b){
+    return b.score-a.score;
+  });
+}
+function meterCandidatePlausible(value,last){
+  if(!isFinite(value)||value<0) return false;
+  if(!isFinite(last)||last<0) return true;
+  return Math.abs(value-last)<=Math.max(5000,Math.abs(last)*.2);
 }
 function meterDecimalRules(m){
   var preferred=Number.isInteger(m.ocrDecimals)?m.ocrDecimals:2;
@@ -2419,14 +2607,25 @@ async function scanMeterPhoto(input){
   if(!file) return;
   var result=document.getElementById('ocr_result');
   if(ocrPreviewUrl) URL.revokeObjectURL(ocrPreviewUrl);
+  if(ocrWindowPreviewUrl) URL.revokeObjectURL(ocrWindowPreviewUrl);
   ocrPreviewUrl=URL.createObjectURL(file);
   result.innerHTML='<img class="ocr-preview" src="'+ocrPreviewUrl+'" alt="待识别的表计照片">'+
     '<div class="progress"><span id="ocr_bar"></span></div>'+
     '<p class="dim" id="ocr_status" style="margin:0">正在准备照片…</p>';
+  var worker=null;
   try{
+    var meter=pickMeter(window._addKind);
+    var prepared=await prepareMeterImages(file,meter);
+    var preview=prepared.filter(function(pass){return pass.preview;})[0];
+    if(preview){
+      ocrWindowPreviewUrl=URL.createObjectURL(preview.blob);
+      result.querySelector('.ocr-preview').outerHTML=
+        '<div class="ocr-window-review"><span>已定位的数字窗</span>'+
+        '<img class="ocr-window-preview" src="'+ocrWindowPreviewUrl+'" alt="放大的表计数字窗">'+
+        '<small>只录入黑色整数位，忽略右侧红色小数位</small></div>';
+    }
     var T=await loadTesseract();
-    var prepared=await prepareMeterImages(file);
-    var worker=await T.createWorker('eng',1,{
+    worker=await T.createWorker('eng',1,{
       workerPath:'assets/vendor/tesseract/worker.min.js',
       workerBlobURL:false,
       corePath:'assets/vendor/tesseract/tesseract-core-lstm.wasm.js',
@@ -2437,35 +2636,48 @@ async function scanMeterPhoto(input){
         recognizing_text:'识别表盘数字'};
       updateOcrProgress(labels[m.status]||'正在识别',(m.progress||0)/prepared.length);
     }});
-    await worker.setParameters({
-      tessedit_char_whitelist:'0123456789., ',
-      tessedit_pageseg_mode:T.PSM&&T.PSM.SPARSE_TEXT?T.PSM.SPARSE_TEXT:'11'
-    });
-    var texts=[];
+    await worker.setParameters({tessedit_char_whitelist:'0123456789., '});
+    var recognitions=[];
     for(var pass=0;pass<prepared.length;pass++){
-      updateOcrProgress('识别读数区域 '+(pass+1)+' / '+prepared.length,pass/prepared.length);
-      var recognized=await worker.recognize(prepared[pass]);
-      texts.push(recognized.data.text);
+      updateOcrProgress('识别'+prepared[pass].label+' '+(pass+1)+' / '+prepared.length,
+        pass/prepared.length);
+      var psm=prepared[pass].mode==='word'
+        ?(T.PSM&&T.PSM.SINGLE_WORD?T.PSM.SINGLE_WORD:'8')
+        :(prepared[pass].mode==='char'
+          ?(T.PSM&&T.PSM.SINGLE_CHAR?T.PSM.SINGLE_CHAR:'10')
+        :(prepared[pass].mode==='raw'
+          ?(T.PSM&&T.PSM.RAW_LINE?T.PSM.RAW_LINE:'13')
+          :(T.PSM&&T.PSM.SPARSE_TEXT?T.PSM.SPARSE_TEXT:'11')));
+      await worker.setParameters({tessedit_pageseg_mode:String(psm)});
+      var recognized=await worker.recognize(prepared[pass].blob);
+      recognitions.push({text:recognized.data.text,confidence:recognized.data.confidence,
+        weight:prepared[pass].weight,trusted:prepared[pass].trusted});
     }
     await worker.terminate();
-    var m=pickMeter(window._addKind);
-    var rs=meterReadings(S.readings,m.id), last=rs.length?rs[rs.length-1].value:NaN;
-    var places=meterDecimalRules(m);
-    var candidates=extractMeterCandidates(texts.join('\n'),last,places,true);
-    if(!candidates.length){
-      updateOcrProgress('没有可靠识别到数字，请重拍或手动输入',1);
-      return;
-    }
-    applyOcrCandidate(candidates[0].value);
-    document.getElementById('ocr_status').textContent='已填入最可能的读数，请核对后保存';
+    worker=null;
+    var rs=meterReadings(S.readings,meter.id), last=rs.length?rs[rs.length-1].value:NaN;
+    var places=meterDecimalRules(meter);
+    var candidates=rankMeterCandidates(recognitions,last,places,true);
+    var safe=candidates.filter(function(candidate){return candidate.safeToFill;})[0];
+    if(safe) applyOcrCandidate(safe.value);
+    document.getElementById('ocr_status').textContent=safe
+      ?'已填入数字窗读数，请对照放大图核对后保存'
+      :(preview?'自动识别不够可靠，请对照放大图手动输入整数读数'
+        :'没有定位到数字窗，请重拍近一点或手动输入');
     document.getElementById('ocr_bar').style.transform='scaleX(1)';
-    result.insertAdjacentHTML('beforeend',
-      '<div class="chips" style="margin:0;padding:2px 0">'+candidates.slice(0,6).map(function(c){
+    var suggestions=candidates.filter(function(candidate){
+      return candidate.plausible&&candidate.trustedHits>0;
+    }).slice(0,4);
+    if(suggestions.length) result.insertAdjacentHTML('beforeend',
+      '<span class="ocr-suggestion-label">可能的读数，请先核对</span>'+
+      '<div class="chips ocr-suggestions">'+suggestions.map(function(c){
         return '<button class="chip" onclick="applyOcrCandidate('+c.value+')">'+
           (Number.isInteger(c.value)?n0(c.value):n2(c.value))+'</button>';
       }).join('')+'</div>');
   }catch(e){
     updateOcrProgress('识别失败：'+e.message,0);
+  }finally{
+    if(worker) try{await worker.terminate();}catch(ignore){}
   }
 }
 /* ================= 电费 / 燃气 ================= */
@@ -2567,11 +2779,11 @@ function addReading(){
     (last?card('<span class="dim">上次读数</span><span class="h2 tnum">'+meterValueText(last.value)+' '+unit+
       ' · '+fmtDate(last.date)+'</span>','blue'):'')+
     fileField({id:'rd_photo',label:'拍照识别表盘',accept:'image/*',capture:'environment',
-      onchange:'scanMeterPhoto(this)',hint:'照片只在当前设备识别，不会上传。首次使用需要下载 OCR 组件。'})+
+      onchange:'scanMeterPhoto(this)',hint:'靠近表盘，让数字窗水平置中；识别只在当前设备进行。'})+
     '<div id="ocr_result"></div>'+
     field({id:'rd_date',label:'日期',type:'date',val:today()})+
     field({id:'rd_val',label:'表读数 (Brutto, '+unit+')',type:'number',step:'any',
-      inputmode:'decimal',ph:last?('≥ '+n2(last.value)):'例如 12345',oninput:'previewReading()'})+
+      inputmode:'decimal',ph:last?('例如 '+n0(Math.floor(last.value))):'例如 12345',oninput:'previewReading()'})+
     field({id:'rd_note',label:'备注（可选）',ph:'例如 年度 Ablesung'})+
     btn('保存','saveReading()'));
 }
