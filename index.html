@@ -417,6 +417,18 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
   nav{left:50%;right:auto;width:640px;transform:translate3d(-50%,0,0);border-left:1px solid var(--line);border-right:1px solid var(--line)}
 }
+@media (max-width:899px){
+  body{height:100vh;height:100dvh;min-height:0;padding-bottom:0;overflow:hidden;
+    display:grid;grid-template-rows:minmax(0,1fr) auto}
+  .app-shell{height:auto;min-height:0;overflow:hidden;display:grid;
+    grid-template-rows:auto minmax(0,1fr)}
+  header{position:relative}
+  main{width:100%;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch}
+  nav{position:relative;inset:auto;width:100%;margin:0;transform:none;
+    padding-left:max(0px,calc((100% - 640px)/2));
+    padding-right:max(0px,calc((100% - 640px)/2))}
+}
 @media (min-width:900px){
   body{padding-bottom:0}
   .app-shell{width:min(1080px,100%);min-height:100vh;margin:0 auto;border-left:1px solid var(--line);
@@ -676,7 +688,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='ccb4baa56b26';
+var APP_BUILD='69f8ffaf1f20';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1128,7 +1140,12 @@ function navGo(v,at){
   }else saveSecretTaps=[];
   go(v);
 }
-function go(v){ view=v; showAllTx=false; render(); window.scrollTo(0,0); }
+function go(v){
+  view=v; showAllTx=false; render();
+  var main=document.getElementById('main');
+  if(main) main.scrollTop=0;
+  window.scrollTo(0,0);
+}
 
 /* ================= 弹层 ================= */
 function openSheet(title,html){
