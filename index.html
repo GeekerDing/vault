@@ -54,9 +54,9 @@
 html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
   -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45;letter-spacing:0;
-  scrollbar-width:none}
+  scrollbar-width:none;min-height:100%}
 html::-webkit-scrollbar,body::-webkit-scrollbar,.sheet>.body::-webkit-scrollbar{display:none}
-body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+body{min-height:100vh;min-height:100dvh;padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 12px)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 input,select,textarea{font:inherit}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
@@ -284,10 +284,10 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .x:active{background:var(--card2)}
 
 /* ---------- 底部导航 ---------- */
-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;
+nav{position:fixed;inset-inline:0;bottom:0;z-index:30;
   background:var(--nav-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-  border-top:1px solid var(--line);display:flex;
-  padding-bottom:env(safe-area-inset-bottom)}
+  border-top:1px solid var(--line);display:flex;min-height:calc(var(--nav) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);isolation:isolate;transform:translateZ(0)}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:8px 2px 7px;color:var(--muted-icon);font-size:11px;font-weight:600;min-width:0}
 nav button.on{color:var(--tx)}
@@ -352,7 +352,7 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
   align-items:center;justify-content:center;padding:24px}
 body.locked{overflow:hidden}
 body.locked .lock{display:flex}
-body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
+body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{visibility:hidden}
 .lockbox{width:min(100%,390px);display:flex;flex-direction:column;gap:14px}
 .vaultmark{width:72px;height:72px;object-fit:cover;border-radius:16px;margin-bottom:4px}
 .lockbox h1{font-size:28px;margin:0}.lockbox p{margin:0;line-height:1.6}
@@ -415,7 +415,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
 .home-support .btn{min-width:0;padding-left:8px;padding-right:8px}
 @media (min-width:700px){
   header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
-  nav{left:50%;right:auto;width:640px;transform:translateX(-50%);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  nav{left:50%;right:auto;width:640px;transform:translate3d(-50%,0,0);border-left:1px solid var(--line);border-right:1px solid var(--line)}
 }
 @media (min-width:900px){
   body{padding-bottom:0}
@@ -428,7 +428,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
   main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,
   main>.retirement-heading,main>.retirement-disclaimer{grid-column:1/-1}
   nav{top:63px;bottom:0;left:50%;right:auto;width:180px;
-    transform:translateX(-540px);border-top:0;border-left:1px solid var(--line);
+    transform:translate3d(-540px,0,0);border-top:0;border-left:1px solid var(--line);
     border-right:1px solid var(--line);flex-direction:column;align-items:stretch;
     gap:4px;padding:16px 10px;background:var(--nav-bg)}
   nav button{flex:0 0 auto;min-height:48px;flex-direction:row;justify-content:flex-start;
@@ -462,8 +462,8 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast{visibility:hidden}
     <button class="hbtn" onclick="openSettings()" aria-label="设置" title="设置"><i class="ph ph-gear"></i></button>
   </div></header>
   <main id="main"></main>
-  <nav id="nav"></nav>
 </div>
+<nav id="nav"></nav>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-hidden="true"
   aria-labelledby="sheetTitle" tabindex="-1" inert><div class="top"><h2 class="h2" id="sheetTitle"></h2>
   <button class="x" onclick="closeSheet()" aria-label="关闭">&times;</button></div>
@@ -676,7 +676,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='f34dff5f6192';
+var APP_BUILD='ccb4baa56b26';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1132,7 +1132,7 @@ function go(v){ view=v; showAllTx=false; render(); window.scrollTo(0,0); }
 
 /* ================= 弹层 ================= */
 function openSheet(title,html){
-  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell');
+  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell'), nav=document.getElementById('nav');
   clearTimeout(sheetClearT);
   if(!sheet.classList.contains('open')) sheetTrigger=document.activeElement;
   document.getElementById('sheetTitle').textContent=title;
@@ -1140,17 +1140,19 @@ function openSheet(title,html){
   sheet.removeAttribute('inert');
   sheet.setAttribute('aria-hidden','false');
   if(shell) shell.setAttribute('inert','');
+  if(nav) nav.setAttribute('inert','');
   sheet.classList.add('open');
   document.body.style.overflow='hidden';
   setTimeout(function(){ if(sheet.classList.contains('open')) sheet.focus(); },0);
 }
 function closeSheet(){
-  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell');
+  var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell'), nav=document.getElementById('nav');
   if(!sheet) return;
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden','true');
   sheet.setAttribute('inert','');
   if(shell) shell.removeAttribute('inert');
+  if(nav) nav.removeAttribute('inert');
   document.body.style.overflow='';
   var restore=sheetTrigger; sheetTrigger=null;
   sheetClearT=setTimeout(function(){
