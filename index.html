@@ -451,6 +451,11 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .record-notes{margin:0;line-height:1.5;white-space:pre-wrap}
 .coupon-image-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .coupon-image-actions .btn{min-width:0;padding-left:8px;padding-right:8px}
+.coupon-image-actions .coupon-live-scan{grid-column:1/-1}
+.coupon-qr-scanner{display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--card2);border-radius:6px}
+.coupon-qr-scanner[hidden]{display:none}
+.coupon-qr-scanner video{display:block;width:100%;aspect-ratio:4/3;max-height:48vh;object-fit:cover;
+  background:#111;border-radius:5px}
 .coupon-image-preview{display:flex;flex-direction:column;gap:8px}
 .coupon-image-preview img,.coupon-image-full{display:block;width:100%;max-height:360px;object-fit:contain;
   background:var(--card2);border:1px solid var(--line);border-radius:6px}
@@ -769,7 +774,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='c43bd25def31';
+var APP_BUILD='2519446ea2d3';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1266,6 +1271,7 @@ function openSheet(title,html){
 function closeSheet(){
   var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell'), nav=document.getElementById('nav');
   if(!sheet) return;
+  if(typeof couponStopQrScanner==='function') couponStopQrScanner();
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden','true');
   sheet.setAttribute('inert','');
@@ -3937,7 +3943,8 @@ function retirementMaybeCelebrateOnUnlock(){
   return false;
 }
 /* ================= Coupon 与欠款 ================= */
-var couponFilter='usable', debtFilter='open', couponImageDraft=null, jsQrLoader=null;
+var couponFilter='usable', debtFilter='open', couponImageDraft=null, jsQrLoader=null,
+  zxingQrLoader=null, couponQrReader=null, couponQrControls=null;
 
 function couponSafeImage(image){
   if(!image||typeof image!=='object'||typeof image.dataUrl!=='string') return null;
@@ -3960,6 +3967,107 @@ function loadJsQr(){
   });
   return jsQrLoader;
 }
+function loadZxingQr(){
+  if(window.ZXingBrowser&&window.ZXingBrowser.BrowserQRCodeReader)
+    return Promise.resolve(window.ZXingBrowser);
+  if(zxingQrLoader) return zxingQrLoader;
+  zxingQrLoader=new Promise(function(resolve,reject){
+    var script=document.createElement('script');
+    script.src='assets/vendor/zxing/zxing-browser.min.js';
+    script.onload=function(){
+      if(window.ZXingBrowser&&window.ZXingBrowser.BrowserQRCodeReader) resolve(window.ZXingBrowser);
+      else reject(new Error('ZXing 二维码组件未正确加载'));
+    };
+    script.onerror=function(){ zxingQrLoader=null; reject(new Error('ZXing 二维码组件加载失败')); };
+    document.head.appendChild(script);
+  });
+  return zxingQrLoader;
+}
+function couponQrRegions(){
+  return [
+    {x:0,y:0,w:1,h:1,maxSide:2200},
+    {x:0,y:0,w:.58,h:.58,maxSide:1600},
+    {x:.42,y:0,w:.58,h:.58,maxSide:1600},
+    {x:0,y:.42,w:.58,h:.58,maxSide:1600},
+    {x:.42,y:.42,w:.58,h:.58,maxSide:1600}
+  ];
+}
+function couponQrCanvas(source,region){
+  var sx=Math.round(source.width*region.x),sy=Math.round(source.height*region.y);
+  var sw=Math.max(1,Math.round(source.width*region.w));
+  var sh=Math.max(1,Math.round(source.height*region.h));
+  var scale=Math.min(1,region.maxSide/Math.max(sw,sh));
+  var canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(sw*scale)); canvas.height=Math.max(1,Math.round(sh*scale));
+  var ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+  return canvas;
+}
+async function couponDecodeCanvas(canvas){
+  var zxingError=null,jsQrError=null;
+  try{
+    var zxing=await loadZxingQr();
+    var result=new zxing.BrowserQRCodeReader().decodeFromCanvas(canvas);
+    if(result&&result.getText()) return String(result.getText());
+  }catch(e){ zxingError=e; }
+  try{
+    var decoder=await loadJsQr(),ctx=canvas.getContext('2d',{willReadFrequently:true});
+    var pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+    var fallback=decoder(pixels.data,canvas.width,canvas.height,{inversionAttempts:'attemptBoth'});
+    if(fallback&&fallback.data) return String(fallback.data);
+  }catch(e){ jsQrError=e; }
+  if(zxingError&&jsQrError) throw new Error('二维码组件暂时不可用');
+  return '';
+}
+async function couponDecodeSource(source){
+  var regions=couponQrRegions();
+  for(var i=0;i<regions.length;i++){
+    var canvas=couponQrCanvas(source,regions[i]);
+    try{
+      var value=await couponDecodeCanvas(canvas);
+      if(value) return value;
+    }finally{ canvas.width=canvas.height=1; }
+  }
+  return '';
+}
+function couponStopQrScanner(message,tone){
+  if(couponQrControls&&couponQrControls.stop) couponQrControls.stop();
+  couponQrControls=null; couponQrReader=null;
+  var video=document.getElementById('coupon_qr_video');
+  if(video&&video.srcObject){
+    Array.prototype.forEach.call(video.srcObject.getTracks(),function(track){track.stop();});
+    video.srcObject=null;
+  }
+  var panel=document.getElementById('coupon_qr_scanner');
+  if(panel) panel.hidden=true;
+  if(message) couponRenderImageDraft(message,tone||'dim');
+}
+async function couponStartQrScanner(){
+  if(couponQrControls) return;
+  var panel=document.getElementById('coupon_qr_scanner');
+  var video=document.getElementById('coupon_qr_video');
+  if(!panel||!video) return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)
+    return couponRenderImageDraft('当前浏览器不支持实时相机，请使用拍照或上传截图。','amber');
+  panel.hidden=false;
+  couponRenderImageDraft('正在启动后置相机…','blue');
+  try{
+    var zxing=await loadZxingQr();
+    couponQrReader=new zxing.BrowserQRCodeReader(undefined,{delayBetweenScanAttempts:120});
+    couponQrControls=await couponQrReader.decodeFromConstraints({audio:false,video:{
+      facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}
+    }},video,function(result,error,controls){
+      if(!result) return;
+      couponQrControls=controls||couponQrControls;
+      couponGuessQrFields(String(result.getText()));
+      couponStopQrScanner('已实时识别二维码并填入券码。','green');
+    });
+  }catch(e){
+    couponStopQrScanner(e&&e.name==='NotAllowedError'?'未获得相机权限，请在浏览器设置中允许相机。':
+      '无法启动实时扫码，请改用拍照或上传截图。','red');
+  }
+}
 function couponCanvasBlob(canvas,quality){
   return new Promise(function(resolve,reject){
     canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('图片压缩失败'));},'image/jpeg',quality);
@@ -3978,6 +4086,9 @@ async function couponPrepareImage(file){
   if(file.size>25*1024*1024) throw new Error('原图超过 25 MB，请先裁剪');
   var loaded=await loadMeterImage(file), source=loaded.source;
   try{
+    var qr='',qrError='';
+    try{ qr=await couponDecodeSource(source); }
+    catch(e){ qrError=e.message||'二维码识别组件未能运行'; }
     var scale=Math.min(1,1600/Math.max(source.width,source.height));
     var canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.round(source.width*scale));
@@ -3985,11 +4096,6 @@ async function couponPrepareImage(file){
     var ctx=canvas.getContext('2d',{willReadFrequently:true});
     ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
     ctx.drawImage(source,0,0,canvas.width,canvas.height);
-    var qr=null;
-    try{
-      var decoder=await loadJsQr(), pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-      qr=decoder(pixels.data,canvas.width,canvas.height,{inversionAttempts:'attemptBoth'});
-    }catch(e){}
     var quality=.8, blob=await couponCanvasBlob(canvas,quality);
     while(blob.size>280000&&quality>.48){
       quality-=.08; blob=await couponCanvasBlob(canvas,quality);
@@ -4002,7 +4108,7 @@ async function couponPrepareImage(file){
     }
     if(blob.size>300000) throw new Error('图片压缩后仍过大，请先裁剪后重试');
     return {image:{dataUrl:await couponBlobDataUrl(blob),width:canvas.width,height:canvas.height,
-      byteSize:blob.size,addedDate:today()},qr:qr&&qr.data?String(qr.data):''};
+      byteSize:blob.size,addedDate:today()},qr:qr,qrError:qrError};
   }finally{ loaded.cleanup(); }
 }
 function couponImagePreviewMarkup(){
@@ -4039,7 +4145,8 @@ async function couponImageSelected(input){
     if(result.qr){
       couponGuessQrFields(result.qr);
       couponRenderImageDraft('已识别二维码并填入券码。','green');
-    }else couponRenderImageDraft('图片已保存，未发现二维码。','dim');
+    }else if(result.qrError) couponRenderImageDraft('图片已保存，但'+result.qrError+'，可手动填写券码。','amber');
+    else couponRenderImageDraft('图片已保存，未发现二维码。可裁剪到二维码后重试。','dim');
   }catch(e){ couponRenderImageDraft(e.message,'red'); }
   input.value='';
 }
@@ -4201,9 +4308,13 @@ function editCoupon(id){
     '<div class="coupon-image-actions">'+
       '<label class="btn ghost filepick">'+icon('image')+'上传截图'+
         '<input type="file" accept="image/*" onchange="couponImageSelected(this)"></label>'+
-      '<label class="btn filepick">'+icon('camera')+'拍照 / 扫二维码'+
+      '<label class="btn ghost filepick">'+icon('camera')+'拍照留存'+
         '<input type="file" accept="image/*" capture="environment" onchange="couponImageSelected(this)"></label>'+
+      '<button type="button" class="btn coupon-live-scan" onclick="couponStartQrScanner()">'+
+        icon('qr-code')+'实时扫描二维码</button>'+
     '</div><span class="dim">图片仅在当前设备处理，压缩后随 Coupon 加密保存。</span>'+
+    '<div id="coupon_qr_scanner" class="coupon-qr-scanner" hidden><video id="coupon_qr_video" playsinline muted></video>'+
+      '<button type="button" class="btn sm ghost" onclick="couponStopQrScanner()">停止扫描</button></div>'+
     '<div id="coupon_image_preview">'+couponImagePreviewMarkup()+'</div>'+
     '<span id="coupon_image_status" class="hint"></span>'+hr()+
     field({id:'coupon_name',label:'Coupon 名称',val:c.name,ph:'例如 Amazon 礼品券'})+
