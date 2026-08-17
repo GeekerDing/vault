@@ -149,6 +149,13 @@ main>*{flex-shrink:0}
   min-height:44px;transition:transform .14s var(--ease-out)}
 .chip:active{transform:scale(.97)}
 .chip.on{background:var(--tx);color:var(--inverse)}
+.section-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;
+  padding:3px;background:var(--card2);border:1px solid var(--line);border-radius:7px;
+  position:sticky;top:0;z-index:12;box-shadow:0 8px 12px var(--shadow)}
+.section-tab{min-width:0;min-height:44px;padding:8px 6px;border-radius:5px;color:var(--dim);
+  font-size:13px;font-weight:650;white-space:nowrap;transition:background-color .14s ease,color .14s ease}
+.section-tab:active{background:var(--line)}
+.section-tab.on{background:var(--card);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
 /* ---------- 表单 ---------- */
 .field{display:flex;flex-direction:column;gap:5px}
@@ -419,7 +426,9 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .home-actions{display:flex;flex-direction:column;gap:8px;padding-top:2px}
 .home-support{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .home-support .btn{min-width:0;padding-left:8px;padding-right:8px}
-.save-overview,.save-dashboard,.save-chart-grid{display:flex;flex-direction:column;gap:14px;min-width:0}
+.save-overview,.save-dashboard,.save-chart-grid,.save-account-view,.overview-grid{display:flex;flex-direction:column;gap:14px;min-width:0}
+.overview-unit{font-size:13px}
+.record-overview-copy{margin:0;min-height:36px;line-height:1.5}
 .record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
 .record-heading-title>div{display:flex;flex-direction:column;min-width:0}
@@ -456,18 +465,22 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   main{max-width:none;margin-left:180px;padding:24px;display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
   main>*{min-width:0}
-  main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,
+  main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,main>.section-tabs,
   main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading,
-  main>.contract-export,main>.save-overview,main>.save-dashboard{grid-column:1/-1}
-  .save-overview,.save-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  main>.contract-export,main>.save-overview,main>.save-dashboard,main>.save-account-view,
+  main>.overview-grid{grid-column:1/-1}
+  .section-tabs{position:relative;top:auto;box-shadow:none}
+  .save-overview,.save-dashboard,.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  .save-account-view{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:16px;align-items:start}
   .save-chart-grid{gap:16px}
   .save-transactions{max-height:max(440px,calc(100vh - 480px));overflow-y:auto;
     scrollbar-width:thin;scrollbar-color:var(--line) transparent}
   .save-transactions::-webkit-scrollbar{width:7px}
   .save-transactions::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
-  main[data-view="coupons"]>.card:first-of-type,
-  main[data-view="debts"]>.card:first-of-type,
-  main[data-view="ctr"]>.card.gold:first-child,
+  main[data-view="coupons"]>.record-heading+.card,
+  main[data-view="debts"]>.record-heading+.card,
+  main[data-view="rights"]>.section-tabs+.card,
+  main[data-view="ctr"]>.section-tabs+.card.gold,
   main[data-view="ctr"]>.card.red{grid-column:1/-1}
   main>.record-empty{grid-column:1/-1}
   nav{top:63px;bottom:0;left:max(16px,calc((100vw - 1600px)/2));right:auto;width:180px;
@@ -736,7 +749,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='5eb56a3deb85';
+var APP_BUILD='c442ffb90249';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -804,6 +817,21 @@ function chips(items,cur,fn){
   return '<div class="chips">'+items.map(function(i){
     return '<button class="chip'+(i.k===cur?' on':'')+'" onclick="'+fn+'(\''+i.k+'\')">'+esc(i.label)+'</button>';
   }).join('')+'</div>';
+}
+var SECTION_TABS={
+  energy:[{k:'energy',label:'概览'},{k:'power',label:'电费'},{k:'gas',label:'燃气'}],
+  funds:[{k:'save',label:'账户'},{k:'transactions',label:'流水'},{k:'debts',label:'欠款'}],
+  rights:[{k:'rights',label:'概览'},{k:'ctr',label:'合同'},{k:'coupons',label:'Coupon'}]
+};
+function sectionTabs(group,current){
+  var items=SECTION_TABS[group]||[];
+  return '<div class="section-tabs" role="tablist" aria-label="'+esc(
+    group==='energy'?'能源分类':group==='funds'?'资金分类':'权益分类')+'">'+items.map(function(item){
+      var selected=item.k===current;
+      return '<button type="button" role="tab" aria-selected="'+(selected?'true':'false')+'"'+
+        ' class="section-tab'+(selected?' on':'')+'" onclick="go(\''+item.k+'\')">'+
+        esc(item.label)+'</button>';
+    }).join('')+'</div>';
 }
 function btn(t,onclick,kind,iconName){
   return '<button class="btn'+(kind?' '+kind:'')+'" onclick="'+onclick+'">'+
@@ -1162,22 +1190,27 @@ function barChart(data,fmt,colorFn,every,unit,label){
 /* ================= 底部导航 ================= */
 var TABS=[
   {k:'home',  label:'今天', icon:'house'},
-  {k:'power', label:'电费', icon:'lightning'},
-  {k:'gas',   label:'燃气', icon:'flame'},
-  {k:'save',  label:'储蓄', icon:'piggy-bank'},
-  {k:'ctr',   label:'合同', icon:'file-text'}
+  {k:'energy',label:'能源', icon:'lightning'},
+  {k:'funds', label:'资金', icon:'piggy-bank'},
+  {k:'rights',label:'权益', icon:'ticket'}
 ];
 var saveSecretTaps=[], sheetTrigger=null, sheetClearT=null;
+function navRootForView(v){
+  if(['energy','power','gas'].indexOf(v)>=0) return 'energy';
+  if(['save','transactions','debts','retire'].indexOf(v)>=0) return 'funds';
+  if(['rights','ctr','coupons'].indexOf(v)>=0) return 'rights';
+  return 'home';
+}
 function renderNav(){
   document.getElementById('nav').innerHTML=TABS.map(function(t){
-    var selected=view===t.k||(view==='retire'&&t.k==='save');
+    var selected=navRootForView(view)===t.k;
     return '<button type="button" class="'+(selected?'on':'')+'"'+
       (selected?' aria-current="page"':'')+' onclick="navGo(\''+t.k+'\')">'+
       icon(t.icon,selected)+'<span>'+t.label+'</span></button>';
   }).join('');
 }
 function navGo(v,at){
-  if(v==='save'){
+  if(v==='funds'){
     var now=isFinite(at)?Number(at):Date.now();
     saveSecretTaps=saveSecretTaps.filter(function(t){return now-t<=RETIREMENT_TAP_WINDOW;});
     saveSecretTaps.push(now);
@@ -1186,7 +1219,7 @@ function navGo(v,at){
       return go('retire');
     }
   }else saveSecretTaps=[];
-  go(v);
+  go(v==='funds'?'save':v);
 }
 function go(v){
   view=v; showAllTx=false; render();
@@ -1340,10 +1373,10 @@ function startMeterEntry(kind){
   closeSheet(); view=kind; render(); window.scrollTo(0,0); addReading();
 }
 function startTransaction(){
-  closeSheet(); view='save'; render(); window.scrollTo(0,0); addTx();
+  closeSheet(); view='transactions'; render(); window.scrollTo(0,0); addTx();
 }
 function startBankImport(){
-  closeSheet(); view='save'; render(); window.scrollTo(0,0); openBankImport();
+  closeSheet(); view='transactions'; render(); window.scrollTo(0,0); openBankImport();
 }
 function openQuickRecord(){
   openSheet('快速记录',
@@ -2780,6 +2813,27 @@ function setMeter(id){
 }
 function meterValueText(value){ return n0(Math.floor(Number(value)||0)); }
 
+function meterOverviewCard(kind){
+  var meters=S.meters.filter(function(m){return m.kind===kind;});
+  var meter=meters[0], label=kind==='power'?'电费':'燃气';
+  if(!meter) return card(h2(label)+
+    '<p class="empty">尚未配置'+(kind==='power'?'电表':'燃气表')+'</p>');
+  var readings=meterReadings(S.readings,meter.id), last=readings[readings.length-1];
+  var period=currentPeriod(readings,meter), unit=meter.unit==='m3'?'m³':'kWh';
+  return card(h2(label,badge(meters.length+' 个表计','dim'))+
+    '<span class="dim">最新读数'+(last?' · '+fmtDate(last.date):'')+'</span>'+
+    '<span class="big tnum">'+(last?meterValueText(last.value):'—')+
+      ' <small class="dim overview-unit">'+unit+'</small></span>'+
+    (period?'<div class="stats">'+stat('本年度用量',n0(period.kwh),'kWh')+
+      stat('推算费用',n0(period.projectedYearCost),'€','gold')+'</div>':'')+
+    '<div class="btnrow">'+btn('查看详情',"go('"+kind+"')",'ghost')+
+      btn('拍照录入',"startMeterEntry('"+kind+"')",null,'camera')+'</div>');
+}
+function viewEnergyOverview(){
+  return sectionTabs('energy','energy')+
+    '<section class="overview-grid">'+meterOverviewCard('power')+meterOverviewCard('gas')+'</section>';
+}
+
 function viewMeter(kind){
   var ms=S.meters.filter(function(m){return m.kind===kind;});
   var m=pickMeter(kind);
@@ -2787,7 +2841,7 @@ function viewMeter(kind){
   var unit = m.unit==='m3' ? 'm³' : 'kWh';
   var rs=meterReadings(S.readings,m.id), iv=intervals(rs,m), per=currentPeriod(rs,m);
   var last=rs[rs.length-1], li=iv[iv.length-1];
-  var out='';
+  var out=sectionTabs('energy',kind);
 
   if(ms.length>1) out+=chips(ms.map(function(x){
     var p=S.properties.filter(function(q){return q.id===x.propertyId;})[0];
@@ -2956,12 +3010,13 @@ function fxSourceText(){
 function setAcc(k){ accSel=k; showAllTx=false; render(); }
 function toggleAllTx(){ showAllTx=!showAllTx; render(); }
 
-function viewSave(){
+function viewSave(mode){
+  mode=mode==='transactions'?'transactions':'save';
   var fx=S.fxRmbPerEur, tot=totalEur(S.txs,S.accounts,fx);
   var eurIds=S.accounts.filter(function(a){return a.currency==='EUR';}).map(function(a){return a.id;});
   var ids = accSel==='all' ? eurIds : [accSel];
   var sel = S.accounts.filter(function(a){return a.id===accSel;})[0];
-  var out='';
+  var out=sectionTabs('funds',mode);
 
   var netWorthCard=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
     '<button class="badge b-gold" onclick="editFx()" aria-label="编辑汇率" title="编辑汇率">'+
@@ -2976,7 +3031,7 @@ function viewSave(){
     return row({label:a.name,sub:sub,value:money(b,a.currency),tone:b<0?'red':'',
       onclick:"setAcc('"+a.id+"')"});
   }).join(''));
-  out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
+  if(mode==='save') out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
 
   out+=chips([{k:'all',label:'欧元合计'}].concat(S.accounts.map(function(a){
     return {k:a.id,label:a.name};})),accSel,'setAcc');
@@ -3009,10 +3064,16 @@ function viewSave(){
   }).join('');
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
-  out+='<section class="save-dashboard"><div class="save-chart-grid">'+balanceCard+monthlyCard+
-    '<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
-      btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div></div>'+
-    '<div class="card save-transactions">'+body+'</div></section>';
+  if(mode==='save'){
+    out+='<section class="save-account-view">'+balanceCard+
+      '<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
+        btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div></section>';
+  }else{
+    out+='<section class="save-dashboard"><div class="save-chart-grid">'+monthlyCard+
+      '<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
+        btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div></div>'+
+      '<div class="card save-transactions">'+body+'</div></section>';
+  }
   return out;
 }
 function addTx(){
@@ -3804,6 +3865,36 @@ function recordHeading(title,subtitle,action){
       icon('arrow-left')+'</button><div><h1>'+esc(title)+'</h1><span class="dim">'+esc(subtitle)+'</span></div></div>'+
     '<button class="btn sm" onclick="'+action+'">'+icon('plus')+'新增</button></div>';
 }
+function recordSectionHeading(title,subtitle,action){
+  return '<div class="record-heading"><div class="record-heading-title"><div><h1>'+esc(title)+
+    '</h1><span class="dim">'+esc(subtitle)+'</span></div></div>'+
+    '<button class="btn sm" onclick="'+action+'">'+icon('plus')+'新增</button></div>';
+}
+
+function viewRightsOverview(){
+  var contractAttention=(S.contracts||[]).filter(function(c){
+    return ['expired','notice','soon'].indexOf(contractStatus(c).urgency)>=0;
+  });
+  var usable=(S.coupons||[]).filter(function(c){
+    return ['active','soon'].indexOf(couponRecordState(c).key)>=0;
+  });
+  var couponDue=couponAttentionItems();
+  var amount=usable.filter(function(c){return c.valueType!=='percent'&&isFinite(c.value);})
+    .reduce(function(sum,c){return sum+recordAmountEur(c.value,c.currency||'EUR');},0);
+  return sectionTabs('rights','rights')+
+    card('<div class="stats">'+stat('有效合同',String((S.contracts||[]).length),'份')+
+      stat('可用 Coupon',String(usable.length),'张','green')+
+      stat('需要关注',String(contractAttention.length+couponDue.length),'项',
+        contractAttention.length+couponDue.length?'amber':'green')+'</div>','blue')+
+    '<section class="overview-grid">'+
+      card(h2('合同',badge(contractAttention.length?'有待处理':'状态正常',contractAttention.length?'amber':'green'))+
+        '<p class="dim record-overview-copy">保险、能源、通讯及家庭长期服务。</p>'+
+        btn('查看合同',"go('ctr')",'ghost','file-text'))+
+      card(h2('Coupon',badge(n2(amount)+' €','green'))+
+        '<p class="dim record-overview-copy">'+usable.length+' 张可使用'+
+          (couponDue.length?' · '+couponDue.length+' 张即将到期':'')+'</p>'+
+        btn('查看 Coupon',"go('coupons')",'ghost','ticket'))+'</section>';
+}
 
 function couponRecordState(c,now){
   now=now||today();
@@ -3829,7 +3920,7 @@ function setCouponFilter(value){
   couponFilter=['usable','expired','used','all'].indexOf(value)>=0?value:'usable';
   render();
 }
-function viewCoupons(){
+function viewCoupons(embedded){
   var all=S.coupons||[];
   var usable=all.filter(function(c){
     return ['active','soon'].indexOf(couponRecordState(c).key)>=0;
@@ -3848,7 +3939,7 @@ function viewCoupons(){
     var ad=a.expires||'9999-12-31',bd=b.expires||'9999-12-31';
     return ad<bd?-1:ad>bd?1:0;
   });
-  var out=recordHeading('Coupon','优惠券、礼品券与兑换码','editCoupon()');
+  var out=(embedded?recordSectionHeading:recordHeading)('Coupon','优惠券、礼品券与兑换码','editCoupon()');
   out+=card('<div class="stats">'+stat('可使用',String(usable.length),'张',usable.length?'green':'dim')+
     stat('金额券面值',n2(amountEur),'€','blue','按当前汇率折算')+
     stat('30 天内到期',String(expiring.length),'张',expiring.length?'amber':'green')+'</div>','green');
@@ -3965,7 +4056,7 @@ function setDebtFilter(value){
   debtFilter=['open','overdue','settled','all'].indexOf(value)>=0?value:'open';
   render();
 }
-function viewDebts(){
+function viewDebts(embedded){
   var all=S.debts||[],summary=debtOutstandingSummary(),attention=debtAttentionItems();
   var list=all.filter(function(debt){
     var key=debtRecordState(debt).key;
@@ -3978,7 +4069,7 @@ function viewDebts(){
     var ad=a.dueDate||a.startDate||'9999-12-31',bd=b.dueDate||b.startDate||'9999-12-31';
     return ad<bd?-1:ad>bd?1:0;
   });
-  var out=recordHeading('欠款','应还、应收与结清状态','editDebt()');
+  var out=(embedded?recordSectionHeading:recordHeading)('欠款','应还、应收与结清状态','editDebt()');
   out+=card('<div class="stats">'+stat('我应还',n2(summary.payable),'€',summary.payable?'red':'dim')+
     stat('我应收',n2(summary.receivable),'€',summary.receivable?'green':'dim')+
     stat('净应收',n2(summary.receivable-summary.payable),'€',
@@ -4471,13 +4562,16 @@ function render(){
   clearChartState();
   m.setAttribute('data-view',view);
   if(view==='home') m.innerHTML=viewHome();
+  else if(view==='energy') m.innerHTML=viewEnergyOverview();
   else if(view==='power') m.innerHTML=viewMeter('power');
   else if(view==='gas') m.innerHTML=viewMeter('gas');
-  else if(view==='save') m.innerHTML=viewSave();
+  else if(view==='save') m.innerHTML=viewSave('save');
+  else if(view==='transactions') m.innerHTML=viewSave('transactions');
   else if(view==='retire') m.innerHTML=viewRetirement();
-  else if(view==='coupons') m.innerHTML=viewCoupons();
-  else if(view==='debts') m.innerHTML=viewDebts();
-  else m.innerHTML=viewCtr();
+  else if(view==='rights') m.innerHTML=viewRightsOverview();
+  else if(view==='coupons') m.innerHTML=sectionTabs('rights','coupons')+viewCoupons(true);
+  else if(view==='debts') m.innerHTML=sectionTabs('funds','debts')+viewDebts(true);
+  else m.innerHTML=sectionTabs('rights','ctr')+viewCtr();
   renderNav();
 }
 window.vaultReady=initVault().catch(function(e){
