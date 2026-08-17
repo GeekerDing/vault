@@ -795,7 +795,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='7292cab6eb10';
+var APP_BUILD='d8f86a9b257c';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1913,8 +1913,13 @@ function syncApiUrl(config){
   return 'https://api.github.com/repos/'+encodeURIComponent(p.owner)+'/'+
     encodeURIComponent(p.repo)+'/contents/'+path;
 }
-async function syncGithubRequest(config,method,body,query){
-  var url=syncApiUrl(config)+(query?('?'+query):'');
+function syncGithubBlobUrl(config,sha){
+  var p=syncRepoParts(config.repo);
+  return 'https://api.github.com/repos/'+encodeURIComponent(p.owner)+'/'+
+    encodeURIComponent(p.repo)+'/git/blobs/'+encodeURIComponent(sha);
+}
+async function syncGithubRequest(config,method,body,query,urlOverride){
+  var url=(urlOverride||syncApiUrl(config))+(query?('?'+query):'');
   var response=await fetch(url,{
     method:method,
     headers:{
@@ -1941,8 +1946,18 @@ async function syncReadCloud(config){
   var data=await syncGithubRequest(config,'GET',null,
     'ref='+encodeURIComponent(config.branch||'main'));
   if(!data) return null;
-  var raw=new TextDecoder().decode(b64ToBytes(String(data.content||'').replace(/\s/g,'')));
-  return {sha:data.sha,envelope:JSON.parse(raw)};
+  var encoded=String(data.content||'').replace(/\s/g,'');
+  if(!encoded||data.encoding==='none'){
+    if(!data.sha) throw new Error('云端同步文件读取不完整，请稍后重试');
+    var blob=await syncGithubRequest(config,'GET',null,null,syncGithubBlobUrl(config,data.sha));
+    encoded=String(blob&&blob.content||'').replace(/\s/g,'');
+  }
+  if(!encoded) throw new Error('云端同步文件读取不完整，请稍后重试');
+  var raw=new TextDecoder().decode(b64ToBytes(encoded)), envelope;
+  if(!raw) throw new Error('云端同步文件读取不完整，请稍后重试');
+  try{ envelope=JSON.parse(raw); }
+  catch(e){ throw new Error('云端同步文件读取不完整，请稍后重试'); }
+  return {sha:data.sha,envelope:envelope};
 }
 async function syncWriteCloud(config,envelope,sha){
   var content=bytesToB64(new TextEncoder().encode(JSON.stringify(envelope)));
