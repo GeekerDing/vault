@@ -33,3 +33,16 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
+  retry-deploy:
+    needs: deploy
+    if: ${{ always() && needs.deploy.result == 'failure' }}
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait before retrying Pages
+        run: sleep 180
+      - name: Retry deployment
+        id: deployment
+        uses: actions/deploy-pages@v4
