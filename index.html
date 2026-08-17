@@ -103,19 +103,27 @@ main>*{flex-shrink:0}
 .big{font-size:30px;font-weight:700}
 .between{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hr{height:1px;background:var(--line);margin:2px 0}
-.stats{display:flex;flex-wrap:wrap;gap:14px}
-.stat{flex:1 1 96px;min-width:92px;display:flex;flex-direction:column;gap:2px}
-.stat .v{font-size:21px;font-weight:700;white-space:nowrap}
-.stat .v small{font-size:11px;color:var(--dim);font-weight:400}
-.contract-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:14px}
+.stat{min-width:0;display:flex;flex-direction:column;gap:2px}
+.stat .v{font-size:21px;font-weight:700;line-height:1.16;white-space:normal;overflow-wrap:anywhere}
+.stat .v small{font-size:11px;color:var(--dim);font-weight:400;white-space:nowrap}
+.contract-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .contract-stats .stat{min-width:0}
-.contract-stats .stat .v{font-size:clamp(15px,4.35vw,18px);letter-spacing:0}
+.contract-stats .stat .v{font-size:18px;letter-spacing:0}
 .contract-stats .stat .v small{font-size:10px}
 .contract-stats .stat .dim{overflow-wrap:anywhere}
+.contract-stats .stat:nth-child(3):last-child{grid-column:1/-1;padding-top:10px;border-top:1px solid var(--line)}
+.debt-summary-stats,.coupon-summary-stats,.cashflow-summary-stats,.retirement-summary-stats{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.debt-summary-stats .stat,.coupon-summary-stats .stat,.cashflow-summary-stats .stat,.retirement-summary-stats .stat{min-width:0}
+.debt-summary-stats .stat .v,.coupon-summary-stats .stat .v,.cashflow-summary-stats .stat .v,.retirement-summary-stats .stat .v{font-size:18px}
+.debt-summary-stats .stat:nth-child(3):last-child,.cashflow-summary-stats .stat:nth-child(3):last-child,.retirement-summary-stats .stat:nth-child(3):last-child{
+  grid-column:1/-1;padding-top:10px;border-top:1px solid var(--line)}
 .row{display:flex;align-items:center;gap:10px;padding:8px 0;text-align:left;width:100%}
 .row .l{flex:1;min-width:0}
 .row .l b{font-weight:400;font-size:14px;display:block;overflow-wrap:anywhere}
-.row .v{font-weight:600;font-size:14px;white-space:nowrap}
+.row .v{flex:0 1 auto;min-width:0;max-width:48%;font-weight:600;font-size:14px;line-height:1.3;
+  white-space:normal;overflow-wrap:anywhere;text-align:right}
 .row.tap{transition:transform .14s var(--ease-out),opacity .14s ease}
 .row.tap:active{opacity:.72;transform:scale(.99)}
 .badge{display:inline-block;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:650;white-space:nowrap}
@@ -132,13 +140,14 @@ main>*{flex-shrink:0}
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;
   padding:12px 16px;border-radius:6px;font-weight:650;font-size:14px;
   background:var(--tx);color:var(--inverse);min-height:44px;
+  min-width:0;line-height:1.2;text-align:center;white-space:normal;
   transition:transform .14s var(--ease-out),opacity .14s ease}
 .btn:active,header .hbtn:active,.x:active,.retirement-back:active{transform:scale(.97)}
 .btn.ghost{background:var(--field);color:var(--tx);border:1px solid var(--line)}
 .btn.danger{background:var(--redS);color:var(--red)}
 .btn.sm{padding:8px 11px;font-size:13px;border-radius:5px;min-height:44px}
 .btnrow{display:flex;gap:8px}
-.btnrow>*{flex:1}
+.btnrow>*{flex:1;min-width:0}
 
 /* ---------- chips ---------- */
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;
@@ -438,16 +447,17 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .energy-contract-stats .stat{min-width:0}
 .energy-contract-stats .stat .v{font-size:20px;white-space:normal;overflow-wrap:anywhere;line-height:1.18}
 .record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
+.record-heading-title{display:flex;flex:1;align-items:center;gap:10px;min-width:0}
 .record-heading-title>div{display:flex;flex-direction:column;min-width:0}
 .record-heading h1{font-size:23px;line-height:1.15;margin:0}
 .record-heading .btn{flex:0 0 auto}
 .record-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.record-badges .badge{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .record-code{display:flex;align-items:center;justify-content:space-between;gap:12px;
   background:var(--card2);border-radius:5px;padding:10px 12px}
-.record-code span{color:var(--dim);font-size:11px}
+.record-code span{flex:0 0 auto;color:var(--dim);font-size:11px}
 .record-code strong{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
-  font-size:14px;overflow-wrap:anywhere;text-align:right}
+  flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere;text-align:right}
 .record-notes{margin:0;line-height:1.5;white-space:pre-wrap}
 .coupon-image-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .coupon-image-actions .btn{min-width:0;padding-left:8px;padding-right:8px}
@@ -468,6 +478,11 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 @media (min-width:700px){
   header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
   nav{left:50%;right:auto;width:640px;transform:translate3d(-50%,0,0);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .contract-stats,.debt-summary-stats,.cashflow-summary-stats,.retirement-summary-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .contract-stats .stat:nth-child(3):last-child,.debt-summary-stats .stat:nth-child(3):last-child,.cashflow-summary-stats .stat:nth-child(3):last-child,.retirement-summary-stats .stat:nth-child(3):last-child{
+    grid-column:auto;padding-top:0;border-top:0}
+  .contract-stats .stat .v,.debt-summary-stats .stat .v,.cashflow-summary-stats .stat .v,.retirement-summary-stats .stat .v{font-size:21px}
+  .coupon-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (max-width:899px){
   body{height:100vh;height:100dvh;min-height:0;padding-bottom:0;overflow:hidden;
@@ -780,7 +795,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='0abf8dbe849d';
+var APP_BUILD='9c0465957102';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -3207,7 +3222,7 @@ function viewSave(mode){
   var dout=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
   var monthlyCard=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' €';},
     function(v){return v<0?'var(--red)':'var(--green)';},3,'€','月度净流入')+hr()+
-    '<div class="stats">'+stat(yr+' 存入',n0(din),'','green')+
+    '<div class="stats cashflow-summary-stats">'+stat(yr+' 存入',n0(din),'','green')+
     stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
     stat('净额',n0(din+dout),'',din+dout>=0?'green':'red')+'</div>');
 
@@ -3816,7 +3831,7 @@ function viewRetirement(){
       '<strong class="tnum">'+progress.toLocaleString('de-DE',{maximumFractionDigits:1})+'%</strong></div>'+
     '<div class="retirement-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" '+
       'aria-valuenow="'+progress.toFixed(1)+'"><span style="width:'+progress.toFixed(2)+'%"></span></div>'+
-    '<div class="stats">'+
+    '<div class="stats retirement-summary-stats">'+
       stat('当前资金',n0(pool.total),'€','green')+
       stat('距离目标',n0(gap),'€',gap?'':'green')+
       stat(plan.contributionMode==='auto'?'近12月月均':'计划月投',
@@ -4279,7 +4294,7 @@ function viewRightsOverview(){
   var couponDue=couponAttentionItems();
   var couponTotals=couponValueTotals(usable);
   return sectionTabs('rights','rights')+
-    card('<div class="stats">'+stat('有效合同',String((S.contracts||[]).length),'份')+
+    card('<div class="stats rights-summary-stats">'+stat('有效合同',String((S.contracts||[]).length),'份')+
       stat('可用 Coupon',String(usable.length),'张','green')+
       stat('需要关注',String(contractAttention.length+couponDue.length),'项',
         contractAttention.length+couponDue.length?'amber':'green')+'</div>','blue')+
@@ -4337,7 +4352,7 @@ function viewCoupons(embedded){
     return ad<bd?-1:ad>bd?1:0;
   });
   var out=(embedded?recordSectionHeading:recordHeading)('Coupon','优惠券、礼品券与兑换码','editCoupon()');
-  out+=card('<div class="stats">'+stat('可使用',String(usable.length),'张',usable.length?'green':'dim')+
+  out+=card('<div class="stats coupon-summary-stats">'+stat('可使用',String(usable.length),'张',usable.length?'green':'dim')+
     stat('金额券面值',n2(couponTotals.eur),'€','blue','按当前汇率折算')+
     stat('点数券面值',couponPoints(couponTotals.points),'','blue')+
     stat('30 天内到期',String(expiring.length),'张',expiring.length?'amber':'green')+'</div>','green');
@@ -4488,7 +4503,7 @@ function viewDebts(embedded){
     return ad<bd?-1:ad>bd?1:0;
   });
   var out=(embedded?recordSectionHeading:recordHeading)('欠款','应还、应收与结清状态','editDebt()');
-  out+=card('<div class="stats">'+stat('我应还',n2(summary.payable),'€',summary.payable?'red':'dim')+
+  out+=card('<div class="stats debt-summary-stats">'+stat('我应还',n2(summary.payable),'€',summary.payable?'red':'dim')+
     stat('我应收',n2(summary.receivable),'€',summary.receivable?'green':'dim')+
     stat('净应收',n2(summary.receivable-summary.payable),'€',
       summary.receivable-summary.payable>=0?'green':'red',summary.count+' 笔未结清')+'</div>','blue');
