@@ -795,7 +795,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='d8f86a9b257c';
+var APP_BUILD='639dffd05bf2';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1796,6 +1796,7 @@ async function disableDeviceUnlock(){
 var SYNC_CONFIG_KEY='scrooge.vault.sync.config.v1';
 var SYNC_META_KEY='scrooge.vault.sync.meta.v1';
 var SYNC_FILE_PATH='vault.sync.json';
+var SYNC_RETRY_DELAYS=[350,900];
 var syncTimer=null, syncPollTimer=null, syncRunning=null, syncAbortController=null;
 var syncEditVersion=0, syncSession=0;
 var syncStatus={kind:'off',text:'家庭同步未设置',detail:''};
@@ -1918,29 +1919,62 @@ function syncGithubBlobUrl(config,sha){
   return 'https://api.github.com/repos/'+encodeURIComponent(p.owner)+'/'+
     encodeURIComponent(p.repo)+'/git/blobs/'+encodeURIComponent(sha);
 }
+function syncRetryableStatus(status){
+  return status===401||status===403||status===429||status>=500;
+}
+function syncGithubError(status,data){
+  var message;
+  if(status===401||status===403)
+    message='GitHub 令牌无效、没有仓库权限，或 GitHub 认证暂时不可用';
+  else if(status===429) message='GitHub 请求过于频繁，请稍后重试';
+  else message=(data&&data.message)||('GitHub 请求失败 ('+status+')');
+  var err=new Error(message);
+  err.status=status;
+  return err;
+}
+function syncNetworkError(){
+  return new Error('GitHub 暂时无法连接，已保留本机数据，请稍后重试');
+}
+function syncRetryWait(delay){
+  return new Promise(function(resolve){setTimeout(resolve,delay);});
+}
 async function syncGithubRequest(config,method,body,query,urlOverride){
   var url=(urlOverride||syncApiUrl(config))+(query?('?'+query):'');
-  var response=await fetch(url,{
-    method:method,
-    headers:{
-      Accept:'application/vnd.github+json',
-      Authorization:'Bearer '+config.token,
-      'X-GitHub-Api-Version':'2022-11-28',
-      'Content-Type':'application/json'
-    },
-    body:body?JSON.stringify(body):undefined,
-    signal:syncAbortController?syncAbortController.signal:undefined,
-    cache:'no-store'
-  });
-  var data=null;
-  try{ data=await response.json(); }catch(e){}
-  if(response.status===404&&method==='GET') return null;
-  if(!response.ok){
-    var err=new Error((data&&data.message)||('GitHub 请求失败 ('+response.status+')'));
-    err.status=response.status;
-    throw err;
+  var delays=method==='GET'?SYNC_RETRY_DELAYS:[], attempt=0;
+  while(true){
+    var response;
+    try{
+      response=await fetch(url,{
+        method:method,
+        headers:{
+          Accept:'application/vnd.github+json',
+          Authorization:'Bearer '+config.token,
+          'X-GitHub-Api-Version':'2022-11-28',
+          'Content-Type':'application/json'
+        },
+        body:body?JSON.stringify(body):undefined,
+        signal:syncAbortController?syncAbortController.signal:undefined,
+        cache:'no-store'
+      });
+    }catch(e){
+      if(e&&e.name==='AbortError') throw e;
+      if(attempt<delays.length){
+        await syncRetryWait(delays[attempt++]);
+        continue;
+      }
+      throw syncNetworkError();
+    }
+    var data=null, invalidJson=false;
+    try{ data=await response.json(); }catch(e){ invalidJson=true; }
+    if(response.status===404&&method==='GET') return null;
+    if(response.ok&&!invalidJson) return data;
+    if(attempt<delays.length&&(invalidJson||syncRetryableStatus(response.status))){
+      await syncRetryWait(delays[attempt++]);
+      continue;
+    }
+    if(response.ok&&invalidJson) throw syncNetworkError();
+    throw syncGithubError(response.status,data);
   }
-  return data;
 }
 async function syncReadCloud(config){
   var data=await syncGithubRequest(config,'GET',null,
