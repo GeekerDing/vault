@@ -92,6 +92,7 @@ header .hbtn:active{background:var(--card2)}
 
 /* ---------- 布局 ---------- */
 main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto}
+main>*{flex-shrink:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:6px;
   padding:15px;display:flex;flex-direction:column;gap:10px}
 .card.gold{background:var(--goldS)} .card.green{background:var(--greenS)}
@@ -106,6 +107,11 @@ main{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px;max-widt
 .stat{flex:1 1 96px;min-width:92px;display:flex;flex-direction:column;gap:2px}
 .stat .v{font-size:21px;font-weight:700;white-space:nowrap}
 .stat .v small{font-size:11px;color:var(--dim);font-weight:400}
+.contract-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.contract-stats .stat{min-width:0}
+.contract-stats .stat .v{font-size:clamp(15px,4.35vw,18px);letter-spacing:0}
+.contract-stats .stat .v small{font-size:10px}
+.contract-stats .stat .dim{overflow-wrap:anywhere}
 .row{display:flex;align-items:center;gap:10px;padding:8px 0;text-align:left;width:100%}
 .row .l{flex:1;min-width:0}
 .row .l b{font-weight:400;font-size:14px;display:block;overflow-wrap:anywhere}
@@ -475,6 +481,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
     box-shadow:-12px 0 36px var(--shadow)}
   .sheet.open{transform:translateX(0)}
   .chart,.chart-y-axis{height:180px}
+  .contract-stats .stat .v{font-size:21px}
 }
 @media (min-width:1200px){
   header{padding-left:28px;padding-right:28px}
@@ -729,7 +736,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='a56fc4294f9f';
+var APP_BUILD='5eb56a3deb85';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -4103,7 +4110,7 @@ function viewCtr(){
   var miss=S.contracts.filter(function(c){return contractMissingFields(c).length;});
   var out='';
 
-  out+=card('<div class="stats">'+stat('年度保险支出',n2(insY),'€','gold')+
+  out+=card('<div class="stats contract-stats">'+stat('年度保险支出',n2(insY),'€','gold')+
     stat('所有合同年化',n2(yearly),'€',null,S.contracts.length+' 份合同')+
     stat('需要关注',String(att.length),'份',att.length?'red':'green')+'</div>','gold');
 
