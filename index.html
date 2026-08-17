@@ -434,6 +434,9 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .quota-track{height:7px;border-radius:4px;background:var(--card2);overflow:hidden}
 .quota-track>span{display:block;height:100%;border-radius:inherit;background:var(--green)}
 .energy-plan-empty{margin:0}
+.energy-contract-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+.energy-contract-stats .stat{min-width:0}
+.energy-contract-stats .stat .v{font-size:20px;white-space:normal;overflow-wrap:anywhere;line-height:1.18}
 .record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
 .record-heading-title>div{display:flex;flex-direction:column;min-width:0}
@@ -486,6 +489,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   main>.contract-export,main>.save-overview,main>.save-dashboard,main>.save-account-view,
   main>.overview-grid{grid-column:1/-1}
   .section-tabs{position:relative;top:auto;box-shadow:none}
+  .energy-contract-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .save-overview,.save-dashboard,.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
   .save-account-view{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:16px;align-items:start}
   .save-chart-grid{gap:16px}
@@ -765,7 +769,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='336020a49c74';
+var APP_BUILD='ac7f09340df5';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -2860,7 +2864,7 @@ function energyPlanCard(m,period){
         (remaining>=0?'剩余 ':'超出 ')+n0(Math.abs(remaining))+' '+quotaUnit+'</span></div>'
     : '<p class="dim energy-plan-empty">尚未填写年度购买额度。</p>';
   return card(h2('能源合同',badge(expiry.label,expiry.tone))+
-    '<div class="stats">'+stat('运营商',esc(m.provider||'待填写'),'')+
+    '<div class="stats energy-contract-stats">'+stat('运营商',esc(m.provider||'待填写'),'')+
       stat('合同到期',m.contractEndDate?fmtDate(m.contractEndDate):'无固定期限','')+
       stat('每月预缴',n2(Number(m.monthlyAbschlag)||0),'€','gold')+
       stat('单位价格',n2(Number(m.arbeitspreisCt)||0),'ct/kWh')+'</div>'+quotaHtml+
