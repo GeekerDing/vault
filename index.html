@@ -413,6 +413,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .home-actions{display:flex;flex-direction:column;gap:8px;padding-top:2px}
 .home-support{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .home-support .btn{min-width:0;padding-left:8px;padding-right:8px}
+.save-overview,.save-dashboard,.save-chart-grid{display:flex;flex-direction:column;gap:14px;min-width:0}
 .record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
 .record-heading-title>div{display:flex;flex-direction:column;min-width:0}
@@ -443,16 +444,28 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 }
 @media (min-width:900px){
   body{padding-bottom:0}
-  .app-shell{width:min(1080px,100%);min-height:100vh;margin:0 auto;border-left:1px solid var(--line);
+  .app-shell{width:min(1600px,calc(100% - 32px));min-height:100vh;margin:0 auto;border-left:1px solid var(--line);
     border-right:1px solid var(--line)}
   header{padding-left:24px;padding-right:24px}
   main{max-width:none;margin-left:180px;padding:24px;display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+    grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
   main>*{min-width:0}
   main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,
-  main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading{grid-column:1/-1}
-  nav{top:63px;bottom:0;left:50%;right:auto;width:180px;
-    transform:translate3d(-540px,0,0);border-top:0;border-left:1px solid var(--line);
+  main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading,
+  main>.contract-export,main>.save-overview,main>.save-dashboard{grid-column:1/-1}
+  .save-overview,.save-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  .save-chart-grid{gap:16px}
+  .save-transactions{max-height:max(440px,calc(100vh - 480px));overflow-y:auto;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .save-transactions::-webkit-scrollbar{width:7px}
+  .save-transactions::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  main[data-view="coupons"]>.card:first-of-type,
+  main[data-view="debts"]>.card:first-of-type,
+  main[data-view="ctr"]>.card.gold:first-child,
+  main[data-view="ctr"]>.card.red{grid-column:1/-1}
+  main>.record-empty{grid-column:1/-1}
+  nav{top:63px;bottom:0;left:max(16px,calc((100vw - 1600px)/2));right:auto;width:180px;
+    transform:none;border-top:0;border-left:1px solid var(--line);
     border-right:1px solid var(--line);flex-direction:column;align-items:stretch;
     gap:4px;padding:16px 10px;background:var(--nav-bg)}
   nav button{flex:0 0 auto;min-height:48px;flex-direction:row;justify-content:flex-start;
@@ -462,6 +475,22 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
     box-shadow:-12px 0 36px var(--shadow)}
   .sheet.open{transform:translateX(0)}
   .chart,.chart-y-axis{height:180px}
+}
+@media (min-width:1200px){
+  header{padding-left:28px;padding-right:28px}
+  main{margin-left:208px;padding:28px}
+  nav{width:208px;padding-left:14px;padding-right:14px}
+  .sheet{width:min(620px,100vw)}
+}
+@media (min-width:1320px){
+  main{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .save-overview{grid-template-columns:1fr 2fr}
+  .save-dashboard{grid-template-columns:2fr 1fr}
+  .save-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .save-chart-grid>.btnrow{grid-column:1/-1}
+  main[data-view="retire"]>.card:nth-of-type(1),
+  main[data-view="retire"]>.card:nth-of-type(3){grid-column:span 2}
+  .chart,.chart-y-axis{height:196px}
 }
 </style>
 </head>
@@ -700,7 +729,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='b62c953c1691';
+var APP_BUILD='a56fc4294f9f';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -2927,24 +2956,25 @@ function viewSave(){
   var sel = S.accounts.filter(function(a){return a.id===accSel;})[0];
   var out='';
 
-  out+=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
+  var netWorthCard=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
     '<button class="badge b-gold" onclick="editFx()" aria-label="编辑汇率" title="编辑汇率">'+
       '汇率 1€ = '+fxText(fx)+' ¥ '+icon('pencil-simple')+'</button></div>'+
     '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
     '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>'+
     '<span class="dim">'+esc(fxSourceText())+'</span>','gold');
 
-  out+=card(h2('账户余额')+S.accounts.map(function(a){
+  var accountsCard=card(h2('账户余额')+S.accounts.map(function(a){
     var b=accountBalance(S.txs,a.id);
     var sub=(a.currency==='RMB'?('≈ '+n2(b/fx)+' €'):'')+(a.note?((a.currency==='RMB'?' · ':'')+a.note):'');
     return row({label:a.name,sub:sub,value:money(b,a.currency),tone:b<0?'red':'',
       onclick:"setAcc('"+a.id+"')"});
   }).join(''));
+  out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
 
   out+=chips([{k:'all',label:'欧元合计'}].concat(S.accounts.map(function(a){
     return {k:a.id,label:a.name};})),accSel,'setAcc');
 
-  out+=card(h2('余额走势',badge(accSel==='all'?'EUR 账户合计':(sel?sel.currency:''),'dim'))+
+  var balanceCard=card(h2('余额走势',badge(accSel==='all'?'EUR 账户合计':(sel?sel.currency:''),'dim'))+
     lineChart(balanceSeries(S.txs,ids),null,function(v){return n2(v)+' €';},'€','余额走势'));
 
   var mn=monthlyNet(S.txs,ids).slice(-18);
@@ -2954,7 +2984,7 @@ function viewSave(){
   var cashRel=rel.filter(function(t){return !t.valuationOnly;});
   var din=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
   var dout=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
-  out+=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' €';},
+  var monthlyCard=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' €';},
     function(v){return v<0?'var(--red)':'var(--green)';},3,'€','月度净流入')+hr()+
     '<div class="stats">'+stat(yr+' 存入',n0(din),'','green')+
     stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
@@ -2972,9 +3002,10 @@ function viewSave(){
   }).join('');
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
-  out+=card(body);
-  out+='<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
-    btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div>';
+  out+='<section class="save-dashboard"><div class="save-chart-grid">'+balanceCard+monthlyCard+
+    '<div class="btnrow">'+btn('记一笔','addTx()',null,'plus')+
+      btn('导入银行账单','openBankImport()','ghost','file-csv')+'</div></div>'+
+    '<div class="card save-transactions">'+body+'</div></section>';
   return out;
 }
 function addTx(){
@@ -3818,7 +3849,8 @@ function viewCoupons(){
     {k:'usable',label:'可使用'},{k:'expired',label:'已过期'},
     {k:'used',label:'已使用'},{k:'all',label:'全部'}
   ],couponFilter,'setCouponFilter');
-  if(!list.length) out+=card('<p class="empty">'+(all.length?'这个筛选下没有 Coupon':'还没有 Coupon')+'</p>');
+  if(!list.length) out+='<div class="card record-empty"><p class="empty">'+
+    (all.length?'这个筛选下没有 Coupon':'还没有 Coupon')+'</p></div>';
   out+=list.map(function(c){
     var state=couponRecordState(c);
     var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(c.name)+'</h3>'+
@@ -3948,7 +3980,8 @@ function viewDebts(){
     {k:'open',label:'未结清'},{k:'overdue',label:'已逾期'},
     {k:'settled',label:'已结清'},{k:'all',label:'全部'}
   ],debtFilter,'setDebtFilter');
-  if(!list.length) out+=card('<p class="empty">'+(all.length?'这个筛选下没有欠款':'还没有欠款记录')+'</p>');
+  if(!list.length) out+='<div class="card record-empty"><p class="empty">'+
+    (all.length?'这个筛选下没有欠款':'还没有欠款记录')+'</p></div>';
   out+=list.map(function(debt){
     var state=debtRecordState(debt),receivable=debt.direction==='receivable';
     var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(debt.title)+'</h3>'+
@@ -4082,8 +4115,9 @@ function viewCtr(){
       value:x.st.label,tone:'red',onclick:"editCtr('"+x.c.id+"')"});
   }).join(''),'red');
 
-  out+=btn('导出到 iPhone 日历 (.ics)','exportIcs()',null,'calendar-arrow-down');
-  out+='<p class="dim" style="margin:-4px 0 0">每份合同生成「退保截止日」（提前 14 天提醒）与「到期日」（提前 7 天提醒）两个全天事件。</p>';
+  out+='<div class="contract-export">'+
+    btn('导出到 iPhone 日历 (.ics)','exportIcs()',null,'calendar-arrow-down')+
+    '<p class="dim" style="margin:6px 0 0">每份合同生成「退保截止日」（提前 14 天提醒）与「到期日」（提前 7 天提醒）两个全天事件。</p></div>';
 
   out+=chips([{k:'all',label:'全部'}].concat(CATS.map(function(c){return {k:c,label:c};})),catSel,'setCat');
 
