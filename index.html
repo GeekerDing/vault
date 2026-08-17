@@ -485,9 +485,9 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   .coupon-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (max-width:899px){
-  html,body{height:100%;min-height:100%;overflow:hidden}
-  body{height:100vh;height:100svh;height:var(--app-height,100dvh);min-height:0;padding-bottom:0;display:block}
-  .app-shell{height:100%;min-height:0;overflow:hidden;display:grid;
+  html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
+  body{min-height:0;padding-bottom:0;display:block}
+  .app-shell{position:fixed;inset:0;height:auto;min-height:0;overflow:hidden;display:grid;
     grid-template-rows:auto minmax(0,1fr)}
   header{position:relative}
   main{width:100%;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;
@@ -795,11 +795,10 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='ea2791455347';
+var APP_BUILD='7292cab6eb10';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
-var mobileViewportStarted=false;
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -983,29 +982,10 @@ async function checkForAppUpdate(force){
 function initAppUpdates(){
   if(appUpdatesStarted) return;
   appUpdatesStarted=true;
-  initMobileViewportHeight();
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden) checkForAppUpdate(false);
   });
   window.addEventListener('online',function(){ checkForAppUpdate(false); });
-}
-function syncMobileViewportHeight(){
-  var query=window.matchMedia&&window.matchMedia('(max-width:899px)');
-  if(query&&!query.matches){
-    document.documentElement.style.removeProperty('--app-height');
-    return;
-  }
-  var viewport=window.visualViewport;
-  var height=viewport&&isFinite(viewport.height)&&viewport.height>0?viewport.height:window.innerHeight;
-  if(isFinite(height)&&height>0) document.documentElement.style.setProperty('--app-height',Math.round(height)+'px');
-}
-function initMobileViewportHeight(){
-  if(mobileViewportStarted) return;
-  mobileViewportStarted=true;
-  syncMobileViewportHeight();
-  window.addEventListener('resize',syncMobileViewportHeight);
-  window.addEventListener('orientationchange',syncMobileViewportHeight);
-  if(window.visualViewport) window.visualViewport.addEventListener('resize',syncMobileViewportHeight);
 }
 function icon(name,fill){
   return '<i class="'+(fill?'ph-fill':'ph')+' ph-'+name+'" aria-hidden="true"></i>';
