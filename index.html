@@ -413,6 +413,18 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .home-actions{display:flex;flex-direction:column;gap:8px;padding-top:2px}
 .home-support{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .home-support .btn{min-width:0;padding-left:8px;padding-right:8px}
+.record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
+.record-heading-title>div{display:flex;flex-direction:column;min-width:0}
+.record-heading h1{font-size:23px;line-height:1.15;margin:0}
+.record-heading .btn{flex:0 0 auto}
+.record-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.record-code{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--card2);border-radius:5px;padding:10px 12px}
+.record-code span{color:var(--dim);font-size:11px}
+.record-code strong{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  font-size:14px;overflow-wrap:anywhere;text-align:right}
+.record-notes{margin:0;line-height:1.5;white-space:pre-wrap}
 @media (min-width:700px){
   header{padding-left:max(16px,calc((100% - 640px)/2));padding-right:max(16px,calc((100% - 640px)/2))}
   nav{left:50%;right:auto;width:640px;transform:translate3d(-50%,0,0);border-left:1px solid var(--line);border-right:1px solid var(--line)}
@@ -438,7 +450,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
     grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
   main>*{min-width:0}
   main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,
-  main>.retirement-heading,main>.retirement-disclaimer{grid-column:1/-1}
+  main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading{grid-column:1/-1}
   nav{top:63px;bottom:0;left:50%;right:auto;width:180px;
     transform:translate3d(-540px,0,0);border-top:0;border-left:1px solid var(--line);
     border-right:1px solid var(--line);flex-direction:column;align-items:stretch;
@@ -495,7 +507,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   </div>
 </div>
 <script>
-var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -688,7 +700,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='69f8ffaf1f20';
+var APP_BUILD='b62c953c1691';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1206,6 +1218,7 @@ function viewHome(){
       prop:S.properties.filter(function(p){return p.id===m.propertyId;})[0]};
   });
   var missing=S.contracts.filter(function(c){return contractMissingFields(c).length;});
+  var couponDue=couponAttentionItems(), debtDue=debtAttentionItems();
   var readingPending=[], pending=[];
 
   meters.forEach(function(x){
@@ -1223,13 +1236,23 @@ function viewHome(){
     }));
   });
   if(readingPending.length) pending.push(readingPending.shift());
-  pending.push(activityRow({
-    icon:'file-csv',tone:'blue',label:'导入新的银行账单',
-    sub:'支持 ING 与常见 CSV',value:'导入',onclick:'startBankImport()'
+  if(debtDue.length) pending.push(activityRow({
+    icon:'hand-coins',tone:debtRecordState(debtDue[0]).key==='overdue'?'red':'amber',
+    label:'欠款需要处理',sub:debtDue[0].title+' · '+fmtDate(debtDue[0].dueDate),
+    value:debtDue.length+' 笔',onclick:"go('debts')"
+  }));
+  if(couponDue.length) pending.push(activityRow({
+    icon:'ticket',tone:'amber',label:'Coupon 即将到期',
+    sub:couponDue[0].name+' · '+fmtDate(couponDue[0].expires),
+    value:couponDue.length+' 张',onclick:"go('coupons')"
   }));
   if(missing.length) pending.push(activityRow({
     icon:'file-dashed',tone:'amber',label:'合同资料待补齐',
     sub:'缺少保费或保障对象',value:missing.length+' 份',onclick:"go('ctr')"
+  }));
+  pending.push(activityRow({
+    icon:'file-csv',tone:'blue',label:'导入新的银行账单',
+    sub:'支持 ING 与常见 CSV',value:'导入',onclick:'startBankImport()'
   }));
   pending=pending.concat(readingPending);
 
@@ -1270,6 +1293,9 @@ function viewHome(){
     '<div class="home-support">'+
       '<button class="btn ghost" onclick="startMeterEntry(\'power\')">'+icon('camera')+'拍照抄表</button>'+
       '<button class="btn ghost" onclick="startBankImport()">'+icon('file-arrow-up')+'导入账单</button>'+
+    '</div><div class="home-support">'+
+      '<button class="btn ghost" onclick="go(\'coupons\')">'+icon('ticket')+'Coupon</button>'+
+      '<button class="btn ghost" onclick="go(\'debts\')">'+icon('hand-coins')+'欠款</button>'+
     '</div></div>';
   return out;
 }
@@ -1288,7 +1314,9 @@ function openQuickRecord(){
     '<button class="btn" onclick="startMeterEntry(\'power\')">'+icon('camera')+'拍照录电表</button>'+
     '<button class="btn ghost" onclick="startMeterEntry(\'gas\')">'+icon('flame')+'拍照录燃气表</button>'+
     '<button class="btn ghost" onclick="startTransaction()">'+icon('plus-circle')+'记一笔储蓄</button>'+
-    '<button class="btn ghost" onclick="startBankImport()">'+icon('file-csv')+'导入银行账单</button>');
+    '<button class="btn ghost" onclick="startBankImport()">'+icon('file-csv')+'导入银行账单</button>'+
+    '<button class="btn ghost" onclick="startCoupon()">'+icon('ticket')+'新增 Coupon</button>'+
+    '<button class="btn ghost" onclick="startDebt()">'+icon('hand-coins')+'新增欠款</button>');
 }
 /* ================= 加密存储与设备解锁 ================= */
 var KDF_ITERATIONS=310000;
@@ -1349,6 +1377,10 @@ function assertState(p){
   if(!p || !Array.isArray(p.accounts) || !Array.isArray(p.txs) ||
      !Array.isArray(p.readings) || !Array.isArray(p.contracts))
     throw new Error('备份内容结构不完整');
+  if(p.coupons==null) p.coupons=[];
+  if(p.debts==null) p.debts=[];
+  if(!Array.isArray(p.coupons)||!Array.isArray(p.debts))
+    throw new Error('Coupon 或欠款记录结构不完整');
   (p.meters||[]).forEach(function(meter){
     if(meter.id==='m-karl-power'){
       meter.ocrIntegerDigits=6;
@@ -1686,7 +1718,7 @@ function syncMergeValue(base,local,remote,path,context){
 }
 function syncStateEmpty(state){
   if(!state) return true;
-  return ['properties','meters','readings','txs','contracts'].every(function(k){
+  return ['properties','meters','readings','txs','contracts','coupons','debts'].every(function(k){
     return !Array.isArray(state[k])||state[k].length===0;
   });
 }
@@ -3722,6 +3754,272 @@ function retirementMaybeCelebrateOnUnlock(){
   }
   return false;
 }
+/* ================= Coupon 与欠款 ================= */
+var couponFilter='usable', debtFilter='open';
+
+function recordAmountEur(value,currency){
+  return currency==='RMB'?Number(value||0)/S.fxRmbPerEur:Number(value||0);
+}
+function recordHeading(title,subtitle,action){
+  return '<div class="record-heading"><div class="record-heading-title">'+
+    '<button class="retirement-back" onclick="go(\'home\')" aria-label="返回今天" title="返回今天">'+
+      icon('arrow-left')+'</button><div><h1>'+esc(title)+'</h1><span class="dim">'+esc(subtitle)+'</span></div></div>'+
+    '<button class="btn sm" onclick="'+action+'">'+icon('plus')+'新增</button></div>';
+}
+
+function couponRecordState(c,now){
+  now=now||today();
+  if(c.usedDate) return {key:'used',label:'已使用',tone:'dim',days:null};
+  if(c.expires){
+    var days=daysBetween(now,c.expires);
+    if(days<0) return {key:'expired',label:'已过期',tone:'red',days:days};
+    if(days<=30) return {key:'soon',label:days===0?'今天到期':days+' 天后到期',tone:'amber',days:days};
+    return {key:'active',label:days+' 天后到期',tone:'green',days:days};
+  }
+  return {key:'active',label:'无到期日',tone:'green',days:null};
+}
+function couponValueText(c){
+  if(!isFinite(c.value)||c.value==null) return '未填写面值';
+  return c.valueType==='percent'?n2(c.value)+'%':money(c.value,c.currency||'EUR');
+}
+function couponAttentionItems(){
+  return (S.coupons||[]).filter(function(c){
+    return couponRecordState(c).key==='soon';
+  }).sort(function(a,b){return a.expires<b.expires?-1:1;});
+}
+function setCouponFilter(value){
+  couponFilter=['usable','expired','used','all'].indexOf(value)>=0?value:'usable';
+  render();
+}
+function viewCoupons(){
+  var all=S.coupons||[];
+  var usable=all.filter(function(c){
+    return ['active','soon'].indexOf(couponRecordState(c).key)>=0;
+  });
+  var expiring=couponAttentionItems();
+  var amountEur=usable.filter(function(c){return c.valueType!=='percent'&&isFinite(c.value);})
+    .reduce(function(sum,c){return sum+recordAmountEur(c.value,c.currency||'EUR');},0);
+  var list=all.filter(function(c){
+    var key=couponRecordState(c).key;
+    if(couponFilter==='usable') return key==='active'||key==='soon';
+    return couponFilter==='all'||key===couponFilter;
+  }).sort(function(a,b){
+    var rank={soon:0,active:1,expired:2,used:3};
+    var ar=rank[couponRecordState(a).key],br=rank[couponRecordState(b).key];
+    if(ar!==br) return ar-br;
+    var ad=a.expires||'9999-12-31',bd=b.expires||'9999-12-31';
+    return ad<bd?-1:ad>bd?1:0;
+  });
+  var out=recordHeading('Coupon','优惠券、礼品券与兑换码','editCoupon()');
+  out+=card('<div class="stats">'+stat('可使用',String(usable.length),'张',usable.length?'green':'dim')+
+    stat('金额券面值',n2(amountEur),'€','blue','按当前汇率折算')+
+    stat('30 天内到期',String(expiring.length),'张',expiring.length?'amber':'green')+'</div>','green');
+  out+=chips([
+    {k:'usable',label:'可使用'},{k:'expired',label:'已过期'},
+    {k:'used',label:'已使用'},{k:'all',label:'全部'}
+  ],couponFilter,'setCouponFilter');
+  if(!list.length) out+=card('<p class="empty">'+(all.length?'这个筛选下没有 Coupon':'还没有 Coupon')+'</p>');
+  out+=list.map(function(c){
+    var state=couponRecordState(c);
+    var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(c.name)+'</h3>'+
+      '<div class="record-badges">'+(c.merchant?badge(c.merchant,'blue'):'')+
+      badge(c.valueType==='percent'?'百分比券':'金额券','dim')+'</div></div>'+badge(state.label,state.tone)+'</div>'+hr()+
+      row({label:c.expires?('有效期至 '+fmtDate(c.expires)):'无固定有效期',
+        sub:c.createdDate?('记录于 '+fmtDate(c.createdDate)):'',value:couponValueText(c),
+        tone:state.key==='expired'?'red':state.key==='used'?'dim':'green'});
+    if(c.code) body+='<div class="record-code"><span>Coupon Code</span><strong>'+esc(c.code)+'</strong></div>';
+    if(c.notes) body+='<p class="dim record-notes">'+esc(c.notes)+'</p>';
+    body+='<div class="btnrow">'+
+      btn(c.usedDate?'恢复为未使用':'标记已使用',"toggleCouponUsed('"+c.id+"')",c.usedDate?'ghost':'','check-circle')+
+      btn('编辑',"editCoupon('"+c.id+"')",'ghost','pencil-simple')+'</div>';
+    return card(body);
+  }).join('');
+  return out;
+}
+function editCoupon(id){
+  var c=id?(S.coupons||[]).filter(function(item){return item.id===id;})[0]:null;
+  c=c||{id:'',name:'',merchant:'',code:'',value:null,valueType:'amount',currency:'EUR',
+    expires:'',usedDate:null,createdDate:today(),notes:''};
+  openSheet(id?'编辑 Coupon':'新增 Coupon',
+    field({id:'coupon_name',label:'Coupon 名称',val:c.name,ph:'例如 Amazon 礼品券'})+
+    field({id:'coupon_merchant',label:'商家 / 平台',val:c.merchant,ph:'例如 Amazon / REWE / Lufthansa'})+
+    field({id:'coupon_code',label:'优惠码 / 券号（可选）',val:c.code,ph:'例如 WELCOME20'})+
+    field({id:'coupon_type',label:'优惠形式',type:'select',val:c.valueType||'amount',
+      onchange:'couponValueTypeChanged()',opts:[{k:'amount',label:'固定金额'},{k:'percent',label:'百分比'}]})+
+    field({id:'coupon_value',label:'面值',type:'text',inputmode:'decimal',
+      val:c.value==null?'':n2(c.value),ph:c.valueType==='percent'?'例如 20':'例如 25,00'})+
+    '<div id="coupon_currency_wrap" style="'+(c.valueType==='percent'?'display:none':'')+'">'+
+      field({id:'coupon_currency',label:'币种',type:'select',val:c.currency||'EUR',
+        opts:[{k:'EUR',label:'欧元 (€)'},{k:'RMB',label:'人民币 (¥)'}]})+'</div>'+
+    field({id:'coupon_expires',label:'到期日（可选）',type:'date',val:c.expires||'',
+      hint:'没有固定有效期可以留空。'})+
+    field({id:'coupon_status',label:'状态',type:'select',val:c.usedDate?'used':'active',
+      opts:[{k:'active',label:'未使用'},{k:'used',label:'已使用'}]})+
+    field({id:'coupon_notes',label:'使用条件 / 备注',type:'textarea',val:c.notes,
+      ph:'最低消费、适用商品、使用渠道等'})+
+    btn('保存',"saveCoupon('"+(c.id||'')+"')")+
+    (id?btn('删除这个 Coupon',"deleteCoupon('"+c.id+"')",'danger','trash'):''));
+}
+function couponValueTypeChanged(){
+  var wrap=document.getElementById('coupon_currency_wrap');
+  if(wrap) wrap.style.display=val('coupon_type')==='percent'?'none':'';
+}
+function saveCoupon(id){
+  var name=val('coupon_name'),type=val('coupon_type')==='percent'?'percent':'amount';
+  if(!name) return toast('请填写 Coupon 名称');
+  var raw=val('coupon_value'),value=raw?fnum('coupon_value'):null;
+  if(raw&&(!isFinite(value)||value<=0)) return toast('请输入有效面值');
+  if(type==='percent'&&isFinite(value)&&value>100) return toast('百分比不能超过 100%');
+  var expires=val('coupon_expires');
+  if(expires&&!isDate(expires)) return toast('到期日格式不对');
+  var old=id?(S.coupons||[]).filter(function(item){return item.id===id;})[0]:null;
+  var used=val('coupon_status')==='used';
+  var obj={id:id||uid(),name:name,merchant:val('coupon_merchant'),code:val('coupon_code'),
+    value:value==null?null:Math.round((value+Number.EPSILON)*100)/100,valueType:type,
+    currency:type==='amount'?val('coupon_currency'):'EUR',expires:expires||null,
+    usedDate:used?((old&&old.usedDate)||today()):null,
+    createdDate:(old&&old.createdDate)||today(),notes:val('coupon_notes')};
+  var index=(S.coupons||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.coupons[index]=obj; else S.coupons.push(obj);
+  save(); closeSheet(); render(); toast('Coupon 已保存');
+}
+function toggleCouponUsed(id){
+  var c=(S.coupons||[]).filter(function(item){return item.id===id;})[0];
+  if(!c) return;
+  c.usedDate=c.usedDate?null:today();
+  save(); render(); toast(c.usedDate?'已标记为使用':'已恢复为未使用');
+}
+function deleteCoupon(id){
+  var c=(S.coupons||[]).filter(function(item){return item.id===id;})[0];
+  if(!c||!confirm('删除 Coupon「'+c.name+'」？')) return;
+  closeSheet(); removeWithUndo('coupons',id,c.name);
+}
+function startCoupon(){ closeSheet(); go('coupons'); editCoupon(); }
+
+function debtRecordState(debt,now){
+  now=now||today();
+  if(debt.settledDate) return {key:'settled',label:'已结清',tone:'dim',days:null};
+  if(debt.dueDate){
+    var days=daysBetween(now,debt.dueDate);
+    if(days<0) return {key:'overdue',label:'逾期 '+Math.abs(days)+' 天',tone:'red',days:days};
+    if(days<=30) return {key:'due',label:days===0?'今天到期':days+' 天后到期',tone:'amber',days:days};
+    return {key:'open',label:days+' 天后到期',tone:'blue',days:days};
+  }
+  return {key:'open',label:'待结清',tone:'blue',days:null};
+}
+function debtAttentionItems(){
+  return (S.debts||[]).filter(function(debt){
+    return ['overdue','due'].indexOf(debtRecordState(debt).key)>=0;
+  }).sort(function(a,b){return a.dueDate<b.dueDate?-1:1;});
+}
+function debtOutstandingSummary(){
+  return (S.debts||[]).filter(function(debt){return !debt.settledDate;})
+    .reduce(function(out,debt){
+      var amount=recordAmountEur(debt.amount,debt.currency||'EUR');
+      if(debt.direction==='receivable') out.receivable+=amount;
+      else out.payable+=amount;
+      out.count++;
+      return out;
+    },{payable:0,receivable:0,count:0});
+}
+function setDebtFilter(value){
+  debtFilter=['open','overdue','settled','all'].indexOf(value)>=0?value:'open';
+  render();
+}
+function viewDebts(){
+  var all=S.debts||[],summary=debtOutstandingSummary(),attention=debtAttentionItems();
+  var list=all.filter(function(debt){
+    var key=debtRecordState(debt).key;
+    if(debtFilter==='open') return key!=='settled';
+    return debtFilter==='all'||key===debtFilter;
+  }).sort(function(a,b){
+    var rank={overdue:0,due:1,open:2,settled:3};
+    var ar=rank[debtRecordState(a).key],br=rank[debtRecordState(b).key];
+    if(ar!==br) return ar-br;
+    var ad=a.dueDate||a.startDate||'9999-12-31',bd=b.dueDate||b.startDate||'9999-12-31';
+    return ad<bd?-1:ad>bd?1:0;
+  });
+  var out=recordHeading('欠款','应还、应收与结清状态','editDebt()');
+  out+=card('<div class="stats">'+stat('我应还',n2(summary.payable),'€',summary.payable?'red':'dim')+
+    stat('我应收',n2(summary.receivable),'€',summary.receivable?'green':'dim')+
+    stat('净应收',n2(summary.receivable-summary.payable),'€',
+      summary.receivable-summary.payable>=0?'green':'red',summary.count+' 笔未结清')+'</div>','blue');
+  out+=chips([
+    {k:'open',label:'未结清'},{k:'overdue',label:'已逾期'},
+    {k:'settled',label:'已结清'},{k:'all',label:'全部'}
+  ],debtFilter,'setDebtFilter');
+  if(!list.length) out+=card('<p class="empty">'+(all.length?'这个筛选下没有欠款':'还没有欠款记录')+'</p>');
+  out+=list.map(function(debt){
+    var state=debtRecordState(debt),receivable=debt.direction==='receivable';
+    var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(debt.title)+'</h3>'+
+      '<div class="record-badges">'+badge(receivable?'别人欠我':'我欠别人',receivable?'green':'red')+
+      (debt.counterparty?badge(debt.counterparty,'dim'):'')+'</div></div>'+badge(state.label,state.tone)+'</div>'+hr()+
+      row({label:debt.dueDate?('到期日 '+fmtDate(debt.dueDate)):'无固定到期日',
+        sub:'发生于 '+fmtDate(debt.startDate),value:money(debt.amount,debt.currency||'EUR'),
+        tone:receivable?'green':'red'});
+    if(debt.notes) body+='<p class="dim record-notes">'+esc(debt.notes)+'</p>';
+    body+='<div class="btnrow">'+
+      btn(debt.settledDate?'恢复为未结清':'标记已结清',"toggleDebtSettled('"+debt.id+"')",debt.settledDate?'ghost':'','check-circle')+
+      btn('编辑',"editDebt('"+debt.id+"')",'ghost','pencil-simple')+'</div>';
+    return card(body);
+  }).join('');
+  if(attention.length) out+='<p class="dim retirement-disclaimer">到期提醒仅用于家庭记录，请以实际约定为准。</p>';
+  return out;
+}
+function editDebt(id){
+  var debt=id?(S.debts||[]).filter(function(item){return item.id===id;})[0]:null;
+  debt=debt||{id:'',direction:'payable',title:'',counterparty:'',amount:null,currency:'EUR',
+    startDate:today(),dueDate:'',settledDate:null,notes:''};
+  openSheet(id?'编辑欠款':'新增欠款',
+    field({id:'debt_direction',label:'方向',type:'select',val:debt.direction||'payable',
+      opts:[{k:'payable',label:'我欠别人（应还）'},{k:'receivable',label:'别人欠我（应收）'}]})+
+    field({id:'debt_title',label:'事项',val:debt.title,ph:'例如 家庭借款 / 垫付款 / 信用卡欠款'})+
+    field({id:'debt_counterparty',label:'对方 / 债权人 / 债务人（可选）',val:debt.counterparty,ph:'姓名或机构'})+
+    field({id:'debt_amount',label:'金额',type:'text',inputmode:'decimal',
+      val:debt.amount==null?'':n2(debt.amount),ph:'例如 500,00'})+
+    field({id:'debt_currency',label:'币种',type:'select',val:debt.currency||'EUR',
+      opts:[{k:'EUR',label:'欧元 (€)'},{k:'RMB',label:'人民币 (¥)'}]})+
+    field({id:'debt_start',label:'发生日',type:'date',val:debt.startDate||today()})+
+    field({id:'debt_due',label:'到期日（可选）',type:'date',val:debt.dueDate||'',
+      hint:'没有约定还款日期可以留空。'})+
+    field({id:'debt_status',label:'状态',type:'select',val:debt.settledDate?'settled':'open',
+      opts:[{k:'open',label:'未结清'},{k:'settled',label:'已结清'}]})+
+    field({id:'debt_notes',label:'备注',type:'textarea',val:debt.notes,
+      ph:'还款计划、分期安排或相关说明'})+
+    btn('保存',"saveDebt('"+(debt.id||'')+"')")+
+    (id?btn('删除这笔欠款',"deleteDebt('"+debt.id+"')",'danger','trash'):''));
+}
+function saveDebt(id){
+  var title=val('debt_title'),amount=fnum('debt_amount');
+  if(!title) return toast('请填写欠款事项');
+  if(!isFinite(amount)||amount<=0) return toast('请输入有效金额');
+  var start=val('debt_start'),due=val('debt_due');
+  if(!isDate(start)) return toast('请选择发生日');
+  if(due&&!isDate(due)) return toast('到期日格式不对');
+  if(due&&due<start) return toast('到期日不能早于发生日');
+  var old=id?(S.debts||[]).filter(function(item){return item.id===id;})[0]:null;
+  var settled=val('debt_status')==='settled';
+  var obj={id:id||uid(),direction:val('debt_direction')==='receivable'?'receivable':'payable',
+    title:title,counterparty:val('debt_counterparty'),
+    amount:Math.round((amount+Number.EPSILON)*100)/100,currency:val('debt_currency'),
+    startDate:start,dueDate:due||null,settledDate:settled?((old&&old.settledDate)||today()):null,
+    notes:val('debt_notes')};
+  var index=(S.debts||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.debts[index]=obj; else S.debts.push(obj);
+  save(); closeSheet(); render(); toast('欠款已保存');
+}
+function toggleDebtSettled(id){
+  var debt=(S.debts||[]).filter(function(item){return item.id===id;})[0];
+  if(!debt) return;
+  debt.settledDate=debt.settledDate?null:today();
+  save(); render(); toast(debt.settledDate?'已标记为结清':'已恢复为未结清');
+}
+function deleteDebt(id){
+  var debt=(S.debts||[]).filter(function(item){return item.id===id;})[0];
+  if(!debt||!confirm('删除欠款「'+debt.title+'」？')) return;
+  closeSheet(); removeWithUndo('debts',id,debt.title);
+}
+function startDebt(){ closeSheet(); go('debts'); editDebt(); }
 /* ================= 合同与保险 ================= */
 var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','意外险','旅行险','税费','能源','通讯','其他'];
 var CYCLES=['jährlich','halbjährlich','quartal','monatlich','einmalig'];
@@ -3992,7 +4290,8 @@ function openSettings(){
   openSheet('设置与备份',
     card('<h2 class="h2">数据</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '目前有 '+S.txs.length+' 条流水、'+S.readings.length+' 条抄表记录、'+
-      S.contracts.length+' 份合同。<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
+      S.contracts.length+' 份合同、'+S.coupons.length+' 张 Coupon、'+S.debts.length+' 笔欠款。'+
+      '<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
     '<div class="settings-actions">'+
       btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
@@ -4052,7 +4351,7 @@ async function doImport(){
   }catch(e){ toast('恢复失败：'+e.message); }
 }
 function assertDataPatch(p){
-  var keys=['properties','meters','readings','accounts','txs','contracts'];
+  var keys=['properties','meters','readings','accounts','txs','contracts','coupons','debts'];
   if(!p || p.format!=='scrooge-vault-data-patch' || p.version!==1 ||
      typeof p.id!=='string' || !p.id.trim())
     throw new Error('更新包结构不完整');
@@ -4071,7 +4370,7 @@ function applyDataPatch(p){
   S.appliedPatches=S.appliedPatches||{};
   if(S.appliedPatches[p.id]) return {already:true,added:0,updated:0};
   var result={already:false,added:0,updated:0};
-  ['properties','meters','readings','accounts','txs','contracts'].forEach(function(key){
+  ['properties','meters','readings','accounts','txs','contracts','coupons','debts'].forEach(function(key){
     if(!p[key]) return;
     S[key]=S[key]||[];
     p[key].forEach(function(item){
@@ -4116,7 +4415,7 @@ function exportShell(){
     'manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},'+
     'assetConfigs:{},'+
     'milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],'+
-    'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],'+
+    'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],'+
     'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
     'festkosten:[],sparZiel:0}};';
   var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
@@ -4135,6 +4434,8 @@ function render(){
   else if(view==='gas') m.innerHTML=viewMeter('gas');
   else if(view==='save') m.innerHTML=viewSave();
   else if(view==='retire') m.innerHTML=viewRetirement();
+  else if(view==='coupons') m.innerHTML=viewCoupons();
+  else if(view==='debts') m.innerHTML=viewDebts();
   else m.innerHTML=viewCtr();
   renderNav();
 }
