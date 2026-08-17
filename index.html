@@ -769,7 +769,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='ac7f09340df5';
+var APP_BUILD='c43bd25def31';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1471,6 +1471,8 @@ function assertState(p){
   if(!Array.isArray(p.coupons)||!Array.isArray(p.debts))
     throw new Error('Coupon 或欠款记录结构不完整');
   p.coupons.forEach(function(coupon){
+    coupon.currency=['EUR','RMB','POINTS'].indexOf(coupon.currency)>=0?coupon.currency:'EUR';
+    if(coupon.valueType==='percent') coupon.currency='EUR';
     if(coupon.image&&(!coupon.image.dataUrl||
       !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(coupon.image.dataUrl)||
       coupon.image.dataUrl.length>420000)) coupon.image=null;
@@ -4057,6 +4059,27 @@ function openCouponImage(id){
 function recordAmountEur(value,currency){
   return currency==='RMB'?Number(value||0)/S.fxRmbPerEur:Number(value||0);
 }
+function couponCurrency(currency){
+  return ['EUR','RMB','POINTS'].indexOf(currency)>=0?currency:'EUR';
+}
+function couponValueTotals(coupons){
+  return coupons.filter(function(c){return c.valueType!=='percent'&&isFinite(c.value);})
+    .reduce(function(out,c){
+      if(couponCurrency(c.currency)==='POINTS') out.points+=Number(c.value||0);
+      else out.eur+=recordAmountEur(c.value,couponCurrency(c.currency));
+      return out;
+    },{eur:0,points:0});
+}
+function couponPoints(value){
+  value=Number(value||0);
+  return (Math.round(value)===value?n0(value):n2(value))+' 点';
+}
+function couponTotalsText(totals){
+  var parts=[];
+  if(totals.eur) parts.push(n2(totals.eur)+' €');
+  if(totals.points) parts.push(couponPoints(totals.points));
+  return parts.length?parts.join(' · '):'0,00 €';
+}
 function recordHeading(title,subtitle,action){
   return '<div class="record-heading"><div class="record-heading-title">'+
     '<button class="retirement-back" onclick="go(\'home\')" aria-label="返回今天" title="返回今天">'+
@@ -4077,8 +4100,7 @@ function viewRightsOverview(){
     return ['active','soon'].indexOf(couponRecordState(c).key)>=0;
   });
   var couponDue=couponAttentionItems();
-  var amount=usable.filter(function(c){return c.valueType!=='percent'&&isFinite(c.value);})
-    .reduce(function(sum,c){return sum+recordAmountEur(c.value,c.currency||'EUR');},0);
+  var couponTotals=couponValueTotals(usable);
   return sectionTabs('rights','rights')+
     card('<div class="stats">'+stat('有效合同',String((S.contracts||[]).length),'份')+
       stat('可用 Coupon',String(usable.length),'张','green')+
@@ -4088,7 +4110,7 @@ function viewRightsOverview(){
       card(h2('合同',badge(contractAttention.length?'有待处理':'状态正常',contractAttention.length?'amber':'green'))+
         '<p class="dim record-overview-copy">保险、能源、通讯及家庭长期服务。</p>'+
         btn('查看合同',"go('ctr')",'ghost','file-text'))+
-      card(h2('Coupon',badge(n2(amount)+' €','green'))+
+      card(h2('Coupon',badge(couponTotalsText(couponTotals),'green'))+
         '<p class="dim record-overview-copy">'+usable.length+' 张可使用'+
           (couponDue.length?' · '+couponDue.length+' 张即将到期':'')+'</p>'+
         btn('查看 Coupon',"go('coupons')",'ghost','ticket'))+'</section>';
@@ -4107,7 +4129,8 @@ function couponRecordState(c,now){
 }
 function couponValueText(c){
   if(!isFinite(c.value)||c.value==null) return '未填写面值';
-  return c.valueType==='percent'?n2(c.value)+'%':money(c.value,c.currency||'EUR');
+  if(c.valueType==='percent') return n2(c.value)+'%';
+  return couponCurrency(c.currency)==='POINTS'?couponPoints(c.value):money(c.value,couponCurrency(c.currency));
 }
 function couponAttentionItems(){
   return (S.coupons||[]).filter(function(c){
@@ -4124,8 +4147,7 @@ function viewCoupons(embedded){
     return ['active','soon'].indexOf(couponRecordState(c).key)>=0;
   });
   var expiring=couponAttentionItems();
-  var amountEur=usable.filter(function(c){return c.valueType!=='percent'&&isFinite(c.value);})
-    .reduce(function(sum,c){return sum+recordAmountEur(c.value,c.currency||'EUR');},0);
+  var couponTotals=couponValueTotals(usable);
   var list=all.filter(function(c){
     var key=couponRecordState(c).key;
     if(couponFilter==='usable') return key==='active'||key==='soon';
@@ -4139,7 +4161,8 @@ function viewCoupons(embedded){
   });
   var out=(embedded?recordSectionHeading:recordHeading)('Coupon','优惠券、礼品券与兑换码','editCoupon()');
   out+=card('<div class="stats">'+stat('可使用',String(usable.length),'张',usable.length?'green':'dim')+
-    stat('金额券面值',n2(amountEur),'€','blue','按当前汇率折算')+
+    stat('金额券面值',n2(couponTotals.eur),'€','blue','按当前汇率折算')+
+    stat('点数券面值',couponPoints(couponTotals.points),'','blue')+
     stat('30 天内到期',String(expiring.length),'张',expiring.length?'amber':'green')+'</div>','green');
   out+=chips([
     {k:'usable',label:'可使用'},{k:'expired',label:'已过期'},
@@ -4151,7 +4174,8 @@ function viewCoupons(embedded){
     var state=couponRecordState(c);
     var body='<div class="between"><div style="flex:1;min-width:0"><h3 class="h3">'+esc(c.name)+'</h3>'+
       '<div class="record-badges">'+(c.merchant?badge(c.merchant,'blue'):'')+
-      badge(c.valueType==='percent'?'百分比券':'金额券','dim')+'</div></div>'+badge(state.label,state.tone)+'</div>'+hr()+
+      badge(c.valueType==='percent'?'百分比券':couponCurrency(c.currency)==='POINTS'?'点数券':'金额券','dim')+
+      '</div></div>'+badge(state.label,state.tone)+'</div>'+hr()+
       row({label:c.expires?('有效期至 '+fmtDate(c.expires)):'无固定有效期',
         sub:c.createdDate?('记录于 '+fmtDate(c.createdDate)):'',value:couponValueText(c),
         tone:state.key==='expired'?'red':state.key==='used'?'dim':'green'});
@@ -4191,7 +4215,8 @@ function editCoupon(id){
       val:c.value==null?'':n2(c.value),ph:c.valueType==='percent'?'例如 20':'例如 25,00'})+
     '<div id="coupon_currency_wrap" style="'+(c.valueType==='percent'?'display:none':'')+'">'+
       field({id:'coupon_currency',label:'币种',type:'select',val:c.currency||'EUR',
-        opts:[{k:'EUR',label:'欧元 (€)'},{k:'RMB',label:'人民币 (¥)'}]})+'</div>'+
+        opts:[{k:'EUR',label:'欧元 (€)'},{k:'RMB',label:'人民币 (¥)'},
+          {k:'POINTS',label:'点数（点）'}]})+'</div>'+
     field({id:'coupon_expires',label:'到期日（可选）',type:'date',val:c.expires||'',
       hint:'没有固定有效期可以留空。'})+
     field({id:'coupon_status',label:'状态',type:'select',val:c.usedDate?'used':'active',
@@ -4217,7 +4242,7 @@ function saveCoupon(id){
   var used=val('coupon_status')==='used';
   var obj={id:id||uid(),name:name,merchant:val('coupon_merchant'),code:val('coupon_code'),
     value:value==null?null:Math.round((value+Number.EPSILON)*100)/100,valueType:type,
-    currency:type==='amount'?val('coupon_currency'):'EUR',expires:expires||null,
+    currency:type==='amount'?couponCurrency(val('coupon_currency')):'EUR',expires:expires||null,
     usedDate:used?((old&&old.usedDate)||today()):null,
     createdDate:(old&&old.createdDate)||today(),notes:val('coupon_notes'),
     image:couponSafeImage(couponImageDraft)};
