@@ -429,6 +429,11 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 .save-overview,.save-dashboard,.save-chart-grid,.save-account-view,.overview-grid{display:flex;flex-direction:column;gap:14px;min-width:0}
 .overview-unit{font-size:13px}
 .record-overview-copy{margin:0;min-height:36px;line-height:1.5}
+.energy-quota{display:flex;flex-direction:column;gap:6px;padding-top:2px}
+.energy-quota .between{align-items:baseline}
+.quota-track{height:7px;border-radius:4px;background:var(--card2);overflow:hidden}
+.quota-track>span{display:block;height:100%;border-radius:inherit;background:var(--green)}
+.energy-plan-empty{margin:0}
 .record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .record-heading-title{display:flex;align-items:center;gap:10px;min-width:0}
 .record-heading-title>div{display:flex;flex-direction:column;min-width:0}
@@ -749,7 +754,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='c442ffb90249';
+var APP_BUILD='707aa2659f69';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1451,6 +1456,11 @@ function assertState(p){
   if(!Array.isArray(p.coupons)||!Array.isArray(p.debts))
     throw new Error('Coupon 或欠款记录结构不完整');
   (p.meters||[]).forEach(function(meter){
+    if(typeof meter.provider!=='string') meter.provider='';
+    if(!isDate(meter.contractEndDate||'')) meter.contractEndDate=null;
+    if(!isFinite(Number(meter.annualQuota))||Number(meter.annualQuota)<0) meter.annualQuota=0;
+    else meter.annualQuota=Number(meter.annualQuota);
+    meter.quotaUnit=meter.unit==='m3'&&meter.quotaUnit==='m3'?'m3':'kWh';
     if(meter.id==='m-karl-power'){
       meter.ocrIntegerDigits=6;
       meter.ocrDecimals=1;
@@ -2812,6 +2822,34 @@ function setMeter(id){
   if(m){ meterSel[m.kind]=id; render(); }
 }
 function meterValueText(value){ return n0(Math.floor(Number(value)||0)); }
+function energyExpiryState(m,now){
+  if(!m.contractEndDate) return {label:'无固定到期',tone:'dim',days:null};
+  var days=daysBetween(now||today(),m.contractEndDate);
+  if(days<0) return {label:'已到期 '+Math.abs(days)+' 天',tone:'red',days:days};
+  if(days<=60) return {label:days===0?'今天到期':days+' 天后到期',tone:'amber',days:days};
+  return {label:days+' 天后到期',tone:'green',days:days};
+}
+function energyQuotaUsage(m,period){
+  if(!period) return 0;
+  return m.quotaUnit==='m3'?period.netRaw:period.kwh;
+}
+function energyQuotaUnit(m){ return m.quotaUnit==='m3'?'m³':'kWh'; }
+function energyPlanCard(m,period){
+  var expiry=energyExpiryState(m), quota=Number(m.annualQuota)||0;
+  var used=energyQuotaUsage(m,period), remaining=quota-used, quotaUnit=energyQuotaUnit(m);
+  var quotaHtml=quota>0
+    ? '<div class="energy-quota"><div class="between"><span class="dim">年度购买额度</span><b class="tnum">'+
+        n0(used)+' / '+n0(quota)+' '+quotaUnit+'</b></div><div class="quota-track"><span style="width:'+
+        Math.max(0,Math.min(100,used/quota*100)).toFixed(1)+'%"></span></div><span class="dim">'+
+        (remaining>=0?'剩余 ':'超出 ')+n0(Math.abs(remaining))+' '+quotaUnit+'</span></div>'
+    : '<p class="dim energy-plan-empty">尚未填写年度购买额度。</p>';
+  return card(h2('能源合同',badge(expiry.label,expiry.tone))+
+    '<div class="stats">'+stat('运营商',esc(m.provider||'待填写'),'')+
+      stat('合同到期',m.contractEndDate?fmtDate(m.contractEndDate):'无固定期限','')+
+      stat('每月预缴',n2(Number(m.monthlyAbschlag)||0),'€','gold')+
+      stat('单位价格',n2(Number(m.arbeitspreisCt)||0),'ct/kWh')+'</div>'+quotaHtml+
+    btn('编辑合同与资费',"editTarif('"+m.id+"')",'ghost','pencil-simple'));
+}
 
 function meterOverviewCard(kind){
   var meters=S.meters.filter(function(m){return m.kind===kind;});
@@ -2820,11 +2858,16 @@ function meterOverviewCard(kind){
     '<p class="empty">尚未配置'+(kind==='power'?'电表':'燃气表')+'</p>');
   var readings=meterReadings(S.readings,meter.id), last=readings[readings.length-1];
   var period=currentPeriod(readings,meter), unit=meter.unit==='m3'?'m³':'kWh';
-  return card(h2(label,badge(meters.length+' 个表计','dim'))+
+  var expiry=energyExpiryState(meter), quota=Number(meter.annualQuota)||0;
+  return card(h2(label,badge(expiry.label,expiry.tone))+
+    '<span class="dim">'+esc(meter.provider||'运营商待填写')+' · '+
+      (meter.contractEndDate?('到期 '+fmtDate(meter.contractEndDate)+' · '):'')+
+      n2(Number(meter.monthlyAbschlag)||0)+' €/月</span>'+hr()+
     '<span class="dim">最新读数'+(last?' · '+fmtDate(last.date):'')+'</span>'+
     '<span class="big tnum">'+(last?meterValueText(last.value):'—')+
       ' <small class="dim overview-unit">'+unit+'</small></span>'+
     (period?'<div class="stats">'+stat('本年度用量',n0(period.kwh),'kWh')+
+      stat('购买额度',quota?n0(quota):'待填写',quota?energyQuotaUnit(meter):'')+
       stat('推算费用',n0(period.projectedYearCost),'€','gold')+'</div>':'')+
     '<div class="btnrow">'+btn('查看详情',"go('"+kind+"')",'ghost')+
       btn('拍照录入',"startMeterEntry('"+kind+"')",null,'camera')+'</div>');
@@ -2849,6 +2892,8 @@ function viewMeter(kind){
   }),m.id,'setMeter');
   out+=btn(kind==='power'?'拍照 / 录入电表':'拍照 / 录入燃气表',
     'addReading()','meter-entry',kind==='power'?'camera':'flame');
+
+  out+=energyPlanCard(m,per);
 
   var head='<div class="between"><div><span class="dim">最新读数 · '+
     (last?fmtDate(last.date):'—')+'</span><br><span class="big tnum c-gold">'+
@@ -2972,13 +3017,21 @@ function delReading(id){
   closeSheet();
   removeWithUndo('readings',id,fmtDate(r.date)+' 抄表记录');
 }
-function editTarif(){
-  var m=pickMeter(view==='gas'?'gas':'power');
-  openSheet('资费设置 · '+m.label,
+function editTarif(id){
+  var m=id?S.meters.filter(function(x){return x.id===id;})[0]:pickMeter(view==='gas'?'gas':'power');
+  if(!m) return;
+  openSheet('能源合同与资费 · '+m.label,
+    field({id:'tf_provider',label:'能源运营商',val:m.provider||'',ph:'例如 Mainova / Grünwelt'})+
+    field({id:'tf_end',label:'合同到期日（可选）',type:'date',val:m.contractEndDate||'',
+      hint:'无固定期限可留空。'})+
     field({id:'tf_p',label:'Arbeitspreis (ct/kWh)',type:'number',step:'any',inputmode:'decimal',
       val:m.arbeitspreisCt,hint:'用于把用量折算成钱'})+
     field({id:'tf_a',label:'每月预缴 Abschlag (€)',type:'number',step:'any',inputmode:'decimal',
       val:m.monthlyAbschlag,hint:'填 0 表示不预缴，则不显示补缴/退款估算'})+
+    field({id:'tf_quota',label:'年度购买额度',type:'number',step:'any',inputmode:'decimal',
+      val:m.annualQuota||'',hint:'填写合同约定的年度电量或燃气额度，未约定可留空。'})+
+    (m.unit==='m3'?field({id:'tf_quota_unit',label:'额度单位',type:'select',val:m.quotaUnit||'kWh',
+      opts:[{k:'kWh',label:'kWh（账单热量）'},{k:'m3',label:'m³（表计体积）'}]}):'')+
     (m.unit==='m3'?field({id:'tf_f',label:'m³ → kWh 换算系数',type:'number',step:'any',
       inputmode:'decimal',val:m.factor,hint:'Brennwert × Zustandszahl，账单上可查，Excel 中为 10.7'}):'')+
     field({id:'tf_t',label:'年度抄表日 (MM-DD)',val:m.ableseTermin,hint:'用于划分结算年度'})+
@@ -2986,7 +3039,15 @@ function editTarif(){
 }
 function saveTarif(id){
   var m=S.meters.filter(function(x){return x.id===id;})[0];
-  var p=fnum('tf_p'), a=fnum('tf_a'), f=fnum('tf_f'), t=val('tf_t');
+  if(!m) return;
+  var p=fnum('tf_p'), a=fnum('tf_a'), f=fnum('tf_f'), quota=fnum('tf_quota'),
+    end=val('tf_end'), t=val('tf_t');
+  if(end&&!isDate(end)) return toast('合同到期日格式不对');
+  if(isFinite(quota)&&quota<0) return toast('年度购买额度不能小于 0');
+  m.provider=val('tf_provider');
+  m.contractEndDate=end||null;
+  m.annualQuota=isFinite(quota)?quota:0;
+  m.quotaUnit=m.unit==='m3'&&val('tf_quota_unit')==='m3'?'m3':'kWh';
   if(isFinite(p)) m.arbeitspreisCt=p;
   if(isFinite(a)) m.monthlyAbschlag=a;
   if(isFinite(f)&&f>0) m.factor=f;
