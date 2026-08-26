@@ -796,7 +796,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='b27f6905ab67';
+var APP_BUILD='6b11579585ec';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -2350,7 +2350,7 @@ function disableFamilySync(){
   toast('这台设备已停用家庭同步');
 }
 /* ================= 银行 CSV 导入 ================= */
-var bankImportRows=[];
+var bankImportRows=[], bankImportFileName='', bankImportUndoIds=[];
 
 function parseDelimited(text,delimiter){
   var rows=[], row=[], field='', quoted=false;
@@ -2494,6 +2494,8 @@ function markBankDuplicates(){
 }
 function openBankImport(){
   bankImportRows=[];
+  bankImportFileName='';
+  bankImportUndoIds=[];
   var selected=accSel==='all'?(S.accounts.filter(function(a){return a.id==='ing';})[0]||S.accounts[0]).id:accSel;
   openSheet('导入银行账单',
     card('<h2 class="h2">ING / 银行 CSV</h2><p class="dim" style="margin:0;line-height:1.6">'+
@@ -2511,6 +2513,7 @@ async function readBankFile(input){
   var box=document.getElementById('bank_preview');
   box.innerHTML='<p class="empty">正在读取 '+esc(f.name)+'…</p>';
   try{
+    bankImportFileName=f.name||'';
     bankImportRows=parseBankCsvText(decodeBankFile(await f.arrayBuffer()));
     renderBankPreview();
   }catch(e){
@@ -2538,7 +2541,8 @@ function renderBankPreview(){
     (dup?'，其中 '+dup+' 条重复':'')+'。取消勾选可排除记录。</p>'+
     '<div class="import-list">'+rows+'</div>'+
     (bankImportRows.length>100?'<p class="dim">这里只预览前 100 条，其余记录仍会按默认选择导入。</p>':'')+
-    btn('导入已选记录','importBankRows()'));
+    btn('导入已选记录','importBankRows()')+
+    btn('查找并撤销这份 CSV 的已导入记录','previewBankImportUndo()','ghost','arrow-counter-clockwise'));
 }
 function toggleBankRow(i,checked){ if(bankImportRows[i]&&!bankImportRows[i].duplicate) bankImportRows[i].selected=checked; }
 async function importBankRows(){
@@ -2546,11 +2550,60 @@ async function importBankRows(){
   markBankDuplicates();
   var chosen=bankImportRows.filter(function(r){return r.selected&&!r.duplicate;});
   if(!chosen.length) return toast('没有可导入的记录');
+  var batchId='bank-batch-'+uid(), importedAt=new Date().toISOString();
   chosen.forEach(function(r){
-    S.txs.push({id:uid(),accountId:accountId,date:r.date,amount:r.amount,note:r.note,importRef:r.importRef});
+    S.txs.push({id:uid(),accountId:accountId,date:r.date,amount:r.amount,note:r.note,
+      importRef:r.importRef,importBatchId:batchId,importFileName:bankImportFileName,importedAt:importedAt});
   });
   await save();
   closeSheet(); render(); toast('已导入 '+chosen.length+' 条账单记录');
+}
+
+function findBankImportMatches(rows){
+  var signatures={}, accounts={};
+  S.accounts.forEach(function(account){
+    accounts[account.id]=account;
+    rows.forEach(function(row){ signatures[importSignature(account.id,row)]=true; });
+  });
+  return S.txs.map(function(tx){
+    if(!tx.importRef||!accounts[tx.accountId]) return null;
+    var signature=importSignature(tx.accountId,tx);
+    if(!signatures[signature]||tx.importRef!=='bank-'+shortHash(signature)) return null;
+    return {tx:tx,account:accounts[tx.accountId]};
+  }).filter(Boolean);
+}
+function previewBankImportUndo(){
+  var matches=findBankImportMatches(bankImportRows), box=document.getElementById('bank_preview');
+  if(!matches.length) return toast('没有找到由这份 CSV 导入的记录');
+  bankImportUndoIds=matches.map(function(match){return match.tx.id;});
+  var groups={};
+  matches.forEach(function(match){
+    var id=match.account.id;
+    if(!groups[id]) groups[id]={account:match.account,count:0,total:0};
+    groups[id].count++; groups[id].total+=Number(match.tx.amount)||0;
+  });
+  var summary=Object.keys(groups).map(function(id){
+    var group=groups[id];
+    return row({label:group.account.name,sub:group.count+' 条银行导入记录',
+      value:money(group.total,group.account.currency),tone:group.total<0?'red':'green'});
+  }).join('');
+  box.innerHTML=card(h2('撤销导入预览',badge(matches.length+' 条','red'))+
+    '<p class="dim" style="margin:0">只会删除与这份 CSV 精确匹配、且带银行导入编号的记录。</p>'+
+    summary+btn('确认撤销这些记录','undoBankImportMatches()','danger','trash')+
+    btn('返回导入预览','renderBankPreview()','ghost'));
+}
+async function undoBankImportMatches(){
+  var ids=bankImportUndoIds.slice();
+  if(!ids.length) return toast('没有可撤销的导入记录');
+  if(!confirm('将删除这份 CSV 导入的 '+ids.length+' 条流水。继续？')) return;
+  var idSet={}; ids.forEach(function(id){idSet[id]=true;});
+  var before=S.txs.length;
+  S.txs=S.txs.filter(function(tx){return !idSet[tx.id];});
+  var removed=before-S.txs.length;
+  if(!removed) return toast('这些记录已经撤销');
+  await save();
+  bankImportUndoIds=[]; bankImportRows=[]; bankImportFileName='';
+  closeSheet(); render(); toast('已撤销 '+removed+' 条银行导入记录');
 }
 /* ================= 表计照片 OCR ================= */
 var tesseractLoader=null, ocrPreviewUrl='', ocrWindowPreviewUrl='';
