@@ -309,7 +309,8 @@ main>*{flex-shrink:0}
 nav{position:fixed;inset-inline:0;bottom:0;z-index:30;
   background:var(--nav-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-top:1px solid var(--line);display:flex;min-height:calc(var(--nav) + env(safe-area-inset-bottom));
-  padding-bottom:env(safe-area-inset-bottom);isolation:isolate;transform:translateZ(0)}
+  padding-bottom:env(safe-area-inset-bottom);isolation:isolate;transform:translateZ(0);
+  touch-action:manipulation;-webkit-user-select:none;user-select:none}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:8px 2px 7px;color:var(--muted-icon);font-size:11px;font-weight:600;min-width:0}
 nav button.on{color:var(--tx)}
@@ -795,7 +796,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='639dffd05bf2';
+var APP_BUILD='b27f6905ab67';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1249,14 +1250,21 @@ function navRootForView(v){
 }
 function renderNav(){
   var nav=document.getElementById('nav'), root=navRootForView(view);
-  if(nav.dataset.root===root&&nav.children.length===TABS.length) return;
+  if(nav.children.length!==TABS.length){
+    nav.innerHTML=TABS.map(function(t){
+      return '<button type="button" onclick="navGo(\''+t.k+'\')">'+
+        icon(t.icon,false)+'<span>'+t.label+'</span></button>';
+    }).join('');
+  }
+  Array.prototype.forEach.call(nav.children,function(button,index){
+    var tab=TABS[index], selected=root===tab.k;
+    button.classList.toggle('on',selected);
+    if(selected) button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
+    var glyph=button.querySelector('i');
+    if(glyph) glyph.className=(selected?'ph-fill':'ph')+' ph-'+tab.icon;
+  });
   nav.dataset.root=root;
-  nav.innerHTML=TABS.map(function(t){
-    var selected=root===t.k;
-    return '<button type="button" class="'+(selected?'on':'')+'"'+
-      (selected?' aria-current="page"':'')+' onclick="navGo(\''+t.k+'\')">'+
-      icon(t.icon,selected)+'<span>'+t.label+'</span></button>';
-  }).join('');
 }
 function navGo(v,at){
   if(v==='funds'){
