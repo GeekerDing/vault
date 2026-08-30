@@ -202,7 +202,12 @@ main>*{flex-shrink:0}
   border:1px solid var(--field-line);font-size:16px;width:100%;min-width:0;max-width:100%}
 .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--tx)}
 .field .hint{color:var(--dim);font-size:11px}
-.field input[type=date],.field input[type=month]{min-height:46px;min-width:0;max-width:100%;overflow:hidden}
+.date-control{width:100%;min-width:0;max-width:100%;overflow:hidden;background:var(--field);
+  border:1px solid var(--field-line);border-radius:5px}
+.date-control:focus-within{border-color:var(--tx)}
+.date-control input[type=date],.date-control input[type=month]{display:block;inline-size:100%;
+  min-inline-size:0;max-inline-size:100%;width:100%;min-width:0;max-width:100%;min-height:46px;
+  overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
 .field input[type=date]::-webkit-date-and-time-value,
 .field input[type=month]::-webkit-date-and-time-value{min-width:0;width:100%;text-align:left;margin:0}
 .switch{display:flex;align-items:center;justify-content:space-between;
@@ -831,7 +836,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='9bb281577256';
+var APP_BUILD='b59a09e3f3b1';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -930,6 +935,7 @@ function field(o){
       : '<input id="'+o.id+'" type="'+t+'" value="'+esc(o.val==null?'':o.val)+'"'+
         (o.step?' step="'+o.step+'"':'')+(o.inputmode?' inputmode="'+o.inputmode+'"':'')+
         ' placeholder="'+esc(o.ph||'')+'"'+(o.oninput?' oninput="'+o.oninput+'"':'')+'>';
+  if(t==='date'||t==='month') input='<div class="date-control">'+input+'</div>';
   return '<div class="field"><label for="'+o.id+'">'+esc(o.label)+'</label>'+input+
     '<span class="hint" id="'+o.id+'_hint">'+(o.hint||'')+'</span></div>';
 }
@@ -1277,7 +1283,7 @@ var TABS=[
   {k:'funds', label:'资金', icon:'piggy-bank'},
   {k:'rights',label:'权益', icon:'ticket'}
 ];
-var saveSecretTaps=[], sheetTrigger=null, sheetClearT=null;
+var saveSecretTaps=[], sheetTrigger=null, sheetClearT=null, sheetScrollResetT=null;
 function navRootForView(v){
   if(['energy','power','gas'].indexOf(v)>=0) return 'energy';
   if(['save','transactions','estate','debts','retire'].indexOf(v)>=0) return 'funds';
@@ -1327,6 +1333,7 @@ function go(v){
 function openSheet(title,html){
   var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell'), nav=document.getElementById('nav');
   clearTimeout(sheetClearT);
+  clearTimeout(sheetScrollResetT);
   if(!sheet.classList.contains('open')) sheetTrigger=document.activeElement;
   document.getElementById('sheetTitle').textContent=title;
   var sheetBody=document.getElementById('sheetBody');
@@ -1338,11 +1345,19 @@ function openSheet(title,html){
   if(nav) nav.setAttribute('inert','');
   sheet.classList.add('open');
   document.body.style.overflow='hidden';
+  requestAnimationFrame(function(){
+    sheetBody.scrollTop=0;
+    requestAnimationFrame(function(){sheetBody.scrollTop=0;});
+  });
+  sheetScrollResetT=setTimeout(function(){
+    if(sheet.classList.contains('open')) sheetBody.scrollTop=0;
+  },280);
   setTimeout(function(){ if(sheet.classList.contains('open')) sheet.focus(); },0);
 }
 function closeSheet(){
   var sheet=document.getElementById('sheet'), shell=document.querySelector('.app-shell'), nav=document.getElementById('nav');
   if(!sheet) return;
+  clearTimeout(sheetScrollResetT);
   if(typeof couponStopQrScanner==='function') couponStopQrScanner();
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden','true');
