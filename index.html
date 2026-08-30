@@ -185,21 +185,26 @@ main>*{flex-shrink:0}
 .estate-record-title{min-width:0}
 .estate-record-title b{display:block;font-size:14px;overflow-wrap:anywhere}
 .estate-record-title span{display:block;margin-top:2px}
-.estate-record .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:9px}
-.estate-record .stat .v{font-size:16px}
+.estate-record .stats{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;row-gap:18px;margin-top:14px;margin-bottom:2px}
+.estate-record .stat .v{font-size:18px;line-height:1.25}
 .estate-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .estate-actions .btn{padding-inline:8px;font-size:12px}
+.estate-record-actions{margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.estate-record-actions .btn:first-child{grid-column:1/-1}
+.estate-assumption{margin:12px 0 0;line-height:1.5}
 .estate-empty{margin:0;padding:5px 0;color:var(--dim);font-size:12px}
 
 /* ---------- 表单 ---------- */
-.field{display:flex;flex-direction:column;gap:5px}
+.field{min-width:0;display:flex;flex-direction:column;gap:5px}
 .field>label{color:var(--dim);font-size:12px}
 .field input,.field select,.field textarea{
   background:var(--field);border-radius:5px;padding:12px;color:var(--tx);
-  border:1px solid var(--field-line);font-size:16px;width:100%}
+  border:1px solid var(--field-line);font-size:16px;width:100%;min-width:0;max-width:100%}
 .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--tx)}
 .field .hint{color:var(--dim);font-size:11px}
-.field input[type=date]{min-height:46px}
+.field input[type=date],.field input[type=month]{min-height:46px;min-width:0;max-width:100%;overflow:hidden}
+.field input[type=date]::-webkit-date-and-time-value,
+.field input[type=month]::-webkit-date-and-time-value{min-width:0;width:100%;text-align:left;margin:0}
 .switch{display:flex;align-items:center;justify-content:space-between;
   background:var(--card2);border-radius:5px;padding:12px}
 .settings-actions{display:grid;gap:8px}
@@ -510,6 +515,8 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   .contract-stats .stat .v,.debt-summary-stats .stat .v,.cashflow-summary-stats .stat .v,.retirement-summary-stats .stat .v{font-size:21px}
   .coupon-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .estate-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .estate-record-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .estate-record-actions .btn:first-child{grid-column:auto}
 }
 @media (max-width:899px){
   html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
@@ -625,7 +632,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   </div>
 </div>
 <script>
-var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],mortgages:[],mortgagePayments:[],tenancies:[],rentPayments:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],mortgages:[],mortgagePayments:[],specialRepayments:[],tenancies:[],rentPayments:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -824,7 +831,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='8536037aad88';
+var APP_BUILD='9bb281577256';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1322,7 +1329,9 @@ function openSheet(title,html){
   clearTimeout(sheetClearT);
   if(!sheet.classList.contains('open')) sheetTrigger=document.activeElement;
   document.getElementById('sheetTitle').textContent=title;
-  document.getElementById('sheetBody').innerHTML=html;
+  var sheetBody=document.getElementById('sheetBody');
+  sheetBody.innerHTML=html;
+  sheetBody.scrollTop=0;
   sheet.removeAttribute('inert');
   sheet.setAttribute('aria-hidden','false');
   if(shell) shell.setAttribute('inert','');
@@ -1539,11 +1548,12 @@ function assertState(p){
   if(p.debts==null) p.debts=[];
   if(p.mortgages==null) p.mortgages=[];
   if(p.mortgagePayments==null) p.mortgagePayments=[];
+  if(p.specialRepayments==null) p.specialRepayments=[];
   if(p.tenancies==null) p.tenancies=[];
   if(p.rentPayments==null) p.rentPayments=[];
   if(!Array.isArray(p.coupons)||!Array.isArray(p.debts)||
      !Array.isArray(p.mortgages)||!Array.isArray(p.mortgagePayments)||
-     !Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments))
+     !Array.isArray(p.specialRepayments)||!Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments))
     throw new Error('家庭记录结构不完整');
   p.coupons.forEach(function(coupon){
     coupon.currency=['EUR','RMB','POINTS'].indexOf(coupon.currency)>=0?coupon.currency:'EUR';
@@ -1902,7 +1912,7 @@ function syncMergeValue(base,local,remote,path,context){
 function syncStateEmpty(state){
   if(!state) return true;
   return ['properties','meters','readings','txs','contracts','coupons','debts','mortgages',
-    'mortgagePayments','tenancies','rentPayments'].every(function(k){
+    'mortgagePayments','specialRepayments','tenancies','rentPayments'].every(function(k){
     return !Array.isArray(state[k])||state[k].length===0;
   });
 }
@@ -4758,7 +4768,15 @@ function estateLatestMortgagePayment(mortgageId){
     return item.remainingBalance!=null&&isFinite(Number(item.remainingBalance));
   })[0]||null;
 }
+function estateSpecialRepayments(mortgageId){
+  return (S.specialRepayments||[]).filter(function(item){return item.mortgageId===mortgageId;})
+    .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+}
 function estateMortgageBalance(mortgage){
+  var special=estateSpecialRepayments(mortgage.id).filter(function(item){
+    return item.remainingBalance!=null&&isFinite(Number(item.remainingBalance));
+  })[0];
+  if(special) return Number(special.remainingBalance);
   var latest=estateLatestMortgagePayment(mortgage.id);
   return latest?Number(latest.remainingBalance):Number(mortgage.currentBalance||0);
 }
@@ -4767,7 +4785,7 @@ function estateMortgagePrincipalPaid(mortgage){
   if(original>0) return Math.max(0,original-balance);
   return estateMortgagePayments(mortgage.id).reduce(function(sum,item){
     return sum+Number(item.principal||0)+Number(item.specialPrincipal||0);
-  },0);
+  },0)+estateSpecialRepayments(mortgage.id).reduce(function(sum,item){return sum+Number(item.amount||0);},0);
 }
 function estateTenancyPayments(tenancyId){
   return (S.rentPayments||[]).filter(function(item){return item.tenancyId===tenancyId;})
@@ -4780,13 +4798,14 @@ function estateRentPaymentTotal(payment){
   return Number(payment.kaltmiete||0)+Number(payment.nebenkosten||0)+Number(payment.other||0);
 }
 function estateSummary(){
-  var mortgages=S.mortgages||[],tenancies=S.tenancies||[],year=today().slice(0,4);
+  var mortgages=S.mortgages||[],tenancies=S.tenancies||[];
   return {
     balance:mortgages.reduce(function(sum,item){return sum+estateMortgageBalance(item);},0),
     monthly:mortgages.reduce(function(sum,item){return sum+Number(item.monthlyPayment||0);},0),
     kalt:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){return sum+Number(item.kaltmiete||0);},0),
-    rentYtd:(S.rentPayments||[]).filter(function(item){return (item.date||'').slice(0,4)===year;})
-      .reduce(function(sum,item){return sum+estateRentPaymentTotal(item);},0)
+    warm:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){
+      return sum+Number(item.kaltmiete||0)+Number(item.nebenkosten||0);
+    },0)
   };
 }
 function estatePropertyMortgages(propertyId){
@@ -4804,7 +4823,7 @@ function viewEstate(){
     stat('剩余贷款',n2(summary.balance),'€',summary.balance?'red':'dim')+
     stat('每月贷款扣款',n2(summary.monthly),'€',summary.monthly?'gold':'dim')+
     stat('当前月冷租',n2(summary.kalt),'€',summary.kalt?'green':'dim')+
-    stat('本年已收',n2(summary.rentYtd),'€',summary.rentYtd?'green':'dim')+'</div>','blue estate-summary');
+    stat('每月暖租',n2(summary.warm),'€',summary.warm?'green':'dim')+'</div>','blue estate-summary');
   if(!(S.properties||[]).length)
     return out+card('<p class="empty">还没有房产，先新增一套房产。</p>','estate-property-card');
   out+=(S.properties||[]).map(estatePropertyCard).join('');
@@ -4837,25 +4856,25 @@ function estatePropertyCard(property){
 }
 function estateMortgageRecord(mortgage){
   var balance=estateMortgageBalance(mortgage),paid=estateMortgagePrincipalPaid(mortgage);
-  var payments=estateMortgagePayments(mortgage.id),last=payments[0];
+  var specials=estateSpecialRepayments(mortgage.id),last=specials[0];
   var term=[];
   if(mortgage.sollzinsPct!=null) term.push('Sollzins '+n2(mortgage.sollzinsPct)+'%');
   if(mortgage.fixedRateEnd) term.push('固定利率至 '+fmtDate(mortgage.fixedRateEnd));
   var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(mortgage.lender||'贷款机构待补')+'</b>'+
-    '<span class="dim">'+esc(term.join(' · ')||'贷款条款待补')+'</span></div>'+badge(payments.length+' 次还款','dim')+'</div>'+
+    '<span class="dim">'+esc(term.join(' · ')||'贷款条款待补')+'</span></div>'+badge(specials.length+' 次 Sondertilgung','dim')+'</div>'+
     '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red')+
     stat('每月扣款',n2(mortgage.monthlyPayment||0),'€')+
     stat('已偿还本金',n2(paid),'€','green')+
     stat('初始本金',n2(mortgage.originalPrincipal||0),'€')+'</div>';
-  if(last) body+=row({label:'最近还款 '+fmtDate(last.date),sub:'利息 '+n2(last.interest||0)+' € · 本金 '+n2(last.principal||0)+' €'+
-    (last.specialPrincipal?' · 特别还款 '+n2(last.specialPrincipal)+' €':''),value:n2(last.total)+' €'});
-  body+='<div class="estate-actions">'+btn('记录还款',"editMortgagePayment('"+mortgage.id+"')",null,'plus')+
-    btn('还款记录',"openMortgageHistory('"+mortgage.id+"')",'ghost','list-bullets')+
+  if(last) body+=row({label:'最近 Sondertilgung '+fmtDate(last.date),sub:last.notes||'特别还款',value:n2(last.amount)+' €',tone:'green'});
+  body+='<p class="dim estate-assumption">正常月供按贷款合同持续执行，无需逐月记录。</p>'+
+    '<div class="estate-actions estate-record-actions">'+btn('记录 Sondertilgung',"editSpecialRepayment('"+mortgage.id+"')",null,'plus')+
+    btn('Sondertilgung 记录',"openSpecialRepaymentHistory('"+mortgage.id+"')",'ghost','list-bullets')+
     btn('编辑贷款',"editMortgage('"+mortgage.id+"')",'ghost','pencil-simple')+'</div></div>';
   return body;
 }
 function estateTenancyRecord(tenancy){
-  var payments=estateTenancyPayments(tenancy.id),last=payments[0],active=estateActiveTenancy(tenancy);
+  var active=estateActiveTenancy(tenancy);
   var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(tenancy.tenantName||'租客待补')+'</b>'+
     '<span class="dim">'+esc(estateRentTypeLabel(tenancy.rentType))+' · '+fmtDate(tenancy.startDate)+
     (tenancy.endDate?' 至 '+fmtDate(tenancy.endDate):' · 无固定终止日')+'</span></div>'+badge(active?'租约进行中':'租约已结束',active?'green':'dim')+'</div>'+
@@ -4863,11 +4882,67 @@ function estateTenancyRecord(tenancy){
     stat('Nebenkosten',n2(tenancy.nebenkosten||0),'€')+
     stat('Kaution',n2(tenancy.kaution||0),'€')+
     stat('付款日',tenancy.paymentDay||'—','号')+'</div>';
-  if(last) body+=row({label:'最近收租 '+esc(last.period||fmtDate(last.date)),sub:fmtDate(last.date),value:n2(estateRentPaymentTotal(last))+' €',tone:'green'});
-  body+='<div class="estate-actions">'+btn('记录收租',"editRentPayment('"+tenancy.id+"')",null,'plus')+
-    btn('收租记录',"openRentHistory('"+tenancy.id+"')",'ghost','list-bullets')+
-    btn('编辑租约',"editTenancy('"+tenancy.id+"')",'ghost','pencil-simple')+'</div></div>';
+  body+='<p class="dim estate-assumption">租金按租约默认正常收取，仅在合同变化时更新。</p>'+
+    btn('编辑租约',"editTenancy('"+tenancy.id+"')",'ghost','pencil-simple')+'</div>';
   return body;
+}
+
+function openSpecialRepaymentHistory(mortgageId){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  if(!mortgage) return;
+  var records=estateSpecialRepayments(mortgageId),body='<p class="dim">'+
+    esc(estatePropertyName(mortgage.propertyId)+' · '+mortgage.lender)+'</p>';
+  body+=records.length?records.map(function(record){
+    return row({label:fmtDate(record.date),sub:record.notes||('还款后剩余 '+n2(record.remainingBalance)+' €'),
+      value:n2(record.amount)+' €',tone:'green',
+      onclick:"editSpecialRepayment('"+mortgageId+"','"+record.id+"')"});
+  }).join(''):'<p class="empty">还没有 Sondertilgung 记录</p>';
+  body+=btn('新增 Sondertilgung',"editSpecialRepayment('"+mortgageId+"')",null,'plus');
+  openSheet('Sondertilgung 记录',body);
+}
+
+function specialBalanceWithout(mortgage,id){
+  var balance=Number(mortgage.currentBalance||0);
+  estateSpecialRepayments(mortgage.id).filter(function(item){return item.id!==id;})
+    .sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:0;}).forEach(function(item){
+      if(item.remainingBalance!=null&&isFinite(Number(item.remainingBalance))) balance=Number(item.remainingBalance);
+      else balance=Math.max(0,balance-Number(item.amount||0));
+    });
+  return balance;
+}
+function editSpecialRepayment(mortgageId,id){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  if(!mortgage) return;
+  var record=id?(S.specialRepayments||[]).filter(function(item){return item.id===id;})[0]:null;
+  record=record||{date:today(),amount:null,remainingBalance:null,notes:''};
+  openSheet(id?'编辑 Sondertilgung':'记录 Sondertilgung',
+    '<p class="dim">'+esc(estatePropertyName(mortgage.propertyId)+' · '+mortgage.lender)+'</p>'+
+    field({id:'re_special_date',label:'特别还款日',type:'date',val:record.date})+
+    field({id:'re_special_amount',label:'Sondertilgung 金额（€）',type:'text',inputmode:'decimal',
+      val:record.amount==null?'':n2(record.amount)})+
+    field({id:'re_special_balance',label:'还款后剩余贷款（可选，€）',type:'text',inputmode:'decimal',
+      val:record.remainingBalance==null?'':n2(record.remainingBalance),hint:'留空时按当前记录的剩余贷款减去本次金额。'})+
+    field({id:'re_special_notes',label:'备注',type:'textarea',val:record.notes||'',ph:'银行回单、年度额度或其他说明'})+
+    btn('保存',"saveSpecialRepayment('"+mortgageId+"','"+(id||'')+"')")+
+    (id?btn('删除这条 Sondertilgung',"deleteSpecialRepayment('"+id+"')",'danger','trash'):''));
+}
+function saveSpecialRepayment(mortgageId,id){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  var date=val('re_special_date'),amount=fnum('re_special_amount'),balance=fnum('re_special_balance');
+  if(!mortgage||!isDate(date)) return toast('请选择正确的特别还款日');
+  if(!isFinite(amount)||amount<=0) return toast('请输入有效的 Sondertilgung 金额');
+  if(!isFinite(balance)) balance=Math.max(0,specialBalanceWithout(mortgage,id)-amount);
+  if(balance<0||balance>mortgage.originalPrincipal) return toast('还款后剩余贷款不合理');
+  var record={id:id||uid(),mortgageId:mortgageId,date:date,amount:Math.round(amount*100)/100,
+    remainingBalance:Math.round(balance*100)/100,notes:val('re_special_notes')};
+  var index=(S.specialRepayments||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.specialRepayments[index]=record; else S.specialRepayments.push(record);
+  save(); closeSheet(); render(); toast('Sondertilgung 已保存');
+}
+function deleteSpecialRepayment(id){
+  var record=(S.specialRepayments||[]).filter(function(item){return item.id===id;})[0];
+  if(!record||!confirm('删除这条 Sondertilgung？')) return;
+  closeSheet(); removeWithUndo('specialRepayments',id,fmtDate(record.date));
 }
 
 function openMortgageHistory(mortgageId){
@@ -5104,10 +5179,11 @@ function deleteEstateProperty(id){
 }
 function deleteMortgage(id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===id;})[0];
-  if(!mortgage||!confirm('删除这笔贷款及其全部还款记录？')) return;
+  if(!mortgage||!confirm('删除这笔贷款及其全部 Sondertilgung 记录？')) return;
   S.mortgagePayments=(S.mortgagePayments||[]).filter(function(item){return item.mortgageId!==id;});
+  S.specialRepayments=(S.specialRepayments||[]).filter(function(item){return item.mortgageId!==id;});
   S.mortgages=(S.mortgages||[]).filter(function(item){return item.id!==id;});
-  save(); closeSheet(); render(); toast('贷款及还款记录已删除');
+  save(); closeSheet(); render(); toast('贷款及 Sondertilgung 记录已删除');
 }
 function deleteMortgagePayment(id){
   var payment=(S.mortgagePayments||[]).filter(function(item){return item.id===id;})[0];
@@ -5459,7 +5535,7 @@ async function doImport(){
 }
 function assertDataPatch(p){
   var keys=['properties','meters','readings','accounts','txs','contracts','coupons','debts',
-    'mortgages','mortgagePayments','tenancies','rentPayments'];
+    'mortgages','mortgagePayments','specialRepayments','tenancies','rentPayments'];
   if(!p || p.format!=='scrooge-vault-data-patch' || p.version!==1 ||
      typeof p.id!=='string' || !p.id.trim())
     throw new Error('更新包结构不完整');
@@ -5479,7 +5555,7 @@ function applyDataPatch(p){
   if(S.appliedPatches[p.id]) return {already:true,added:0,updated:0};
   var result={already:false,added:0,updated:0};
   ['properties','meters','readings','accounts','txs','contracts','coupons','debts',
-    'mortgages','mortgagePayments','tenancies','rentPayments'].forEach(function(key){
+    'mortgages','mortgagePayments','specialRepayments','tenancies','rentPayments'].forEach(function(key){
     if(!p[key]) return;
     S[key]=S[key]||[];
     p[key].forEach(function(item){
@@ -5525,7 +5601,7 @@ function exportShell(){
     'assetConfigs:{},'+
     'milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],'+
     'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],'+
-    'mortgages:[],mortgagePayments:[],tenancies:[],rentPayments:[],'+
+    'mortgages:[],mortgagePayments:[],specialRepayments:[],tenancies:[],rentPayments:[],'+
     'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
     'festkosten:[],sparZiel:0}};';
   var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
