@@ -165,6 +165,31 @@ main>*{flex-shrink:0}
   font-size:13px;font-weight:650;white-space:nowrap;transition:background-color .14s ease,color .14s ease}
 .section-tab:active{background:var(--line)}
 .section-tab.on{background:var(--card);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.section-tabs.tabs-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* ---------- 房产 ---------- */
+.estate-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.estate-heading h1{font-size:25px;line-height:1.2;margin:0}
+.estate-heading p{margin:3px 0 0}
+.estate-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.estate-property-card{gap:13px}
+.estate-property-title{min-width:0}
+.estate-property-title h2{font-size:18px;margin:0;overflow-wrap:anywhere}
+.estate-property-title p{margin:3px 0 0;overflow-wrap:anywhere}
+.estate-section{display:flex;flex-direction:column;gap:8px}
+.estate-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.estate-section-head h3{font-size:14px;margin:0}
+.estate-record{padding:10px 0;border-top:1px solid var(--line)}
+.estate-record:first-of-type{border-top:0}
+.estate-record .between{align-items:flex-start}
+.estate-record-title{min-width:0}
+.estate-record-title b{display:block;font-size:14px;overflow-wrap:anywhere}
+.estate-record-title span{display:block;margin-top:2px}
+.estate-record .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:9px}
+.estate-record .stat .v{font-size:16px}
+.estate-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.estate-actions .btn{padding-inline:8px;font-size:12px}
+.estate-empty{margin:0;padding:5px 0;color:var(--dim);font-size:12px}
 
 /* ---------- 表单 ---------- */
 .field{display:flex;flex-direction:column;gap:5px}
@@ -484,6 +509,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
     grid-column:auto;padding-top:0;border-top:0}
   .contract-stats .stat .v,.debt-summary-stats .stat .v,.cashflow-summary-stats .stat .v,.retirement-summary-stats .stat .v{font-size:21px}
   .coupon-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .estate-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (max-width:899px){
   html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
@@ -508,7 +534,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,main>.section-tabs,
   main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading,
   main>.contract-export,main>.save-overview,main>.save-dashboard,main>.save-account-view,
-  main>.overview-grid{grid-column:1/-1}
+  main>.overview-grid,main>.estate-heading,main>.estate-summary{grid-column:1/-1}
   .section-tabs{position:relative;top:auto;box-shadow:none}
   .energy-contract-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .save-overview,.save-dashboard,.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
@@ -520,6 +546,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   .save-transactions::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
   main[data-view="coupons"]>.record-heading+.card,
   main[data-view="debts"]>.record-heading+.card,
+  main[data-view="estate"]>.estate-heading+.estate-summary,
   main[data-view="rights"]>.section-tabs+.card,
   main[data-view="ctr"]>.section-tabs+.card.gold,
   main[data-view="ctr"]>.card.red{grid-column:1/-1}
@@ -551,6 +578,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   .save-chart-grid>.btnrow{grid-column:1/-1}
   main[data-view="retire"]>.card:nth-of-type(1),
   main[data-view="retire"]>.card:nth-of-type(3){grid-column:span 2}
+  main[data-view="estate"]>.estate-property-card{grid-column:span 1}
   .chart,.chart-y-axis{height:196px}
 }
 </style>
@@ -597,7 +625,7 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   </div>
 </div>
 <script>
-var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
+var SEED={version:2,fxRmbPerEur:8,fxRateSource:"manual",fxRateDate:null,appliedPatches:{},retirementPlan:{accountIds:null,contributionMode:"auto",manualMonthlyContribution:1500,selectedScenario:"base",rates:{conservative:3,base:5,optimistic:7},assetConfigs:{},milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],mortgages:[],mortgagePayments:[],tenancies:[],rentPayments:[],budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,festkosten:[],sparZiel:0}};
 /* ================= 计算引擎 =================
    逻辑与《嘘！Scrooge 的金库.xlsx》的公式逐条对齐：
    月均消耗 = (本次读数 − 上次读数) × 换算系数 ÷ 天数 × 30
@@ -796,7 +824,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='6b11579585ec';
+var APP_BUILD='8536037aad88';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -867,12 +895,13 @@ function chips(items,cur,fn){
 }
 var SECTION_TABS={
   energy:[{k:'energy',label:'概览'},{k:'power',label:'电费'},{k:'gas',label:'燃气'}],
-  funds:[{k:'save',label:'账户'},{k:'transactions',label:'流水'},{k:'debts',label:'欠款'}],
+  funds:[{k:'save',label:'账户'},{k:'transactions',label:'流水'},
+    {k:'estate',label:'房产'},{k:'debts',label:'欠款'}],
   rights:[{k:'rights',label:'概览'},{k:'ctr',label:'合同'},{k:'coupons',label:'Coupon'}]
 };
 function sectionTabs(group,current){
   var items=SECTION_TABS[group]||[];
-  return '<div class="section-tabs" role="tablist" aria-label="'+esc(
+  return '<div class="section-tabs'+(items.length===4?' tabs-4':'')+'" role="tablist" aria-label="'+esc(
     group==='energy'?'能源分类':group==='funds'?'资金分类':'权益分类')+'">'+items.map(function(item){
       var selected=item.k===current;
       return '<button type="button" role="tab" aria-selected="'+(selected?'true':'false')+'"'+
@@ -1244,7 +1273,7 @@ var TABS=[
 var saveSecretTaps=[], sheetTrigger=null, sheetClearT=null;
 function navRootForView(v){
   if(['energy','power','gas'].indexOf(v)>=0) return 'energy';
-  if(['save','transactions','debts','retire'].indexOf(v)>=0) return 'funds';
+  if(['save','transactions','estate','debts','retire'].indexOf(v)>=0) return 'funds';
   if(['rights','ctr','coupons'].indexOf(v)>=0) return 'rights';
   return 'home';
 }
@@ -1508,8 +1537,14 @@ function assertState(p){
     throw new Error('备份内容结构不完整');
   if(p.coupons==null) p.coupons=[];
   if(p.debts==null) p.debts=[];
-  if(!Array.isArray(p.coupons)||!Array.isArray(p.debts))
-    throw new Error('Coupon 或欠款记录结构不完整');
+  if(p.mortgages==null) p.mortgages=[];
+  if(p.mortgagePayments==null) p.mortgagePayments=[];
+  if(p.tenancies==null) p.tenancies=[];
+  if(p.rentPayments==null) p.rentPayments=[];
+  if(!Array.isArray(p.coupons)||!Array.isArray(p.debts)||
+     !Array.isArray(p.mortgages)||!Array.isArray(p.mortgagePayments)||
+     !Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments))
+    throw new Error('家庭记录结构不完整');
   p.coupons.forEach(function(coupon){
     coupon.currency=['EUR','RMB','POINTS'].indexOf(coupon.currency)>=0?coupon.currency:'EUR';
     if(coupon.valueType==='percent') coupon.currency='EUR';
@@ -1866,7 +1901,8 @@ function syncMergeValue(base,local,remote,path,context){
 }
 function syncStateEmpty(state){
   if(!state) return true;
-  return ['properties','meters','readings','txs','contracts','coupons','debts'].every(function(k){
+  return ['properties','meters','readings','txs','contracts','coupons','debts','mortgages',
+    'mortgagePayments','tenancies','rentPayments'].every(function(k){
     return !Array.isArray(state[k])||state[k].length===0;
   });
 }
@@ -4699,6 +4735,397 @@ function deleteDebt(id){
   closeSheet(); removeWithUndo('debts',id,debt.title);
 }
 function startDebt(){ closeSheet(); go('debts'); editDebt(); }
+/* ================= 房产、贷款与出租 ================= */
+function estatePropertyName(id){
+  var property=(S.properties||[]).filter(function(item){return item.id===id;})[0];
+  return property?property.name:'未关联房产';
+}
+function estatePropertyOptions(){
+  return (S.properties||[]).map(function(property){return {k:property.id,label:property.name};});
+}
+function estateUseLabel(value){
+  return {owner:'自住',rental:'出租',mixed:'自住兼出租'}[value]||'用途待补';
+}
+function estateRentTypeLabel(value){
+  return {fixed:'固定租金',index:'Indexmiete',step:'Staffelmiete'}[value]||'固定租金';
+}
+function estateMortgagePayments(mortgageId){
+  return (S.mortgagePayments||[]).filter(function(item){return item.mortgageId===mortgageId;})
+    .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+}
+function estateLatestMortgagePayment(mortgageId){
+  return estateMortgagePayments(mortgageId).filter(function(item){
+    return item.remainingBalance!=null&&isFinite(Number(item.remainingBalance));
+  })[0]||null;
+}
+function estateMortgageBalance(mortgage){
+  var latest=estateLatestMortgagePayment(mortgage.id);
+  return latest?Number(latest.remainingBalance):Number(mortgage.currentBalance||0);
+}
+function estateMortgagePrincipalPaid(mortgage){
+  var original=Number(mortgage.originalPrincipal||0),balance=estateMortgageBalance(mortgage);
+  if(original>0) return Math.max(0,original-balance);
+  return estateMortgagePayments(mortgage.id).reduce(function(sum,item){
+    return sum+Number(item.principal||0)+Number(item.specialPrincipal||0);
+  },0);
+}
+function estateTenancyPayments(tenancyId){
+  return (S.rentPayments||[]).filter(function(item){return item.tenancyId===tenancyId;})
+    .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+}
+function estateActiveTenancy(tenancy){
+  return (!tenancy.endDate||tenancy.endDate>=today())&&(!tenancy.startDate||tenancy.startDate<=today());
+}
+function estateRentPaymentTotal(payment){
+  return Number(payment.kaltmiete||0)+Number(payment.nebenkosten||0)+Number(payment.other||0);
+}
+function estateSummary(){
+  var mortgages=S.mortgages||[],tenancies=S.tenancies||[],year=today().slice(0,4);
+  return {
+    balance:mortgages.reduce(function(sum,item){return sum+estateMortgageBalance(item);},0),
+    monthly:mortgages.reduce(function(sum,item){return sum+Number(item.monthlyPayment||0);},0),
+    kalt:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){return sum+Number(item.kaltmiete||0);},0),
+    rentYtd:(S.rentPayments||[]).filter(function(item){return (item.date||'').slice(0,4)===year;})
+      .reduce(function(sum,item){return sum+estateRentPaymentTotal(item);},0)
+  };
+}
+function estatePropertyMortgages(propertyId){
+  return (S.mortgages||[]).filter(function(item){return item.propertyId===propertyId;});
+}
+function estatePropertyTenancies(propertyId){
+  return (S.tenancies||[]).filter(function(item){return item.propertyId===propertyId;});
+}
+
+function viewEstate(){
+  var summary=estateSummary(),out=sectionTabs('funds','estate');
+  out+='<div class="estate-heading"><div><h1>房产</h1><p class="dim">贷款、还款、出租与持有成本</p></div>'+
+    btn('新增房产','editEstateProperty()','sm','plus')+'</div>';
+  out+=card('<div class="stats estate-summary-stats">'+
+    stat('剩余贷款',n2(summary.balance),'€',summary.balance?'red':'dim')+
+    stat('每月贷款扣款',n2(summary.monthly),'€',summary.monthly?'gold':'dim')+
+    stat('当前月冷租',n2(summary.kalt),'€',summary.kalt?'green':'dim')+
+    stat('本年已收',n2(summary.rentYtd),'€',summary.rentYtd?'green':'dim')+'</div>','blue estate-summary');
+  if(!(S.properties||[]).length)
+    return out+card('<p class="empty">还没有房产，先新增一套房产。</p>','estate-property-card');
+  out+=(S.properties||[]).map(estatePropertyCard).join('');
+  return out+'<p class="dim retirement-disclaimer">本页用于维护合同和实际收支，金额请以银行与租赁凭证为准。</p>';
+}
+function estatePropertyCard(property){
+  var mortgages=estatePropertyMortgages(property.id),tenancies=estatePropertyTenancies(property.id);
+  var details=[];
+  if(property.address) details.push(property.address);
+  if(property.areaM2!=null) details.push(n2(property.areaM2)+' m²');
+  if(property.ownershipPct!=null) details.push('持有 '+n2(property.ownershipPct)+'%');
+  var body='<div class="between"><div class="estate-property-title"><h2>'+esc(property.name)+'</h2>'+
+    '<p class="dim">'+esc(details.join(' · ')||'房产资料待补')+'</p></div>'+badge(estateUseLabel(property.useType),'blue')+'</div>';
+  var costs=[];
+  if(property.purchaseDate) costs.push(row({label:'购入日',value:fmtDate(property.purchaseDate)}));
+  if(property.purchasePrice!=null) costs.push(row({label:'购入价格',value:n2(property.purchasePrice)+' €'}));
+  if(property.monthlyHausgeld!=null) costs.push(row({label:'Hausgeld',sub:'每月',value:n2(property.monthlyHausgeld)+' €'}));
+  if(property.annualPropertyTax!=null) costs.push(row({label:'Grundsteuer',sub:'每年',value:n2(property.annualPropertyTax)+' €'}));
+  if(property.monthlyMaintenanceReserve!=null) costs.push(row({label:'维修储备',sub:'每月',value:n2(property.monthlyMaintenanceReserve)+' €'}));
+  if(costs.length) body+=hr()+'<div class="estate-section">'+costs.join('')+'</div>';
+  body+=hr()+'<div class="estate-section"><div class="estate-section-head"><h3>贷款</h3>'+badge(mortgages.length+' 笔','dim')+'</div>'+
+    (mortgages.length?mortgages.map(estateMortgageRecord).join(''):'<p class="estate-empty">没有贷款记录</p>')+'</div>';
+  body+=hr()+'<div class="estate-section"><div class="estate-section-head"><h3>出租</h3>'+badge(tenancies.length+' 份','dim')+'</div>'+
+    (tenancies.length?tenancies.map(estateTenancyRecord).join(''):'<p class="estate-empty">没有租约记录</p>')+'</div>';
+  body+=hr()+'<div class="estate-actions">'+
+    btn('编辑房产',"editEstateProperty('"+property.id+"')",'ghost','pencil-simple')+
+    btn('新增贷款',"editMortgage('', '"+property.id+"')",'ghost','bank')+
+    btn('新增租约',"editTenancy('', '"+property.id+"')",'ghost','key')+'</div>';
+  return card(body,'estate-property-card');
+}
+function estateMortgageRecord(mortgage){
+  var balance=estateMortgageBalance(mortgage),paid=estateMortgagePrincipalPaid(mortgage);
+  var payments=estateMortgagePayments(mortgage.id),last=payments[0];
+  var term=[];
+  if(mortgage.sollzinsPct!=null) term.push('Sollzins '+n2(mortgage.sollzinsPct)+'%');
+  if(mortgage.fixedRateEnd) term.push('固定利率至 '+fmtDate(mortgage.fixedRateEnd));
+  var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(mortgage.lender||'贷款机构待补')+'</b>'+
+    '<span class="dim">'+esc(term.join(' · ')||'贷款条款待补')+'</span></div>'+badge(payments.length+' 次还款','dim')+'</div>'+
+    '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red')+
+    stat('每月扣款',n2(mortgage.monthlyPayment||0),'€')+
+    stat('已偿还本金',n2(paid),'€','green')+
+    stat('初始本金',n2(mortgage.originalPrincipal||0),'€')+'</div>';
+  if(last) body+=row({label:'最近还款 '+fmtDate(last.date),sub:'利息 '+n2(last.interest||0)+' € · 本金 '+n2(last.principal||0)+' €'+
+    (last.specialPrincipal?' · 特别还款 '+n2(last.specialPrincipal)+' €':''),value:n2(last.total)+' €'});
+  body+='<div class="estate-actions">'+btn('记录还款',"editMortgagePayment('"+mortgage.id+"')",null,'plus')+
+    btn('还款记录',"openMortgageHistory('"+mortgage.id+"')",'ghost','list-bullets')+
+    btn('编辑贷款',"editMortgage('"+mortgage.id+"')",'ghost','pencil-simple')+'</div></div>';
+  return body;
+}
+function estateTenancyRecord(tenancy){
+  var payments=estateTenancyPayments(tenancy.id),last=payments[0],active=estateActiveTenancy(tenancy);
+  var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(tenancy.tenantName||'租客待补')+'</b>'+
+    '<span class="dim">'+esc(estateRentTypeLabel(tenancy.rentType))+' · '+fmtDate(tenancy.startDate)+
+    (tenancy.endDate?' 至 '+fmtDate(tenancy.endDate):' · 无固定终止日')+'</span></div>'+badge(active?'租约进行中':'租约已结束',active?'green':'dim')+'</div>'+
+    '<div class="stats">'+stat('Kaltmiete',n2(tenancy.kaltmiete||0),'€','green')+
+    stat('Nebenkosten',n2(tenancy.nebenkosten||0),'€')+
+    stat('Kaution',n2(tenancy.kaution||0),'€')+
+    stat('付款日',tenancy.paymentDay||'—','号')+'</div>';
+  if(last) body+=row({label:'最近收租 '+esc(last.period||fmtDate(last.date)),sub:fmtDate(last.date),value:n2(estateRentPaymentTotal(last))+' €',tone:'green'});
+  body+='<div class="estate-actions">'+btn('记录收租',"editRentPayment('"+tenancy.id+"')",null,'plus')+
+    btn('收租记录',"openRentHistory('"+tenancy.id+"')",'ghost','list-bullets')+
+    btn('编辑租约',"editTenancy('"+tenancy.id+"')",'ghost','pencil-simple')+'</div></div>';
+  return body;
+}
+
+function openMortgageHistory(mortgageId){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  if(!mortgage) return;
+  var payments=estateMortgagePayments(mortgageId),body='<p class="dim">'+
+    esc(estatePropertyName(mortgage.propertyId)+' · '+mortgage.lender)+'</p>';
+  body+=payments.length?payments.map(function(payment){
+    return row({label:fmtDate(payment.date),
+      sub:'利息 '+n2(payment.interest||0)+' € · 本金 '+n2(payment.principal||0)+' €'+
+        (payment.specialPrincipal?' · 特别还款 '+n2(payment.specialPrincipal)+' €':''),
+      value:n2(payment.total)+' €',onclick:"editMortgagePayment('"+mortgageId+"','"+payment.id+"')"});
+  }).join(''):'<p class="empty">还没有还款记录</p>';
+  body+=btn('新增还款',"editMortgagePayment('"+mortgageId+"')",null,'plus');
+  openSheet('还款记录',body);
+}
+function openRentHistory(tenancyId){
+  var tenancy=(S.tenancies||[]).filter(function(item){return item.id===tenancyId;})[0];
+  if(!tenancy) return;
+  var payments=estateTenancyPayments(tenancyId),body='<p class="dim">'+
+    esc(estatePropertyName(tenancy.propertyId)+' · '+tenancy.tenantName)+'</p>';
+  body+=payments.length?payments.map(function(payment){
+    return row({label:payment.period,sub:'到账 '+fmtDate(payment.date)+' · 冷租 '+n2(payment.kaltmiete||0)+
+      ' € · 杂费 '+n2(payment.nebenkosten||0)+' €',value:n2(estateRentPaymentTotal(payment))+' €',
+      tone:'green',onclick:"editRentPayment('"+tenancyId+"','"+payment.id+"')"});
+  }).join(''):'<p class="empty">还没有收租记录</p>';
+  body+=btn('新增收租',"editRentPayment('"+tenancyId+"')",null,'plus');
+  openSheet('收租记录',body);
+}
+
+function estateOptionalNumber(id){
+  var value=fnum(id); return isFinite(value)?Math.round((value+Number.EPSILON)*100)/100:null;
+}
+function editEstateProperty(id){
+  var property=id?(S.properties||[]).filter(function(item){return item.id===id;})[0]:null;
+  property=property||{name:'',address:'',useType:'owner',purchaseDate:'',purchasePrice:null,
+    areaM2:null,ownershipPct:100,monthlyHausgeld:null,annualPropertyTax:null,
+    monthlyMaintenanceReserve:null,notes:''};
+  openSheet(id?'编辑房产':'新增房产',
+    field({id:'re_prop_name',label:'房产名称',val:property.name,ph:'例如 Karl-Arnold / Nidda'})+
+    field({id:'re_prop_address',label:'地址（可选）',val:property.address||''})+
+    field({id:'re_prop_use',label:'用途',type:'select',val:property.useType||'owner',opts:[
+      {k:'owner',label:'自住'},{k:'rental',label:'出租'},{k:'mixed',label:'自住兼出租'}]})+
+    field({id:'re_prop_purchase_date',label:'购入日（可选）',type:'date',val:property.purchaseDate||''})+
+    field({id:'re_prop_purchase_price',label:'购入价格（可选，€）',type:'text',inputmode:'decimal',val:property.purchasePrice==null?'':n2(property.purchasePrice)})+
+    field({id:'re_prop_area',label:'面积（可选，m²）',type:'text',inputmode:'decimal',val:property.areaM2==null?'':n2(property.areaM2)})+
+    field({id:'re_prop_ownership',label:'持有比例（%）',type:'text',inputmode:'decimal',val:property.ownershipPct==null?'100':n2(property.ownershipPct)})+
+    field({id:'re_prop_hausgeld',label:'Hausgeld（每月，€）',type:'text',inputmode:'decimal',val:property.monthlyHausgeld==null?'':n2(property.monthlyHausgeld)})+
+    field({id:'re_prop_tax',label:'Grundsteuer（每年，€）',type:'text',inputmode:'decimal',val:property.annualPropertyTax==null?'':n2(property.annualPropertyTax)})+
+    field({id:'re_prop_reserve',label:'维修储备（每月，€）',type:'text',inputmode:'decimal',val:property.monthlyMaintenanceReserve==null?'':n2(property.monthlyMaintenanceReserve)})+
+    field({id:'re_prop_notes',label:'备注',type:'textarea',val:property.notes||''})+
+    btn('保存',"saveEstateProperty('"+(id||'')+"')")+
+    (id?btn('删除房产',"deleteEstateProperty('"+id+"')",'danger','trash'):''));
+}
+function saveEstateProperty(id){
+  var name=val('re_prop_name'),purchaseDate=val('re_prop_purchase_date');
+  if(!name) return toast('请填写房产名称');
+  if(purchaseDate&&!isDate(purchaseDate)) return toast('购入日格式不对');
+  var numbers=['re_prop_purchase_price','re_prop_area','re_prop_hausgeld','re_prop_tax','re_prop_reserve'];
+  if(numbers.some(function(key){var value=fnum(key);return isFinite(value)&&value<0;})) return toast('金额和面积不能小于 0');
+  var ownership=fnum('re_prop_ownership');
+  if(!isFinite(ownership)||ownership<=0||ownership>100) return toast('持有比例应大于 0 且不超过 100%');
+  var old=id?(S.properties||[]).filter(function(item){return item.id===id;})[0]:null;
+  var property=Object.assign({},old||{}, {id:id||uid(),name:name,address:val('re_prop_address'),
+    useType:val('re_prop_use'),purchaseDate:purchaseDate||null,
+    purchasePrice:estateOptionalNumber('re_prop_purchase_price'),areaM2:estateOptionalNumber('re_prop_area'),
+    ownershipPct:estateOptionalNumber('re_prop_ownership'),monthlyHausgeld:estateOptionalNumber('re_prop_hausgeld'),
+    annualPropertyTax:estateOptionalNumber('re_prop_tax'),monthlyMaintenanceReserve:estateOptionalNumber('re_prop_reserve'),
+    notes:val('re_prop_notes')});
+  var index=(S.properties||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.properties[index]=property; else S.properties.push(property);
+  save(); closeSheet(); render(); toast('房产资料已保存');
+}
+
+function editMortgage(id,propertyId){
+  var mortgage=id?(S.mortgages||[]).filter(function(item){return item.id===id;})[0]:null;
+  mortgage=mortgage||{propertyId:propertyId||(S.properties[0]&&S.properties[0].id)||'',lender:'',contractNo:'',
+    originalPrincipal:null,currentBalance:null,monthlyPayment:null,sollzinsPct:null,effectiveRatePct:null,
+    initialTilgungPct:null,startDate:'',fixedRateEnd:'',maturityDate:'',specialRepaymentPct:null,paymentDay:1,notes:''};
+  openSheet(id?'编辑贷款':'新增贷款',
+    field({id:'re_mort_prop',label:'房产',type:'select',val:mortgage.propertyId,opts:estatePropertyOptions()})+
+    field({id:'re_mort_lender',label:'贷款机构',val:mortgage.lender,ph:'例如 ING / Sparkasse'})+
+    field({id:'re_mort_contract',label:'合同号（可选）',val:mortgage.contractNo||''})+
+    field({id:'re_mort_original',label:'初始贷款本金（€）',type:'text',inputmode:'decimal',val:mortgage.originalPrincipal==null?'':n2(mortgage.originalPrincipal)})+
+    field({id:'re_mort_balance',label:'当前剩余贷款（€）',type:'text',inputmode:'decimal',val:mortgage.currentBalance==null?'':n2(estateMortgageBalance(mortgage))})+
+    field({id:'re_mort_monthly',label:'每月扣款（€）',type:'text',inputmode:'decimal',val:mortgage.monthlyPayment==null?'':n2(mortgage.monthlyPayment)})+
+    field({id:'re_mort_sollzins',label:'Sollzins（%）',type:'text',inputmode:'decimal',val:mortgage.sollzinsPct==null?'':n2(mortgage.sollzinsPct)})+
+    field({id:'re_mort_effective',label:'Effektivzins（%）',type:'text',inputmode:'decimal',val:mortgage.effectiveRatePct==null?'':n2(mortgage.effectiveRatePct)})+
+    field({id:'re_mort_tilgung',label:'初始 Tilgung（%）',type:'text',inputmode:'decimal',val:mortgage.initialTilgungPct==null?'':n2(mortgage.initialTilgungPct)})+
+    field({id:'re_mort_start',label:'贷款开始日',type:'date',val:mortgage.startDate||''})+
+    field({id:'re_mort_fixed_end',label:'Zinsbindung 至（可选）',type:'date',val:mortgage.fixedRateEnd||''})+
+    field({id:'re_mort_maturity',label:'预计贷款结束日（可选）',type:'date',val:mortgage.maturityDate||''})+
+    field({id:'re_mort_special',label:'每年 Sondertilgung 上限（%）',type:'text',inputmode:'decimal',val:mortgage.specialRepaymentPct==null?'':n2(mortgage.specialRepaymentPct)})+
+    field({id:'re_mort_day',label:'每月扣款日',type:'number',val:mortgage.paymentDay||1})+
+    field({id:'re_mort_notes',label:'备注',type:'textarea',val:mortgage.notes||''})+
+    btn('保存',"saveMortgage('"+(id||'')+"')")+
+    (id?btn('删除贷款',"deleteMortgage('"+id+"')",'danger','trash'):''));
+}
+function saveMortgage(id){
+  var lender=val('re_mort_lender'),original=fnum('re_mort_original'),balance=fnum('re_mort_balance'),
+    monthly=fnum('re_mort_monthly'),start=val('re_mort_start'),fixed=val('re_mort_fixed_end'),
+    maturity=val('re_mort_maturity'),day=Number(val('re_mort_day'));
+  if(!val('re_mort_prop')) return toast('请选择房产');
+  if(!lender) return toast('请填写贷款机构');
+  if(!isFinite(original)||original<=0) return toast('请输入初始贷款本金');
+  if(!isFinite(balance)||balance<0||balance>original) return toast('剩余贷款应在 0 与初始本金之间');
+  if(!isFinite(monthly)||monthly<=0) return toast('请输入每月扣款');
+  if(!isDate(start)) return toast('请选择贷款开始日');
+  if((fixed&&!isDate(fixed))||(maturity&&!isDate(maturity))) return toast('贷款日期格式不对');
+  if((fixed&&fixed<start)||(maturity&&maturity<start)) return toast('结束日期不能早于贷款开始日');
+  if(!Number.isInteger(day)||day<1||day>31) return toast('扣款日应为 1 至 31');
+  var rates=['re_mort_sollzins','re_mort_effective','re_mort_tilgung','re_mort_special'];
+  if(rates.some(function(key){var value=fnum(key);return isFinite(value)&&(value<0||value>100);})) return toast('利率应在 0% 至 100% 之间');
+  var mortgage={id:id||uid(),propertyId:val('re_mort_prop'),lender:lender,contractNo:val('re_mort_contract'),
+    originalPrincipal:estateOptionalNumber('re_mort_original'),currentBalance:estateOptionalNumber('re_mort_balance'),
+    monthlyPayment:estateOptionalNumber('re_mort_monthly'),sollzinsPct:estateOptionalNumber('re_mort_sollzins'),
+    effectiveRatePct:estateOptionalNumber('re_mort_effective'),initialTilgungPct:estateOptionalNumber('re_mort_tilgung'),
+    startDate:start,fixedRateEnd:fixed||null,maturityDate:maturity||null,
+    specialRepaymentPct:estateOptionalNumber('re_mort_special'),paymentDay:day,notes:val('re_mort_notes')};
+  var index=(S.mortgages||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.mortgages[index]=mortgage; else S.mortgages.push(mortgage);
+  save(); closeSheet(); render(); toast('贷款已保存');
+}
+
+function editMortgagePayment(mortgageId,id){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  if(!mortgage) return;
+  var payment=id?(S.mortgagePayments||[]).filter(function(item){return item.id===id;})[0]:null;
+  payment=payment||{date:today(),total:mortgage.monthlyPayment||null,interest:null,principal:null,
+    specialPrincipal:0,remainingBalance:null,notes:''};
+  openSheet(id?'编辑还款':'记录还款',
+    '<p class="dim">'+esc(estatePropertyName(mortgage.propertyId)+' · '+mortgage.lender)+'</p>'+
+    field({id:'re_pay_date',label:'还款日',type:'date',val:payment.date})+
+    field({id:'re_pay_total',label:'本次总扣款（€）',type:'text',inputmode:'decimal',val:payment.total==null?'':n2(payment.total)})+
+    field({id:'re_pay_interest',label:'其中利息（€）',type:'text',inputmode:'decimal',val:payment.interest==null?'':n2(payment.interest)})+
+    field({id:'re_pay_principal',label:'其中常规本金（€）',type:'text',inputmode:'decimal',val:payment.principal==null?'':n2(payment.principal)})+
+    field({id:'re_pay_special',label:'其中 Sondertilgung（€）',type:'text',inputmode:'decimal',val:n2(payment.specialPrincipal||0)})+
+    field({id:'re_pay_balance',label:'还款后剩余贷款（可选，€）',type:'text',inputmode:'decimal',val:payment.remainingBalance==null?'':n2(payment.remainingBalance),hint:'留空时按上一余额减去本金和特别还款。'})+
+    field({id:'re_pay_notes',label:'备注',type:'textarea',val:payment.notes||''})+
+    btn('保存',"saveMortgagePayment('"+mortgageId+"','"+(id||'')+"')")+
+    (id?btn('删除还款记录',"deleteMortgagePayment('"+id+"')",'danger','trash'):''));
+}
+function saveMortgagePayment(mortgageId,id){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
+  var date=val('re_pay_date'),total=fnum('re_pay_total'),interest=fnum('re_pay_interest'),
+    principal=fnum('re_pay_principal'),special=fnum('re_pay_special'),balance=fnum('re_pay_balance');
+  if(!mortgage||!isDate(date)) return toast('请选择正确的还款日');
+  interest=isFinite(interest)?interest:0; principal=isFinite(principal)?principal:0; special=isFinite(special)?special:0;
+  if([interest,principal,special].some(function(value){return value<0;})) return toast('还款拆分不能小于 0');
+  var parts=interest+principal+special;
+  if(!isFinite(total)) total=parts;
+  if(total<=0||Math.abs(total-parts)>.02) return toast('总扣款应等于利息、本金与特别还款之和');
+  if(!isFinite(balance)) balance=Math.max(0,estateMortgageBalance(mortgage)-principal-special);
+  if(balance<0||balance>mortgage.originalPrincipal) return toast('还款后剩余贷款不合理');
+  var payment={id:id||uid(),mortgageId:mortgageId,date:date,total:Math.round(total*100)/100,
+    interest:Math.round(interest*100)/100,principal:Math.round(principal*100)/100,
+    specialPrincipal:Math.round(special*100)/100,remainingBalance:Math.round(balance*100)/100,
+    notes:val('re_pay_notes')};
+  var index=(S.mortgagePayments||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.mortgagePayments[index]=payment; else S.mortgagePayments.push(payment);
+  save(); closeSheet(); render(); toast('还款记录已保存');
+}
+
+function editTenancy(id,propertyId){
+  var tenancy=id?(S.tenancies||[]).filter(function(item){return item.id===id;})[0]:null;
+  tenancy=tenancy||{propertyId:propertyId||(S.properties[0]&&S.properties[0].id)||'',tenantName:'',
+    startDate:today(),endDate:'',kaltmiete:null,nebenkosten:null,kaution:null,paymentDay:3,rentType:'fixed',notes:''};
+  openSheet(id?'编辑租约':'新增租约',
+    field({id:'re_ten_prop',label:'房产',type:'select',val:tenancy.propertyId,opts:estatePropertyOptions()})+
+    field({id:'re_ten_tenant',label:'租客 / 承租方',val:tenancy.tenantName})+
+    field({id:'re_ten_start',label:'租约开始日',type:'date',val:tenancy.startDate})+
+    field({id:'re_ten_end',label:'租约结束日（可选）',type:'date',val:tenancy.endDate||'',hint:'无固定期限租约可以留空。'})+
+    field({id:'re_ten_kalt',label:'Kaltmiete（每月，€）',type:'text',inputmode:'decimal',val:tenancy.kaltmiete==null?'':n2(tenancy.kaltmiete)})+
+    field({id:'re_ten_neben',label:'Nebenkosten（每月，€）',type:'text',inputmode:'decimal',val:tenancy.nebenkosten==null?'':n2(tenancy.nebenkosten)})+
+    field({id:'re_ten_kaution',label:'Kaution（€）',type:'text',inputmode:'decimal',val:tenancy.kaution==null?'':n2(tenancy.kaution)})+
+    field({id:'re_ten_day',label:'每月付款日',type:'number',val:tenancy.paymentDay||3})+
+    field({id:'re_ten_type',label:'租金调整方式',type:'select',val:tenancy.rentType||'fixed',opts:[
+      {k:'fixed',label:'固定租金'},{k:'index',label:'Indexmiete（指数租金）'},{k:'step',label:'Staffelmiete（阶梯租金）'}]})+
+    field({id:'re_ten_notes',label:'备注',type:'textarea',val:tenancy.notes||''})+
+    btn('保存',"saveTenancy('"+(id||'')+"')")+
+    (id?btn('删除租约',"deleteTenancy('"+id+"')",'danger','trash'):''));
+}
+function saveTenancy(id){
+  var tenant=val('re_ten_tenant'),start=val('re_ten_start'),end=val('re_ten_end'),
+    kalt=fnum('re_ten_kalt'),neben=fnum('re_ten_neben'),kaution=fnum('re_ten_kaution'),day=Number(val('re_ten_day'));
+  if(!val('re_ten_prop')) return toast('请选择房产');
+  if(!tenant) return toast('请填写租客或承租方');
+  if(!isDate(start)||(end&&!isDate(end))) return toast('租约日期格式不对');
+  if(end&&end<start) return toast('租约结束日不能早于开始日');
+  if(!isFinite(kalt)||kalt<0||!isFinite(neben)||neben<0||!isFinite(kaution)||kaution<0) return toast('租金、杂费和押金不能小于 0');
+  if(!Number.isInteger(day)||day<1||day>31) return toast('付款日应为 1 至 31');
+  var tenancy={id:id||uid(),propertyId:val('re_ten_prop'),tenantName:tenant,startDate:start,endDate:end||null,
+    kaltmiete:Math.round(kalt*100)/100,nebenkosten:Math.round(neben*100)/100,kaution:Math.round(kaution*100)/100,
+    paymentDay:day,rentType:val('re_ten_type'),notes:val('re_ten_notes')};
+  var index=(S.tenancies||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.tenancies[index]=tenancy; else S.tenancies.push(tenancy);
+  save(); closeSheet(); render(); toast('租约已保存');
+}
+
+function editRentPayment(tenancyId,id){
+  var tenancy=(S.tenancies||[]).filter(function(item){return item.id===tenancyId;})[0];
+  if(!tenancy) return;
+  var payment=id?(S.rentPayments||[]).filter(function(item){return item.id===id;})[0]:null;
+  payment=payment||{period:today().slice(0,7),date:today(),kaltmiete:tenancy.kaltmiete,
+    nebenkosten:tenancy.nebenkosten,other:0,notes:''};
+  openSheet(id?'编辑收租记录':'记录收租',
+    '<p class="dim">'+esc(estatePropertyName(tenancy.propertyId)+' · '+tenancy.tenantName)+'</p>'+
+    field({id:'re_rent_period',label:'对应月份',type:'month',val:payment.period})+
+    field({id:'re_rent_date',label:'到账日',type:'date',val:payment.date})+
+    field({id:'re_rent_kalt',label:'Kaltmiete（€）',type:'text',inputmode:'decimal',val:n2(payment.kaltmiete||0)})+
+    field({id:'re_rent_neben',label:'Nebenkosten（€）',type:'text',inputmode:'decimal',val:n2(payment.nebenkosten||0)})+
+    field({id:'re_rent_other',label:'其他收款 / 调整（€）',type:'text',inputmode:'decimal',val:n2(payment.other||0)})+
+    field({id:'re_rent_notes',label:'备注',type:'textarea',val:payment.notes||''})+
+    btn('保存',"saveRentPayment('"+tenancyId+"','"+(id||'')+"')")+
+    (id?btn('删除收租记录',"deleteRentPayment('"+id+"')",'danger','trash'):''));
+}
+function saveRentPayment(tenancyId,id){
+  var period=val('re_rent_period'),date=val('re_rent_date'),kalt=fnum('re_rent_kalt'),
+    neben=fnum('re_rent_neben'),other=fnum('re_rent_other');
+  if(!/^\d{4}-\d{2}$/.test(period)||!isDate(date)) return toast('请选择对应月份和到账日');
+  if(!isFinite(kalt)||kalt<0||!isFinite(neben)||neben<0||!isFinite(other)) return toast('请输入有效的收租金额');
+  var payment={id:id||uid(),tenancyId:tenancyId,period:period,date:date,kaltmiete:Math.round(kalt*100)/100,
+    nebenkosten:Math.round(neben*100)/100,other:Math.round(other*100)/100,notes:val('re_rent_notes')};
+  var index=(S.rentPayments||[]).findIndex(function(item){return item.id===id;});
+  if(index>=0) S.rentPayments[index]=payment; else S.rentPayments.push(payment);
+  save(); closeSheet(); render(); toast('收租记录已保存');
+}
+
+function deleteEstateProperty(id){
+  if(estatePropertyMortgages(id).length||estatePropertyTenancies(id).length)
+    return toast('请先删除关联贷款和租约');
+  if(!confirm('删除房产「'+estatePropertyName(id)+'」？')) return;
+  closeSheet(); removeWithUndo('properties',id,estatePropertyName(id));
+}
+function deleteMortgage(id){
+  var mortgage=(S.mortgages||[]).filter(function(item){return item.id===id;})[0];
+  if(!mortgage||!confirm('删除这笔贷款及其全部还款记录？')) return;
+  S.mortgagePayments=(S.mortgagePayments||[]).filter(function(item){return item.mortgageId!==id;});
+  S.mortgages=(S.mortgages||[]).filter(function(item){return item.id!==id;});
+  save(); closeSheet(); render(); toast('贷款及还款记录已删除');
+}
+function deleteMortgagePayment(id){
+  var payment=(S.mortgagePayments||[]).filter(function(item){return item.id===id;})[0];
+  if(!payment||!confirm('删除这条还款记录？')) return;
+  closeSheet(); removeWithUndo('mortgagePayments',id,fmtDate(payment.date));
+}
+function deleteTenancy(id){
+  var tenancy=(S.tenancies||[]).filter(function(item){return item.id===id;})[0];
+  if(!tenancy||!confirm('删除这份租约及其全部收租记录？')) return;
+  S.rentPayments=(S.rentPayments||[]).filter(function(item){return item.tenancyId!==id;});
+  S.tenancies=(S.tenancies||[]).filter(function(item){return item.id!==id;});
+  save(); closeSheet(); render(); toast('租约及收租记录已删除');
+}
+function deleteRentPayment(id){
+  var payment=(S.rentPayments||[]).filter(function(item){return item.id===id;})[0];
+  if(!payment||!confirm('删除这条收租记录？')) return;
+  closeSheet(); removeWithUndo('rentPayments',id,payment.period);
+}
 /* ================= 合同与保险 ================= */
 var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','意外险','旅行险','税费','能源','通讯','其他'];
 var CYCLES=['jährlich','halbjährlich','quartal','monatlich','einmalig'];
@@ -5031,7 +5458,8 @@ async function doImport(){
   }catch(e){ toast('恢复失败：'+e.message); }
 }
 function assertDataPatch(p){
-  var keys=['properties','meters','readings','accounts','txs','contracts','coupons','debts'];
+  var keys=['properties','meters','readings','accounts','txs','contracts','coupons','debts',
+    'mortgages','mortgagePayments','tenancies','rentPayments'];
   if(!p || p.format!=='scrooge-vault-data-patch' || p.version!==1 ||
      typeof p.id!=='string' || !p.id.trim())
     throw new Error('更新包结构不完整');
@@ -5050,7 +5478,8 @@ function applyDataPatch(p){
   S.appliedPatches=S.appliedPatches||{};
   if(S.appliedPatches[p.id]) return {already:true,added:0,updated:0};
   var result={already:false,added:0,updated:0};
-  ['properties','meters','readings','accounts','txs','contracts','coupons','debts'].forEach(function(key){
+  ['properties','meters','readings','accounts','txs','contracts','coupons','debts',
+    'mortgages','mortgagePayments','tenancies','rentPayments'].forEach(function(key){
     if(!p[key]) return;
     S[key]=S[key]||[];
     p[key].forEach(function(item){
@@ -5096,6 +5525,7 @@ function exportShell(){
     'assetConfigs:{},'+
     'milestone:{highestReached:0,active:0,remainingUnlocks:0}},properties:[],meters:[],readings:[],'+
     'accounts:[{id:"a1",name:"储蓄账户",currency:"EUR",note:""}],txs:[],contracts:[],coupons:[],debts:[],'+
+    'mortgages:[],mortgagePayments:[],tenancies:[],rentPayments:[],'+
     'budget:{einkommen:0,tilgung:0,autoMonat:0,grundbesitzQuartal:0,wohngebaeudeJahr:0,'+
     'festkosten:[],sparZiel:0}};';
   var i=html.indexOf('var SEED={'), j=html.indexOf('/* ================= 计算引擎');
@@ -5115,6 +5545,7 @@ function render(){
   else if(view==='gas') m.innerHTML=viewMeter('gas');
   else if(view==='save') m.innerHTML=viewSave('save');
   else if(view==='transactions') m.innerHTML=viewSave('transactions');
+  else if(view==='estate') m.innerHTML=viewEstate();
   else if(view==='retire') m.innerHTML=viewRetirement();
   else if(view==='rights') m.innerHTML=viewRightsOverview();
   else if(view==='coupons') m.innerHTML=sectionTabs('rights','coupons')+viewCoupons(true);
