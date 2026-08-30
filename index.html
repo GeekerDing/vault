@@ -836,7 +836,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='b59a09e3f3b1';
+var APP_BUILD='c30766d62860';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1570,6 +1570,12 @@ function assertState(p){
      !Array.isArray(p.mortgages)||!Array.isArray(p.mortgagePayments)||
      !Array.isArray(p.specialRepayments)||!Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments))
     throw new Error('家庭记录结构不完整');
+  p.mortgages.forEach(function(mortgage){
+    if(mortgage.specialRepaymentLimit==null&&mortgage.specialRepaymentPct!=null&&
+      isFinite(Number(mortgage.specialRepaymentPct))&&isFinite(Number(mortgage.originalPrincipal)))
+      mortgage.specialRepaymentLimit=Math.round(
+        Number(mortgage.originalPrincipal)*(Number(mortgage.specialRepaymentPct)/100)*100)/100;
+  });
   p.coupons.forEach(function(coupon){
     coupon.currency=['EUR','RMB','POINTS'].indexOf(coupon.currency)>=0?coupon.currency:'EUR';
     if(coupon.valueType==='percent') coupon.currency='EUR';
@@ -4802,6 +4808,18 @@ function estateMortgagePrincipalPaid(mortgage){
     return sum+Number(item.principal||0)+Number(item.specialPrincipal||0);
   },0)+estateSpecialRepayments(mortgage.id).reduce(function(sum,item){return sum+Number(item.amount||0);},0);
 }
+function estateSpecialRepaymentLimit(mortgage){
+  var limit=Number(mortgage&&mortgage.specialRepaymentLimit);
+  if(mortgage&&mortgage.specialRepaymentLimit!=null&&isFinite(limit)&&limit>=0) return limit;
+  var pct=Number(mortgage&&mortgage.specialRepaymentPct),principal=Number(mortgage&&mortgage.originalPrincipal);
+  return mortgage&&mortgage.specialRepaymentPct!=null&&isFinite(pct)&&pct>=0&&isFinite(principal)&&principal>=0
+    ?principal*pct/100:null;
+}
+function estateSpecialRepaymentYearUsage(mortgage,year){
+  var prefix=String(year||today().slice(0,4))+'-';
+  return estateSpecialRepayments(mortgage.id).filter(function(item){return String(item.date||'').indexOf(prefix)===0;})
+    .reduce(function(sum,item){return sum+Number(item.amount||0);},0);
+}
 function estateTenancyPayments(tenancyId){
   return (S.rentPayments||[]).filter(function(item){return item.tenancyId===tenancyId;})
     .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
@@ -4872,6 +4890,7 @@ function estatePropertyCard(property){
 function estateMortgageRecord(mortgage){
   var balance=estateMortgageBalance(mortgage),paid=estateMortgagePrincipalPaid(mortgage);
   var specials=estateSpecialRepayments(mortgage.id),last=specials[0];
+  var specialLimit=estateSpecialRepaymentLimit(mortgage),specialUsed=estateSpecialRepaymentYearUsage(mortgage);
   var term=[];
   if(mortgage.sollzinsPct!=null) term.push('Sollzins '+n2(mortgage.sollzinsPct)+'%');
   if(mortgage.fixedRateEnd) term.push('固定利率至 '+fmtDate(mortgage.fixedRateEnd));
@@ -4881,6 +4900,10 @@ function estateMortgageRecord(mortgage){
     stat('每月扣款',n2(mortgage.monthlyPayment||0),'€')+
     stat('已偿还本金',n2(paid),'€','green')+
     stat('初始本金',n2(mortgage.originalPrincipal||0),'€')+'</div>';
+  body+=row({label:'年度允许 Sondertilgung',
+    sub:specialLimit==null?'在编辑贷款中填写合同约定金额':
+      '本年已用 '+n2(specialUsed)+' € · 剩余 '+n2(Math.max(0,specialLimit-specialUsed))+' €',
+    value:specialLimit==null?'—':n2(specialLimit)+' € / 年'});
   if(last) body+=row({label:'最近 Sondertilgung '+fmtDate(last.date),sub:last.notes||'特别还款',value:n2(last.amount)+' €',tone:'green'});
   body+='<p class="dim estate-assumption">正常月供按贷款合同持续执行，无需逐月记录。</p>'+
     '<div class="estate-actions estate-record-actions">'+btn('记录 Sondertilgung',"editSpecialRepayment('"+mortgage.id+"')",null,'plus')+
@@ -5036,7 +5059,7 @@ function editMortgage(id,propertyId){
   var mortgage=id?(S.mortgages||[]).filter(function(item){return item.id===id;})[0]:null;
   mortgage=mortgage||{propertyId:propertyId||(S.properties[0]&&S.properties[0].id)||'',lender:'',contractNo:'',
     originalPrincipal:null,currentBalance:null,monthlyPayment:null,sollzinsPct:null,effectiveRatePct:null,
-    initialTilgungPct:null,startDate:'',fixedRateEnd:'',maturityDate:'',specialRepaymentPct:null,paymentDay:1,notes:''};
+    initialTilgungPct:null,startDate:'',fixedRateEnd:'',maturityDate:'',specialRepaymentLimit:null,paymentDay:1,notes:''};
   openSheet(id?'编辑贷款':'新增贷款',
     field({id:'re_mort_prop',label:'房产',type:'select',val:mortgage.propertyId,opts:estatePropertyOptions()})+
     field({id:'re_mort_lender',label:'贷款机构',val:mortgage.lender,ph:'例如 ING / Sparkasse'})+
@@ -5050,7 +5073,9 @@ function editMortgage(id,propertyId){
     field({id:'re_mort_start',label:'贷款开始日',type:'date',val:mortgage.startDate||''})+
     field({id:'re_mort_fixed_end',label:'Zinsbindung 至（可选）',type:'date',val:mortgage.fixedRateEnd||''})+
     field({id:'re_mort_maturity',label:'预计贷款结束日（可选）',type:'date',val:mortgage.maturityDate||''})+
-    field({id:'re_mort_special',label:'每年 Sondertilgung 上限（%）',type:'text',inputmode:'decimal',val:mortgage.specialRepaymentPct==null?'':n2(mortgage.specialRepaymentPct)})+
+    field({id:'re_mort_special',label:'每年允许的 Sondertilgung 金额（€）',type:'text',inputmode:'decimal',
+      val:estateSpecialRepaymentLimit(mortgage)==null?'':n2(estateSpecialRepaymentLimit(mortgage)),
+      hint:'填写贷款合同每年允许的最高特别还款金额。'})+
     field({id:'re_mort_day',label:'每月扣款日',type:'number',val:mortgage.paymentDay||1})+
     field({id:'re_mort_notes',label:'备注',type:'textarea',val:mortgage.notes||''})+
     btn('保存',"saveMortgage('"+(id||'')+"')")+
@@ -5069,14 +5094,16 @@ function saveMortgage(id){
   if((fixed&&!isDate(fixed))||(maturity&&!isDate(maturity))) return toast('贷款日期格式不对');
   if((fixed&&fixed<start)||(maturity&&maturity<start)) return toast('结束日期不能早于贷款开始日');
   if(!Number.isInteger(day)||day<1||day>31) return toast('扣款日应为 1 至 31');
-  var rates=['re_mort_sollzins','re_mort_effective','re_mort_tilgung','re_mort_special'];
+  var rates=['re_mort_sollzins','re_mort_effective','re_mort_tilgung'];
   if(rates.some(function(key){var value=fnum(key);return isFinite(value)&&(value<0||value>100);})) return toast('利率应在 0% 至 100% 之间');
+  var specialLimit=estateOptionalNumber('re_mort_special');
+  if(specialLimit!=null&&(specialLimit<0||specialLimit>original)) return toast('Sondertilgung 年度上限应在 0 与初始本金之间');
   var mortgage={id:id||uid(),propertyId:val('re_mort_prop'),lender:lender,contractNo:val('re_mort_contract'),
     originalPrincipal:estateOptionalNumber('re_mort_original'),currentBalance:estateOptionalNumber('re_mort_balance'),
     monthlyPayment:estateOptionalNumber('re_mort_monthly'),sollzinsPct:estateOptionalNumber('re_mort_sollzins'),
     effectiveRatePct:estateOptionalNumber('re_mort_effective'),initialTilgungPct:estateOptionalNumber('re_mort_tilgung'),
     startDate:start,fixedRateEnd:fixed||null,maturityDate:maturity||null,
-    specialRepaymentPct:estateOptionalNumber('re_mort_special'),paymentDay:day,notes:val('re_mort_notes')};
+    specialRepaymentLimit:specialLimit,paymentDay:day,notes:val('re_mort_notes')};
   var index=(S.mortgages||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.mortgages[index]=mortgage; else S.mortgages.push(mortgage);
   save(); closeSheet(); render(); toast('贷款已保存');
@@ -5194,11 +5221,11 @@ function deleteEstateProperty(id){
 }
 function deleteMortgage(id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===id;})[0];
-  if(!mortgage||!confirm('删除这笔贷款及其全部 Sondertilgung 记录？')) return;
+  if(!mortgage||!confirm('删除这笔贷款？')) return;
   S.mortgagePayments=(S.mortgagePayments||[]).filter(function(item){return item.mortgageId!==id;});
   S.specialRepayments=(S.specialRepayments||[]).filter(function(item){return item.mortgageId!==id;});
   S.mortgages=(S.mortgages||[]).filter(function(item){return item.id!==id;});
-  save(); closeSheet(); render(); toast('贷款及 Sondertilgung 记录已删除');
+  save(); closeSheet(); render(); toast('贷款已删除');
 }
 function deleteMortgagePayment(id){
   var payment=(S.mortgagePayments||[]).filter(function(item){return item.id===id;})[0];
