@@ -836,7 +836,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='c30766d62860';
+var APP_BUILD='512d09cef9f9';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1575,6 +1575,22 @@ function assertState(p){
       isFinite(Number(mortgage.specialRepaymentPct))&&isFinite(Number(mortgage.originalPrincipal)))
       mortgage.specialRepaymentLimit=Math.round(
         Number(mortgage.originalPrincipal)*(Number(mortgage.specialRepaymentPct)/100)*100)/100;
+    if(!isDate(mortgage.referenceBalanceDate||'')){
+      var records=p.mortgagePayments.concat(p.specialRepayments).filter(function(record){
+        return record.mortgageId===mortgage.id&&record.remainingBalance!=null&&
+          isFinite(Number(record.remainingBalance));
+      }).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+      if(records[0]){
+        mortgage.currentBalance=Number(records[0].remainingBalance);
+        mortgage.referenceBalanceDate=records[0].date;
+      }else if(mortgage.currentBalance!=null&&isFinite(Number(mortgage.currentBalance))){
+        mortgage.currentBalance=Number(mortgage.currentBalance);
+        mortgage.referenceBalanceDate=isDate(mortgage.balanceAsOfDate||'')?mortgage.balanceAsOfDate:today();
+      }else{
+        mortgage.currentBalance=null;
+        mortgage.referenceBalanceDate=null;
+      }
+    }
   });
   p.coupons.forEach(function(coupon){
     coupon.currency=['EUR','RMB','POINTS'].indexOf(coupon.currency)>=0?coupon.currency:'EUR';
@@ -4793,13 +4809,44 @@ function estateSpecialRepayments(mortgageId){
   return (S.specialRepayments||[]).filter(function(item){return item.mortgageId===mortgageId;})
     .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
 }
+function estateMortgageDueDate(year,month,paymentDay){
+  var lastDay=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+  return isoOf(Date.UTC(year,month,Math.min(Number(paymentDay)||1,lastDay)));
+}
+function estateMortgageBalanceAt(mortgage,throughDate,ignoreSpecialId){
+  var target=isDate(throughDate||'')?throughDate:today();
+  var baselineDate=mortgage.startDate;
+  var balance=Number(mortgage.originalPrincipal||0);
+  if(!isDate(baselineDate||'')||target<=baselineDate) return Math.max(0,Math.round(balance*100)/100);
+  var events=[];
+  var startParts=baselineDate.split('-'),endParts=target.split('-');
+  var startMonth=Number(startParts[0])*12+Number(startParts[1])-1;
+  var endMonth=Number(endParts[0])*12+Number(endParts[1])-1;
+  for(var monthIndex=startMonth;monthIndex<=endMonth;monthIndex++){
+    var year=Math.floor(monthIndex/12),month=monthIndex%12;
+    var due=estateMortgageDueDate(year,month,mortgage.paymentDay);
+    if(due>baselineDate&&due<=target) events.push({date:due,type:'payment'});
+  }
+  estateSpecialRepayments(mortgage.id).forEach(function(item){
+    if(item.id!==ignoreSpecialId&&item.date>baselineDate&&item.date<=target)
+      events.push({date:item.date,type:'special',amount:Number(item.amount||0)});
+  });
+  events.sort(function(a,b){
+    if(a.date!==b.date) return a.date<b.date?-1:1;
+    return a.type==='payment'?-1:b.type==='payment'?1:0;
+  });
+  var monthlyRate=Math.max(0,Number(mortgage.sollzinsPct||0))/100/12;
+  var monthlyPayment=Math.max(0,Number(mortgage.monthlyPayment||0));
+  events.forEach(function(event){
+    if(balance<=0) return;
+    if(event.type==='payment') balance=Math.max(0,balance+balance*monthlyRate-monthlyPayment);
+    else balance=Math.max(0,balance-event.amount);
+    balance=Math.round((balance+Number.EPSILON)*100)/100;
+  });
+  return balance;
+}
 function estateMortgageBalance(mortgage){
-  var special=estateSpecialRepayments(mortgage.id).filter(function(item){
-    return item.remainingBalance!=null&&isFinite(Number(item.remainingBalance));
-  })[0];
-  if(special) return Number(special.remainingBalance);
-  var latest=estateLatestMortgagePayment(mortgage.id);
-  return latest?Number(latest.remainingBalance):Number(mortgage.currentBalance||0);
+  return estateMortgageBalanceAt(mortgage,today());
 }
 function estateMortgagePrincipalPaid(mortgage){
   var original=Number(mortgage.originalPrincipal||0),balance=estateMortgageBalance(mortgage);
@@ -4896,16 +4943,23 @@ function estateMortgageRecord(mortgage){
   if(mortgage.fixedRateEnd) term.push('固定利率至 '+fmtDate(mortgage.fixedRateEnd));
   var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(mortgage.lender||'贷款机构待补')+'</b>'+
     '<span class="dim">'+esc(term.join(' · ')||'贷款条款待补')+'</span></div>'+badge(specials.length+' 次 Sondertilgung','dim')+'</div>'+
-    '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red')+
+    '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red','自动计算至 '+fmtDate(today()))+
     stat('每月扣款',n2(mortgage.monthlyPayment||0),'€')+
     stat('已偿还本金',n2(paid),'€','green')+
     stat('初始本金',n2(mortgage.originalPrincipal||0),'€')+'</div>';
+  if(mortgage.currentBalance!=null&&isFinite(Number(mortgage.currentBalance))){
+    var referenceDiff=balance-Number(mortgage.currentBalance);
+    body+=row({label:'银行参考余额',
+      sub:(isDate(mortgage.referenceBalanceDate||'')?fmtDate(mortgage.referenceBalanceDate):'日期待补')+
+        ' · 与自动估算差额 '+n2(referenceDiff)+' €',
+      value:n2(Number(mortgage.currentBalance))+' €'});
+  }
   body+=row({label:'年度允许 Sondertilgung',
     sub:specialLimit==null?'在编辑贷款中填写合同约定金额':
       '本年已用 '+n2(specialUsed)+' € · 剩余 '+n2(Math.max(0,specialLimit-specialUsed))+' €',
     value:specialLimit==null?'—':n2(specialLimit)+' € / 年'});
   if(last) body+=row({label:'最近 Sondertilgung '+fmtDate(last.date),sub:last.notes||'特别还款',value:n2(last.amount)+' €',tone:'green'});
-  body+='<p class="dim estate-assumption">正常月供按贷款合同持续执行，无需逐月记录。</p>'+
+  body+='<p class="dim estate-assumption">剩余贷款按月供、Sollzins 和 Sondertilgung 自动计算；合同变更时请更新贷款资料。</p>'+
     '<div class="estate-actions estate-record-actions">'+btn('记录 Sondertilgung',"editSpecialRepayment('"+mortgage.id+"')",null,'plus')+
     btn('Sondertilgung 记录',"openSpecialRepaymentHistory('"+mortgage.id+"')",'ghost','list-bullets')+
     btn('编辑贷款',"editMortgage('"+mortgage.id+"')",'ghost','pencil-simple')+'</div></div>';
@@ -4931,7 +4985,7 @@ function openSpecialRepaymentHistory(mortgageId){
   var records=estateSpecialRepayments(mortgageId),body='<p class="dim">'+
     esc(estatePropertyName(mortgage.propertyId)+' · '+mortgage.lender)+'</p>';
   body+=records.length?records.map(function(record){
-    return row({label:fmtDate(record.date),sub:record.notes||('还款后剩余 '+n2(record.remainingBalance)+' €'),
+    return row({label:fmtDate(record.date),sub:record.notes||('还款后剩余 '+n2(estateMortgageBalanceAt(mortgage,record.date))+' €'),
       value:n2(record.amount)+' €',tone:'green',
       onclick:"editSpecialRepayment('"+mortgageId+"','"+record.id+"')"});
   }).join(''):'<p class="empty">还没有 Sondertilgung 记录</p>';
@@ -4939,15 +4993,6 @@ function openSpecialRepaymentHistory(mortgageId){
   openSheet('Sondertilgung 记录',body);
 }
 
-function specialBalanceWithout(mortgage,id){
-  var balance=Number(mortgage.currentBalance||0);
-  estateSpecialRepayments(mortgage.id).filter(function(item){return item.id!==id;})
-    .sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:0;}).forEach(function(item){
-      if(item.remainingBalance!=null&&isFinite(Number(item.remainingBalance))) balance=Number(item.remainingBalance);
-      else balance=Math.max(0,balance-Number(item.amount||0));
-    });
-  return balance;
-}
 function editSpecialRepayment(mortgageId,id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
   if(!mortgage) return;
@@ -4958,19 +5003,19 @@ function editSpecialRepayment(mortgageId,id){
     field({id:'re_special_date',label:'特别还款日',type:'date',val:record.date})+
     field({id:'re_special_amount',label:'Sondertilgung 金额（€）',type:'text',inputmode:'decimal',
       val:record.amount==null?'':n2(record.amount)})+
-    field({id:'re_special_balance',label:'还款后剩余贷款（可选，€）',type:'text',inputmode:'decimal',
-      val:record.remainingBalance==null?'':n2(record.remainingBalance),hint:'留空时按当前记录的剩余贷款减去本次金额。'})+
+    '<p class="dim estate-assumption">还款后剩余贷款会自动重新计算。</p>'+
     field({id:'re_special_notes',label:'备注',type:'textarea',val:record.notes||'',ph:'银行回单、年度额度或其他说明'})+
     btn('保存',"saveSpecialRepayment('"+mortgageId+"','"+(id||'')+"')")+
     (id?btn('删除这条 Sondertilgung',"deleteSpecialRepayment('"+id+"')",'danger','trash'):''));
 }
 function saveSpecialRepayment(mortgageId,id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
-  var date=val('re_special_date'),amount=fnum('re_special_amount'),balance=fnum('re_special_balance');
+  var date=val('re_special_date'),amount=fnum('re_special_amount');
   if(!mortgage||!isDate(date)) return toast('请选择正确的特别还款日');
+  if(date<mortgage.startDate) return toast('特别还款日不能早于贷款开始日');
+  if(date>today()) return toast('特别还款日不能晚于今天');
   if(!isFinite(amount)||amount<=0) return toast('请输入有效的 Sondertilgung 金额');
-  if(!isFinite(balance)) balance=Math.max(0,specialBalanceWithout(mortgage,id)-amount);
-  if(balance<0||balance>mortgage.originalPrincipal) return toast('还款后剩余贷款不合理');
+  var balance=Math.max(0,estateMortgageBalanceAt(mortgage,date,id)-amount);
   var record={id:id||uid(),mortgageId:mortgageId,date:date,amount:Math.round(amount*100)/100,
     remainingBalance:Math.round(balance*100)/100,notes:val('re_special_notes')};
   var index=(S.specialRepayments||[]).findIndex(function(item){return item.id===id;});
@@ -5058,14 +5103,17 @@ function saveEstateProperty(id){
 function editMortgage(id,propertyId){
   var mortgage=id?(S.mortgages||[]).filter(function(item){return item.id===id;})[0]:null;
   mortgage=mortgage||{propertyId:propertyId||(S.properties[0]&&S.properties[0].id)||'',lender:'',contractNo:'',
-    originalPrincipal:null,currentBalance:null,monthlyPayment:null,sollzinsPct:null,effectiveRatePct:null,
+    originalPrincipal:null,currentBalance:null,referenceBalanceDate:'',monthlyPayment:null,sollzinsPct:null,effectiveRatePct:null,
     initialTilgungPct:null,startDate:'',fixedRateEnd:'',maturityDate:'',specialRepaymentLimit:null,paymentDay:1,notes:''};
   openSheet(id?'编辑贷款':'新增贷款',
     field({id:'re_mort_prop',label:'房产',type:'select',val:mortgage.propertyId,opts:estatePropertyOptions()})+
     field({id:'re_mort_lender',label:'贷款机构',val:mortgage.lender,ph:'例如 ING / Sparkasse'})+
     field({id:'re_mort_contract',label:'合同号（可选）',val:mortgage.contractNo||''})+
     field({id:'re_mort_original',label:'初始贷款本金（€）',type:'text',inputmode:'decimal',val:mortgage.originalPrincipal==null?'':n2(mortgage.originalPrincipal)})+
-    field({id:'re_mort_balance',label:'当前剩余贷款（€）',type:'text',inputmode:'decimal',val:mortgage.currentBalance==null?'':n2(estateMortgageBalance(mortgage))})+
+    '<p class="dim estate-assumption">剩余贷款和已偿还本金会根据月供、利率和 Sondertilgung 自动计算。参考余额仅用于对照，不参与计算。</p>'+
+    field({id:'re_mort_balance',label:'银行参考余额（可选，€）',type:'text',inputmode:'decimal',
+      val:mortgage.currentBalance==null?'':n2(mortgage.currentBalance),hint:'可以是大概数字，只用于和自动估算对照。'})+
+    field({id:'re_mort_balance_date',label:'参考余额日期（可选）',type:'date',val:mortgage.referenceBalanceDate||''})+
     field({id:'re_mort_monthly',label:'每月扣款（€）',type:'text',inputmode:'decimal',val:mortgage.monthlyPayment==null?'':n2(mortgage.monthlyPayment)})+
     field({id:'re_mort_sollzins',label:'Sollzins（%）',type:'text',inputmode:'decimal',val:mortgage.sollzinsPct==null?'':n2(mortgage.sollzinsPct)})+
     field({id:'re_mort_effective',label:'Effektivzins（%）',type:'text',inputmode:'decimal',val:mortgage.effectiveRatePct==null?'':n2(mortgage.effectiveRatePct)})+
@@ -5082,13 +5130,15 @@ function editMortgage(id,propertyId){
     (id?btn('删除贷款',"deleteMortgage('"+id+"')",'danger','trash'):''));
 }
 function saveMortgage(id){
-  var lender=val('re_mort_lender'),original=fnum('re_mort_original'),balance=fnum('re_mort_balance'),
+  var lender=val('re_mort_lender'),original=fnum('re_mort_original'),
     monthly=fnum('re_mort_monthly'),start=val('re_mort_start'),fixed=val('re_mort_fixed_end'),
-    maturity=val('re_mort_maturity'),day=Number(val('re_mort_day'));
+    maturity=val('re_mort_maturity'),day=Number(val('re_mort_day')),
+    referenceBalance=fnum('re_mort_balance'),referenceDate=val('re_mort_balance_date');
   if(!val('re_mort_prop')) return toast('请选择房产');
   if(!lender) return toast('请填写贷款机构');
   if(!isFinite(original)||original<=0) return toast('请输入初始贷款本金');
-  if(!isFinite(balance)||balance<0||balance>original) return toast('剩余贷款应在 0 与初始本金之间');
+  if(isFinite(referenceBalance)&&(referenceBalance<0||referenceBalance>original)) return toast('参考余额应在 0 与初始本金之间');
+  if(referenceDate&&!isDate(referenceDate)) return toast('参考余额日期格式不对');
   if(!isFinite(monthly)||monthly<=0) return toast('请输入每月扣款');
   if(!isDate(start)) return toast('请选择贷款开始日');
   if((fixed&&!isDate(fixed))||(maturity&&!isDate(maturity))) return toast('贷款日期格式不对');
@@ -5099,7 +5149,9 @@ function saveMortgage(id){
   var specialLimit=estateOptionalNumber('re_mort_special');
   if(specialLimit!=null&&(specialLimit<0||specialLimit>original)) return toast('Sondertilgung 年度上限应在 0 与初始本金之间');
   var mortgage={id:id||uid(),propertyId:val('re_mort_prop'),lender:lender,contractNo:val('re_mort_contract'),
-    originalPrincipal:estateOptionalNumber('re_mort_original'),currentBalance:estateOptionalNumber('re_mort_balance'),
+    originalPrincipal:estateOptionalNumber('re_mort_original'),
+    currentBalance:isFinite(referenceBalance)?Math.round(referenceBalance*100)/100:null,
+    referenceBalanceDate:isFinite(referenceBalance)?(referenceDate||today()):null,
     monthlyPayment:estateOptionalNumber('re_mort_monthly'),sollzinsPct:estateOptionalNumber('re_mort_sollzins'),
     effectiveRatePct:estateOptionalNumber('re_mort_effective'),initialTilgungPct:estateOptionalNumber('re_mort_tilgung'),
     startDate:start,fixedRateEnd:fixed||null,maturityDate:maturity||null,
