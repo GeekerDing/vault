@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://data-api.ecb.europa.eu; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://data-api.ecb.europa.eu; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; object-src 'none'">
 <title>Scrooge's Safe</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,8 +17,8 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20260726-2">
 <link rel="shortcut icon" type="image/png" href="assets/favicon-32.png?v=20260726-2">
 <link rel="manifest" href="assets/manifest.webmanifest?v=20260726-2">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="assets/vendor/phosphor/regular/style.css">
+<link rel="stylesheet" href="assets/vendor/phosphor/fill/style.css">
 <style>
 :root{
   color-scheme:light dark;
@@ -520,8 +520,6 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   .contract-stats .stat .v,.debt-summary-stats .stat .v,.cashflow-summary-stats .stat .v,.retirement-summary-stats .stat .v{font-size:21px}
   .coupon-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .estate-summary-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .estate-record-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .estate-record-actions .btn:first-child{grid-column:auto}
 }
 @media (max-width:899px){
   html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
@@ -541,14 +539,13 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
     border-right:1px solid var(--line)}
   header{padding-left:24px;padding-right:24px}
   main{max-width:none;margin-left:180px;padding:24px;display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
+    grid-template-columns:minmax(0,1fr);align-items:start;gap:16px}
   main>*{min-width:0}
   main>.today-head,main>.asset-strip,main>.chips,main>.meter-entry,main>.btnrow,main>.section-tabs,
   main>.retirement-heading,main>.retirement-disclaimer,main>.record-heading,
   main>.contract-export,main>.save-overview,main>.save-dashboard,main>.save-account-view,
   main>.overview-grid,main>.estate-heading,main>.estate-summary{grid-column:1/-1}
   .section-tabs{position:relative;top:auto;box-shadow:none}
-  .energy-contract-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .save-overview,.save-dashboard,.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
   .save-account-view{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:16px;align-items:start}
   .save-chart-grid{gap:16px}
@@ -578,12 +575,12 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 }
 @media (min-width:1200px){
   header{padding-left:28px;padding-right:28px}
-  main{margin-left:208px;padding:28px}
+  main{margin-left:208px;padding:28px;grid-template-columns:repeat(2,minmax(0,1fr))}
   nav{width:208px;padding-left:14px;padding-right:14px}
   .sheet{width:min(620px,100vw)}
 }
 @media (min-width:1320px){
-  main{grid-template-columns:repeat(3,minmax(0,1fr))}
+  main{grid-template-columns:repeat(2,minmax(0,1fr))}
   .save-overview{grid-template-columns:1fr 2fr}
   .save-dashboard{grid-template-columns:2fr 1fr}
   .save-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
@@ -592,6 +589,20 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
   main[data-view="retire"]>.card:nth-of-type(3){grid-column:span 2}
   main[data-view="estate"]>.estate-property-card{grid-column:span 1}
   .chart,.chart-y-axis{height:196px}
+}
+.energy-contract-stats,.estate-record .stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:16px}
+.energy-contract-stats .stat .v,.estate-record .stat .v{font-size:20px;overflow-wrap:normal}
+.energy-contract-stats .stat:first-child{grid-column:1/-1}
+.energy-contract-stats .stat:first-child .v{font-size:18px;overflow-wrap:anywhere}
+.estate-actions{grid-template-columns:repeat(auto-fit,minmax(min(100%,125px),1fr));gap:10px}
+.estate-actions .btn{white-space:normal;overflow-wrap:normal;min-height:44px;line-height:1.4}
+.estate-record-actions .btn:first-child{grid-column:1/-1}
+.date-control{box-sizing:border-box;inline-size:100%;min-inline-size:0}
+.check-row{display:flex;align-items:center;gap:10px;min-height:44px}
+.check-row input{width:20px;height:20px;flex:none}
+.saving .btn{cursor:progress}
+@media (min-width:900px) and (max-width:1199px){
+  .save-overview,.save-dashboard,.save-chart-grid,.overview-grid{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 </head>
@@ -657,7 +668,7 @@ function addYearsIso(d,n){
   return [year,String(month).padStart(2,'0'),String(Math.min(day,maxDay)).padStart(2,'0')].join('-');
 }
 function fmtDate(d){ if(!d) return '—'; var p=d.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; }
-function isDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d); }
+function isDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d)&&isFinite(toD(d))&&isoOf(toD(d))===d; }
 
 /** 结算年度起点：以 Ablesetermin (MM-DD) 为分界 */
 function periodStart(d, term){
@@ -668,12 +679,40 @@ function periodStart(d, term){
 }
 
 function n0(v){ return Math.round(v).toLocaleString('de-DE'); }
-function n2(v){ return v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function n2(v){ return v==null||!isFinite(v)?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function eur(v){ return (v<0?'−':'')+n2(Math.abs(v))+' €'; }
 function money(v,cur){ return (v<0?'−':'')+n2(Math.abs(v))+' '+(cur==='EUR'?'€':'¥'); }
 
 function sortByDate(a){ return a.slice().sort(function(x,y){ return x.date<y.date?-1:x.date>y.date?1:0; }); }
 function meterReadings(readings,id){ return sortByDate(readings.filter(function(r){return r.meterId===id;})); }
+function termsAt(record,date){
+  var periods=(record.terms||[]).filter(function(t){return t.date<=date;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+  return Object.assign({},record,periods.length?periods[periods.length-1].values:{});
+}
+function recordTerms(previous,next,keys,date){
+  next.terms=copyState(previous&&previous.terms||[]);
+  function values(record){var result={};keys.forEach(function(k){result[k]=record[k];});return result;}
+  if(!previous){next.terms=[{id:'term-'+date,date:date,values:values(next)}];return;}
+  if(!next.terms.length) next.terms.push({id:'term-initial',date:previous.startDate||previous.contractStartDate||'0001-01-01',values:values(previous)});
+  if(!syncSame(values(previous),values(next))){
+    next.terms=next.terms.filter(function(t){return t.date!==date;});
+    next.terms.push({id:'term-'+date,date:date,values:values(next)});
+  }
+  next.terms.sort(function(a,b){return a.date.localeCompare(b.date);});
+}
+function energyIntervalAmounts(from,to,netRaw,m){
+  var duration=daysBetween(from,to),result={kwh:0,cost:0,abschlag:0};
+  if(duration<=0) return result;
+  var cuts=[from,to].concat((m.terms||[]).map(function(t){return t.date;}).filter(function(d){return d>from&&d<to;}));
+  cuts=Array.from(new Set(cuts)).sort();
+  for(var i=1;i<cuts.length;i++){
+    var days=daysBetween(cuts[i-1],cuts[i]),term=termsAt(m,cuts[i-1]);
+    var kwh=netRaw*days/duration*term.factor;
+    result.kwh+=kwh;result.cost+=kwh*term.arbeitspreisCt/100;
+    result.abschlag+=Number(term.monthlyAbschlag||0)*days*12/365;
+  }
+  return result;
+}
 
 /** 每两次抄表之间的区间 */
 function intervals(rs,m){
@@ -682,9 +721,8 @@ function intervals(rs,m){
     var days=daysBetween(s[i-1].date,s[i].date);
     var safe=days>0?days:1;
     var netRaw=s[i].value-s[i-1].value;
-    var kwh=netRaw*m.factor;
-    var cost=kwh*m.arbeitspreisCt/100;
-    var absch=m.monthlyAbschlag*safe*12/365;
+    var amounts=energyIntervalAmounts(s[i-1].date,s[i].date,netRaw,m);
+    var kwh=amounts.kwh,cost=amounts.cost,absch=amounts.abschlag;
     out.push({from:s[i-1].date,to:s[i].date,days:days,netRaw:netRaw,kwh:kwh,
       avg30:kwh/safe*30, perDay:kwh/safe, cost:cost, abschlag:absch,
       delta:cost-absch, anomaly:netRaw<0, readingId:s[i].id, value:s[i].value});
@@ -695,7 +733,7 @@ function intervals(rs,m){
 /** 本结算年度累计 */
 function currentPeriod(rs,m,now){
   now=now||today();
-  var s=sortByDate(rs);
+  var s=sortByDate(rs).filter(function(r){return r.date<=now;});
   if(s.length<2) return null;
   var start=periodStart(now,m.ableseTermin);
   // 基准 = 不晚于结算年度起点的最后一次抄表；若全都晚于起点则取第一次
@@ -704,10 +742,11 @@ function currentPeriod(rs,m,now){
   if(bi<0) bi=0;
   var base=s[bi], last=s[s.length-1];
   if(base.date===last.date) return null;
-  var netRaw=last.value-base.value, kwh=netRaw*m.factor;
+  var netRaw=last.value-base.value,parts=intervals(s.slice(bi),m);
+  var kwh=parts.reduce(function(total,p){return total+p.kwh;},0);
   var days=Math.max(1,daysBetween(base.date,last.date));
-  var cost=kwh*m.arbeitspreisCt/100;
-  var paid=m.monthlyAbschlag*(daysBetween(base.date,now)/30.44);
+  var cost=parts.reduce(function(total,p){return total+p.cost;},0);
+  var paid=parts.reduce(function(total,p){return total+p.abschlag;},0);
   var perDay=kwh/days;
   return {start:base.date,end:last.date,kwh:kwh,netRaw:netRaw,cost:cost,
     abschlagPaid:paid, delta:cost-paid, days:days, avg30:perDay*30,
@@ -836,7 +875,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='512d09cef9f9';
+var APP_BUILD='b302ecd198bf';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -864,23 +903,23 @@ function toast(msg,actionLabel,actionFn){
   clearTimeout(toastT);
   toastT=setTimeout(function(){el.classList.remove('show');},actionLabel?5000:2600);
 }
-function removeWithUndo(collection,id,label){
+async function removeWithUndo(collection,id,label){
   var list=S&&S[collection], index=list?list.findIndex(function(x){return x.id===id;}):-1;
   if(index<0) return false;
   clearTimeout(undoT);
   pendingUndo={collection:collection,index:index,item:copyState(list[index])};
   list.splice(index,1);
-  save(); render();
+  if(!await save()) return false; render();
   toast('已删除'+(label?(' · '+label):''),'撤销',undoPendingDelete);
   undoT=setTimeout(function(){pendingUndo=null;},5200);
   return true;
 }
-function undoPendingDelete(){
+async function undoPendingDelete(){
   if(!pendingUndo||!S||!S[pendingUndo.collection]) return;
   clearTimeout(undoT);
   var undo=pendingUndo; pendingUndo=null;
   S[undo.collection].splice(Math.min(undo.index,S[undo.collection].length),0,undo.item);
-  save(); render(); toast('已恢复');
+  if(!await save()) return false; render(); toast('已恢复');
 }
 
 /* ================= 小工具 ================= */
@@ -987,7 +1026,7 @@ async function refreshApp(auto){
     return false;
   }
   setRefreshStatus('checking','正在刷新');
-  try{ await saveQueue; }catch(e){}
+  if(!await flushStorage()) return;
   updatePending=false;
   performAppReload(appUrlWith('_refresh'));
   return true;
@@ -1500,9 +1539,174 @@ function openQuickRecord(){
     '<button class="btn ghost" onclick="startCoupon()">'+icon('ticket')+'新增 Coupon</button>'+
     '<button class="btn ghost" onclick="startDebt()">'+icon('hand-coins')+'新增欠款</button>');
 }
+/* Encrypted records only. IndexedDB CAS protects concurrent tabs without holding
+   a transaction open while WebCrypto runs. Legacy storage remains readable. */
+var storageDbPromise=null, storageBase=null, storageIntent=null, storageFailure=null;
+var storageBusy=0, storageRotating=false, storageConflict=null;
+var FALLBACK_RECORD_KEY='scrooge.vault.record.v3';
+function openStorageDb(){
+  if(!storageDbPromise) storageDbPromise=new Promise(function(resolve,reject){
+    var request=indexedDB.open('scrooge-vault-storage',1);
+    request.onupgradeneeded=function(){request.result.createObjectStore('records');};
+    request.onsuccess=function(){resolve(request.result);};
+    request.onerror=function(){storageDbPromise=null;reject(request.error);};
+    request.onblocked=function(){reject(new Error('请关闭其他旧版金库页面后重试'));};
+  });
+  return storageDbPromise;
+}
+function legacyStorageRecord(){
+  var raw=localStorage.getItem(ENC_KEY);
+  return {revision:0,envelope:raw?JSON.parse(raw):null,
+    syncConfig:JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY)||'null'),history:[]};
+}
+async function readStorageRecord(){
+  if(typeof indexedDB==='undefined'){
+    return JSON.parse(localStorage.getItem(FALLBACK_RECORD_KEY)||'null')||legacyStorageRecord();
+  }
+  var db=await openStorageDb();
+  var record=await new Promise(function(resolve,reject){
+    var tx=db.transaction('records','readonly'),req=tx.objectStore('records').get('current');
+    req.onsuccess=function(){resolve(req.result);};
+    req.onerror=function(){reject(req.error);};
+  });
+  return record||legacyStorageRecord();
+}
+async function commitStorageRecord(expected,next){
+  next.revision=(expected.revision||0)+1;
+  next.savedAt=new Date().toISOString();
+  if(typeof indexedDB==='undefined'){
+    throw new Error('浏览器不支持事务存储，请使用最新版 Safari 或 Chrome');
+  }
+  var db=await openStorageDb();
+  await new Promise(function(resolve,reject){
+    var tx=db.transaction('records','readwrite'),store=tx.objectStore('records');
+    var req=store.get('current'),conflict=false;
+    req.onsuccess=function(){
+      if(((req.result&&req.result.revision)||0)!==expected.revision){conflict=true;tx.abort();return;}
+      store.put(next,'current');
+    };
+    tx.oncomplete=function(){resolve();};
+    tx.onabort=function(){reject(conflict?{storageRetry:true}:tx.error||new Error('本地事务未完成'));};
+    tx.onerror=function(){};
+  });
+  return next;
+}
+function sameKdf(a,b){return !!a&&!!b&&a.salt===b.salt&&a.iterations===b.iterations;}
+function storageAdopt(state,envelope){
+  storageBase=copyState(state);storageIntent=copyState(state);storageFailure=null;
+  vaultEnvelope=envelope;
+}
+function setStorageBusy(delta){
+  storageBusy=Math.max(0,storageBusy+delta);
+  document.body.classList.toggle('saving',storageBusy>0);
+  document.body.setAttribute('aria-busy',storageBusy?'true':'false');
+}
+document.addEventListener('click',function(event){
+  if((storageBusy||storageRotating)&&event.target.closest('#main,#sheetBody,#nav')){
+    event.preventDefault();event.stopImmediatePropagation();
+  }
+},true);
+async function readLocalEnvelope(){return (await readStorageRecord()).envelope;}
+async function persistSnapshot(snapshot,key,kdf,base){
+  var desired=assertState(JSON.parse(snapshot));
+  for(var attempt=0;attempt<8;attempt++){
+    var record=await readStorageRecord(),remote=null,merged=desired;
+    if(record.envelope){
+      if(!sameKdf(record.envelope.kdf,kdf)) throw new Error('主密码已在其他页面更改，请重新解锁');
+      remote=assertState(JSON.parse(await decryptTextWithKey(record.envelope,key)));
+      if(base){
+        var result=syncMergeStates(base,desired,remote,true);
+        if(result.conflicts.length){
+          storageConflict={local:copyState(desired),remote:copyState(remote),paths:result.conflicts};
+          throw new Error('其他页面修改了相同记录，请先核对冲突');
+        }
+        merged=result.state;
+      }
+    }
+    var env=await encryptTextWithKey(JSON.stringify(merged),key,kdf,'scrooge-vault-local');
+    var history=(record.history||[]).slice();
+    if(record.envelope) history.unshift({id:uid(),date:record.savedAt||new Date().toISOString(),envelope:record.envelope});
+    var next=Object.assign({},record,{envelope:env,history:history.slice(0,5)});
+    try{await commitStorageRecord(record,next);}
+    catch(e){if(e.storageRetry) continue;throw e;}
+    storageBase=copyState(merged);vaultEnvelope=env;
+    if(syncSame(storageIntent,JSON.parse(snapshot))) storageIntent=copyState(merged);
+    if(S&&syncSame(S,desired)) S=copyState(merged);
+    else if(S) S=syncMergeStates(desired,S,merged,true).state;
+    // Preserve the pre-migration ciphertext in IndexedDB before releasing space.
+    try{localStorage.removeItem(ENC_KEY);localStorage.removeItem(SYNC_CONFIG_KEY);}catch(e){}
+    return env;
+  }
+  throw new Error('其他页面正在保存，请稍后重试');
+}
+function save(){
+  if(!S||!vaultKey||!vaultEnvelope||storageRotating) return Promise.resolve(false);
+  if(storageFailure&&JSON.stringify(S)!==storageFailure.snapshot){
+    S=copyState(storageBase);openStorageRecovery();return Promise.resolve(false);
+  }
+  var snapshot=JSON.stringify(S),base=copyState(storageIntent||storageBase||S);
+  storageIntent=JSON.parse(snapshot);
+  var key=vaultKey,kdf=copyState(vaultEnvelope.kdf);
+  setStorageBusy(1);
+  saveQueue=saveQueue.catch(function(){}).then(async function(){
+    await persistSnapshot(snapshot,key,kdf,base);
+    storageFailure=null;
+    try{syncLocalChanged();}catch(e){toast('已保存到本机，同步状态暂时无法更新');}
+    return true;
+  }).catch(function(e){
+    storageFailure={message:e.message||'本地保存失败',snapshot:snapshot};
+    if(S&&JSON.stringify(S)===snapshot) S=copyState(storageBase||base);
+    storageIntent=copyState(storageBase||base);
+    toast('尚未保存：'+storageFailure.message,'处理',openStorageRecovery);
+    throw e;
+  }).finally(function(){setStorageBusy(-1);});
+  return saveQueue.catch(function(){return false;});
+}
+async function flushStorage(){
+  try{await saveQueue;}catch(e){}
+  if(storageFailure){openStorageRecovery();return false;}
+  return true;
+}
+function openStorageRecovery(){
+  if(!S) return openLockedRecovery();
+  openSheet('未保存的修改',card('<p class="c-red">'+esc(storageFailure?storageFailure.message:'请核对修改')+'</p>','red')+
+    btn('导出未保存内容的加密副本','exportUnsavedSnapshot()',null,'download-simple')+
+    (storageConflict?btn('核对其他页面的修改','openLocalConflict()','ghost'):btn('重试保存','retryFailedSave()','ghost'))+
+    btn('放弃未保存的修改','discardFailedSave()','danger'));
+}
+function discardFailedSave(){
+  if(!confirm('放弃上次尚未保存的修改？')) return;
+  S=copyState(storageBase);storageIntent=copyState(storageBase);storageFailure=null;storageConflict=null;
+  closeSheet();render();
+}
+async function retryFailedSave(){
+  if(!storageFailure) return;
+  S=assertState(JSON.parse(storageFailure.snapshot));
+  if(await save()){closeSheet();render();toast('修改已保存');}
+}
+async function exportUnsavedSnapshot(){
+  if(!storageFailure||!vaultKey) return;
+  var env=await encryptTextWithKey(storageFailure.snapshot,vaultKey,vaultEnvelope.kdf,'scrooge-vault-backup');
+  saveFile('Scrooge-unsaved-'+today()+'.vault.json',JSON.stringify(env),'application/json');
+  toast('已导出，使用当前主密码恢复');
+}
+function openLocalConflict(){
+  if(!storageConflict) return;
+  openSheet('其他页面有修改',conflictMarkup(storageConflict)+
+    btn('保留本页修改并合并其他记录','resolveLocalConflict(true)')+
+    btn('采用其他页面的冲突值','resolveLocalConflict(false)','ghost'));
+}
+async function resolveLocalConflict(preferLocal){
+  var c=storageConflict;if(!c) return;
+  var resolved=syncMergeStates(storageBase,c.local,c.remote,preferLocal).state;
+  storageBase=copyState(c.remote);storageIntent=copyState(c.remote);storageConflict=null;
+  storageFailure=null;
+  S=resolved;
+  if(await save()){closeSheet();render();toast('冲突已处理');}
+}
 /* ================= 加密存储与设备解锁 ================= */
 var KDF_ITERATIONS=310000;
-var vaultKey=null, vaultEnvelope=null, pendingState=null;
+var vaultKey=null, vaultEnvelope=null, pendingState=null, volatileRecovery=null;
 var saveQueue=Promise.resolve(), hiddenAt=0, vaultStarted=false;
 
 function copyState(x){ return JSON.parse(JSON.stringify(x)); }
@@ -1528,11 +1732,11 @@ function subtle(){
   if(!window.crypto || !crypto.subtle) throw new Error('当前浏览器不支持加密，请使用最新版 Safari 或 Chrome');
   return crypto.subtle;
 }
-async function deriveVaultKey(password,salt,iterations){
+async function deriveVaultKey(password,salt,iterations,extractable){
   var raw=await subtle().importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
   return subtle().deriveKey(
     {name:'PBKDF2',salt:salt,iterations:iterations||KDF_ITERATIONS,hash:'SHA-256'},
-    raw,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    raw,{name:'AES-GCM',length:256},!!extractable,['encrypt','decrypt']);
 }
 async function encryptTextWithKey(text,key,kdf,format){
   var iv=randomBytes(12);
@@ -1566,9 +1770,12 @@ function assertState(p){
   if(p.specialRepayments==null) p.specialRepayments=[];
   if(p.tenancies==null) p.tenancies=[];
   if(p.rentPayments==null) p.rentPayments=[];
+  if(p.mortgageExceptions==null) p.mortgageExceptions=[];
+  if(p.rentExceptions==null) p.rentExceptions=[];
   if(!Array.isArray(p.coupons)||!Array.isArray(p.debts)||
      !Array.isArray(p.mortgages)||!Array.isArray(p.mortgagePayments)||
-     !Array.isArray(p.specialRepayments)||!Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments))
+     !Array.isArray(p.specialRepayments)||!Array.isArray(p.tenancies)||!Array.isArray(p.rentPayments)||
+     !Array.isArray(p.mortgageExceptions)||!Array.isArray(p.rentExceptions))
     throw new Error('家庭记录结构不完整');
   p.mortgages.forEach(function(mortgage){
     if(mortgage.specialRepaymentLimit==null&&mortgage.specialRepaymentPct!=null&&
@@ -1625,26 +1832,6 @@ function freshKdf(){
   return {iterations:KDF_ITERATIONS,salt:bytesToB64(randomBytes(16))};
 }
 
-async function persistSnapshot(snapshot,key,kdf){
-  var env=await encryptTextWithKey(snapshot,key,kdf,'scrooge-vault-local');
-  localStorage.setItem(ENC_KEY,JSON.stringify(env));
-  vaultEnvelope=env;
-  return env;
-}
-function save(){
-  if(!S || !vaultKey || !vaultEnvelope) return Promise.resolve(false);
-  if(typeof syncLocalChanged==='function') syncLocalChanged();
-  var snapshot=JSON.stringify(S), key=vaultKey;
-  var kdf={iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
-  saveQueue=saveQueue.catch(function(){}).then(function(){
-    return persistSnapshot(snapshot,key,kdf);
-  }).catch(function(e){
-    toast('加密保存失败：'+e.message);
-    throw e;
-  });
-  return saveQueue;
-}
-
 function lockUi(title,text,fields,actions){
   document.body.classList.add('locked');
   document.getElementById('lockTitle').textContent=title;
@@ -1667,22 +1854,26 @@ function showSetup(){
     '<button class="btn" onclick="setupVault()">加密并进入</button>');
 }
 function hasDeviceUnlock(){
-  try{ return !!JSON.parse(localStorage.getItem(DEVICE_KEY)||'null'); }catch(e){ return false; }
+  try{ var cfg=JSON.parse(localStorage.getItem(DEVICE_KEY)||'null');return !!cfg&&cfg.version===2; }catch(e){ return false; }
 }
 function showUnlock(){
   var device=hasDeviceUnlock()
     ? '<button class="btn ghost" onclick="unlockWithDevice()">使用 Face ID / 设备解锁</button>' : '';
   lockUi('打开 Scrooge\'s Safe','数据已在此设备加密。请输入主密码，或使用已启用的设备认证。',
     passwordInput('unlock_pw','主密码','unlockWithPassword()'),
-    device+'<button class="btn" onclick="unlockWithPassword()">用主密码解锁</button>');
+    device+'<button class="btn" onclick="unlockWithPassword()">用主密码解锁</button>'+
+    '<button class="btn ghost" onclick="openLockedRecovery()">备份与恢复</button>');
   setTimeout(function(){ var e=document.getElementById('unlock_pw'); if(e)e.focus(); },50);
 }
 function unlockUi(){
   document.body.classList.remove('locked');
+  document.getElementById('lockFields').innerHTML='';
   setLockError('');
   render();
   if(typeof syncUnlocked==='function') syncUnlocked();
-  if(typeof retirementMaybeCelebrateOnUnlock==='function')
+  if(storageFailure) toast('上次有修改未写入，请先处理','处理',openStorageRecovery);
+  else if(volatileRecovery) toast('上次未保存的副本需要旧主密码恢复','导出',exportLockedCopy);
+  else if(typeof retirementMaybeCelebrateOnUnlock==='function')
     setTimeout(retirementMaybeCelebrateOnUnlock,60);
 }
 async function setupVault(){
@@ -1695,6 +1886,7 @@ async function setupVault(){
     vaultEnvelope={kdf:kdf};
     S=assertState(pendingState||copyState(SEED));
     await persistSnapshot(JSON.stringify(S),vaultKey,kdf);
+    storageAdopt(S,vaultEnvelope);
     localStorage.removeItem(KEY);
     pendingState=null;
     unlockUi();
@@ -1706,26 +1898,47 @@ async function unlockWithPassword(){
   if(!p) return setLockError('请输入主密码');
   setLockError('正在解密…');
   try{
-    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var env=await readLocalEnvelope();
     var key=await keyForEnvelope(p,env);
     var state=assertState(JSON.parse(await decryptTextWithKey(env,key)));
     vaultEnvelope=env; vaultKey=key; S=Object.assign({},SEED,state);
+    storageAdopt(S,env);
+    if(!(await readStorageRecord()).revision) await persistSnapshot(JSON.stringify(S),key,env.kdf,S);
+    await recoverVolatile(key,env);
     unlockUi();
   }catch(e){
     vaultKey=null; S=null;
-    setLockError('密码不正确，或加密数据已损坏');
+    setLockError(e.name==='OperationError'?'密码不正确，或加密数据已损坏':'暂时无法解锁：'+e.message+'。原密文仍保留。');
   }
 }
-async function lockVault(){
+async function lockVault(automatic){
   if(!vaultStarted) return;
+  if(storageRotating) return;
+  try{await saveQueue;}catch(e){}
+  if(storageFailure){
+    if(!automatic){openStorageRecovery();return;}
+    volatileRecovery=await encryptTextWithKey(storageFailure.snapshot,vaultKey,vaultEnvelope.kdf,'scrooge-vault-backup');
+    storageFailure=null;
+  }
   if(typeof syncLocked==='function') syncLocked();
-  try{ await saveQueue; }catch(e){}
   closeSheet();
+  document.getElementById('sheetBody').innerHTML='';
+  clearTimeout(undoT);pendingUndo=null;bankImportRows=[];bankImportFileName='';bankImportUndoIds=[];couponImageDraft=null;
+  if(ocrPreviewUrl) URL.revokeObjectURL(ocrPreviewUrl);
+  if(ocrWindowPreviewUrl) URL.revokeObjectURL(ocrWindowPreviewUrl);
+  ocrPreviewUrl='';ocrWindowPreviewUrl='';
+  hideRetirementCelebration();document.getElementById('retirementCelebrationAmount').textContent='';
   clearChartState();
   document.getElementById('main').innerHTML='';
   document.getElementById('nav').innerHTML='';
   vaultKey=null; S=null;
+  storageBase=null;storageIntent=null;storageConflict=null;familyConflict=null;
   showUnlock();
+}
+async function recoverVolatile(key,env){
+  if(!volatileRecovery) return;
+  if(!sameKdf(volatileRecovery.kdf,env.kdf)) return;
+  storageFailure={message:'上次修改尚未写入本机',snapshot:await decryptTextWithKey(volatileRecovery,key)};volatileRecovery=null;
 }
 
 async function initVault(){
@@ -1734,20 +1947,20 @@ async function initVault(){
   document.body.classList.add('locked');
   document.addEventListener('visibilitychange',function(){
     if(document.hidden) hiddenAt=Date.now();
-    else if(hiddenAt && Date.now()-hiddenAt>5*60*1000) lockVault();
+    else if(hiddenAt && Date.now()-hiddenAt>5*60*1000) lockVault(true);
   });
-  var raw=localStorage.getItem(ENC_KEY);
-  if(raw){
-    try{
-      vaultEnvelope=JSON.parse(raw);
+  try{
+    await removeLegacyDeviceUnlock();
+    vaultEnvelope=await readLocalEnvelope();
+    if(vaultEnvelope){
       if(vaultEnvelope.format!=='scrooge-vault-local') throw new Error('格式不符');
       showUnlock();
       return;
-    }catch(e){
-      lockUi('无法打开 Scrooge\'s Safe','本地加密数据格式异常。请从加密备份恢复。','','');
-      setLockError(e.message);
-      return;
     }
+  }catch(e){
+    lockUi('无法打开 Scrooge\'s Safe','本地数据暂时无法读取。请保留此设备的数据。','',
+      '<button class="btn" onclick="openLockedRecovery()">备份与恢复</button>');
+    setLockError(e.message);return;
   }
   try{
     var plain=localStorage.getItem(KEY);
@@ -1796,20 +2009,34 @@ async function changeMasterPassword(){
   var old=val('old_pw'), next=val('new_pw'), again=val('new_pw2');
   if(next.length<8) return toast('新主密码至少需要 8 位');
   if(next!==again) return toast('两次输入的新密码不一致');
+  if(storageRotating||!await flushStorage()) return;
+  storageRotating=true;
+  syncLocked();
   try{
-    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var record=await readStorageRecord(),env=record.envelope;
     var oldKey=await keyForEnvelope(old,env);
     await decryptTextWithKey(env,oldKey);
     var syncConfig=typeof readSyncConfig==='function' ? await readSyncConfig(oldKey) : null;
     var kdf=freshKdf();
     var nextKey=await deriveVaultKey(next,b64ToBytes(kdf.salt),kdf.iterations);
-    await persistSnapshot(JSON.stringify(S),nextKey,kdf);
-    if(syncConfig&&typeof writeSyncConfig==='function')
-      await writeSyncConfig(syncConfig,nextKey,kdf);
+    var latest=assertState(JSON.parse(await decryptTextWithKey(env,oldKey)));
+    var merged=syncMergeStates(storageBase,S,latest,true);
+    if(merged.conflicts.length) throw new Error('其他页面有冲突修改，请先保存并核对');
+    var nextEnv=await encryptTextWithKey(JSON.stringify(merged.state),nextKey,kdf,'scrooge-vault-local');
+    var nextConfig=syncConfig?await encryptTextWithKey(JSON.stringify(syncConfig),nextKey,kdf,'scrooge-vault-sync-config'):null;
+    var history=[];
+    for(var point of (record.history||[])){
+      history.push(Object.assign({},point,{envelope:await encryptTextWithKey(
+        await decryptTextWithKey(point.envelope,oldKey),nextKey,kdf,'scrooge-vault-local')}));
+    }
+    await commitStorageRecord(record,Object.assign({},record,{envelope:nextEnv,syncConfig:nextConfig,history:history}));
     vaultKey=nextKey;
-    if(hasDeviceUnlock()) await storeDeviceKey(nextKey);
+    S=merged.state;storageAdopt(S,nextEnv);
+    localStorage.removeItem(DEVICE_KEY);
     closeSheet(); toast('主密码已更改');
-  }catch(e){ toast('当前主密码不正确'); }
+  }catch(e){ toast(e.storageRetry?'其他页面正在保存，请重试':
+    e.name==='OperationError'?'当前主密码不正确':'密码未更改：'+e.message); }
+  finally{storageRotating=false;syncUnlocked();}
 }
 
 function openDeviceDb(){
@@ -1824,19 +2051,37 @@ async function withDeviceStore(mode,fn){
   var db=await openDeviceDb();
   return new Promise(function(resolve,reject){
     var tx=db.transaction('keys',mode), store=tx.objectStore('keys'), req=fn(store);
-    req.onsuccess=function(){ resolve(req.result); };
     req.onerror=function(){ reject(req.error); };
-    tx.oncomplete=function(){ db.close(); };
+    tx.oncomplete=function(){ db.close();resolve(req.result); };
+    tx.onabort=function(){db.close();reject(tx.error||new Error('设备密钥清理未完成'));};
   });
 }
-function storeDeviceKey(key){ return withDeviceStore('readwrite',function(s){return s.put(key,'vault-key');}); }
-function readDeviceKey(){ return withDeviceStore('readonly',function(s){return s.get('vault-key');}); }
 function deleteDeviceKey(){ return withDeviceStore('readwrite',function(s){return s.delete('vault-key');}); }
+async function removeLegacyDeviceUnlock(){
+  var raw=localStorage.getItem(DEVICE_KEY),cfg;
+  try{cfg=JSON.parse(raw||'null');}catch(e){}
+  if(cfg&&cfg.version!==2) localStorage.removeItem(DEVICE_KEY);
+  if(typeof indexedDB!=='undefined') await deleteDeviceKey();
+}
+async function devicePrf(credentialId,salt){
+  var assertion=await navigator.credentials.get({publicKey:{challenge:randomBytes(32),
+    allowCredentials:[{type:'public-key',id:b64UrlBytes(credentialId)}],
+    extensions:{prf:{eval:{first:b64ToBytes(salt)}}},userVerification:'required',timeout:60000}});
+  if(!assertion||b64Url(new Uint8Array(assertion.rawId))!==credentialId) throw new Error('设备凭据不匹配');
+  var prf=assertion.getClientExtensionResults().prf;
+  if(!prf||!prf.results||!prf.results.first) throw new Error('此设备不支持安全设备解锁，请使用主密码');
+  return subtle().importKey('raw',prf.results.first,'AES-GCM',false,['wrapKey','unwrapKey']);
+}
 
 async function enableDeviceUnlock(){
   if(!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials)
     return toast('设备解锁需要 HTTPS 和最新版 Safari/Chrome');
   try{
+    if(!await flushStorage()) return;
+    var env=await readLocalEnvelope(),password=val('old_pw');
+    if(!password) return toast('请先填写上方的当前主密码');
+    var wrappingSource=await deriveVaultKey(password,b64ToBytes(env.kdf.salt),env.kdf.iterations,true);
+    await decryptTextWithKey(env,wrappingSource);
     var userId=randomBytes(16);
     var cred=await navigator.credentials.create({publicKey:{
       challenge:randomBytes(32),
@@ -1845,12 +2090,16 @@ async function enableDeviceUnlock(){
       pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',
         residentKey:'discouraged'},
-      timeout:60000,attestation:'none'
+      timeout:60000,attestation:'none',extensions:{prf:{}}
     }});
-    await storeDeviceKey(vaultKey);
-    localStorage.setItem(DEVICE_KEY,JSON.stringify({
-      credentialId:b64Url(new Uint8Array(cred.rawId)),userId:b64Url(userId)
-    }));
+    if(!cred) throw new Error('设备认证已取消');
+    var cfg={version:2,credentialId:b64Url(new Uint8Array(cred.rawId)),
+      prfSalt:bytesToB64(randomBytes(32)),iv:bytesToB64(randomBytes(12)),kdfSalt:env.kdf.salt};
+    var wrappingKey=await devicePrf(cfg.credentialId,cfg.prfSalt);
+    cfg.wrappedKey=bytesToB64(new Uint8Array(await subtle().wrapKey('raw',wrappingSource,wrappingKey,
+      {name:'AES-GCM',iv:b64ToBytes(cfg.iv),additionalData:new TextEncoder().encode(location.origin+'|'+cfg.kdfSalt)})));
+    localStorage.setItem(DEVICE_KEY,JSON.stringify(cfg));
+    await deleteDeviceKey();
     closeSheet(); toast('设备解锁已启用');
   }catch(e){
     toast(e.name==='NotAllowedError'?'设备认证已取消':'无法启用设备解锁：'+e.message);
@@ -1860,18 +2109,16 @@ async function unlockWithDevice(){
   setLockError('正在请求设备认证…');
   try{
     var cfg=JSON.parse(localStorage.getItem(DEVICE_KEY));
-    var assertion=await navigator.credentials.get({publicKey:{
-      challenge:randomBytes(32),
-      allowCredentials:[{type:'public-key',id:b64UrlBytes(cfg.credentialId)}],
-      userVerification:'required',timeout:60000
-    }});
-    if(!assertion || b64Url(new Uint8Array(assertion.rawId))!==cfg.credentialId)
-      throw new Error('设备凭据不匹配');
-    var key=await readDeviceKey();
-    if(!key) throw new Error('设备密钥已丢失，请使用主密码');
-    var env=JSON.parse(localStorage.getItem(ENC_KEY));
+    var env=await readLocalEnvelope();
+    if(!cfg||cfg.version!==2||cfg.kdfSalt!==env.kdf.salt) throw new Error('请重新启用设备解锁');
+    var wrappingKey=await devicePrf(cfg.credentialId,cfg.prfSalt);
+    var key=await subtle().unwrapKey('raw',b64ToBytes(cfg.wrappedKey),wrappingKey,
+      {name:'AES-GCM',iv:b64ToBytes(cfg.iv),additionalData:new TextEncoder().encode(location.origin+'|'+cfg.kdfSalt)},
+      'AES-GCM',false,['encrypt','decrypt']);
     var state=assertState(JSON.parse(await decryptTextWithKey(env,key)));
     vaultEnvelope=env; vaultKey=key; S=Object.assign({},SEED,state);
+    storageAdopt(S,env);
+    await recoverVolatile(key,env);
     unlockUi();
   }catch(e){
     setLockError(e.name==='NotAllowedError'?'设备认证已取消':'设备解锁失败，请使用主密码');
@@ -1894,7 +2141,14 @@ var syncStatus={kind:'off',text:'家庭同步未设置',detail:''};
 function syncClone(value){
   return value===undefined?undefined:JSON.parse(JSON.stringify(value));
 }
-function syncSame(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function syncSame(a,b){
+  if(a===b) return true;
+  if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b)) return false;
+  var keys=Object.keys(a);
+  return keys.length===Object.keys(b).length&&keys.every(function(k){
+    return Object.prototype.hasOwnProperty.call(b,k)&&syncSame(a[k],b[k]);
+  });
+}
 function syncObject(value){
   return value!==null&&typeof value==='object'&&!Array.isArray(value);
 }
@@ -1915,6 +2169,10 @@ function syncMergeValue(base,local,remote,path,context){
   if(syncSame(local,remote)) return syncClone(local);
   if(syncSame(local,base)) return syncClone(remote);
   if(syncSame(remote,base)) return syncClone(local);
+  if(!base&&local&&remote&&local.importIdentity&&local.importIdentity===remote.importIdentity&&
+    local.accountId===remote.accountId&&local.date===remote.date&&local.amount===remote.amount&&local.note===remote.note){
+    return syncClone(String(local.importedAt)<String(remote.importedAt)?local:remote);
+  }
 
   if(syncIdArrays([base,local,remote])){
     var maps=[{}, {}, {}], order=[], seen={};
@@ -1973,9 +2231,8 @@ function writeSyncMeta(patch){
   return meta;
 }
 async function readSyncConfig(key){
-  var raw=localStorage.getItem(SYNC_CONFIG_KEY);
-  if(!raw) return null;
-  var env=JSON.parse(raw), useKey=key||vaultKey;
+  var env=(await readStorageRecord()).syncConfig,useKey=key||vaultKey;
+  if(!env) return null;
   if(!useKey||env.format!=='scrooge-vault-sync-config')
     throw new Error('本机同步设置无法解密');
   return JSON.parse(await decryptTextWithKey(env,useKey));
@@ -1985,11 +2242,20 @@ async function writeSyncConfig(config,key,kdf){
   var useKdf=kdf||{iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
   var env=await encryptTextWithKey(JSON.stringify(config),useKey,useKdf,
     'scrooge-vault-sync-config');
-  localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(env));
+  await storeSyncConfigEnvelope(env,useKdf);
   writeSyncMeta({
     configured:true,auto:config.auto!==false,repo:config.repo,branch:config.branch,
     deviceName:config.deviceName
   });
+}
+async function storeSyncConfigEnvelope(env,kdf){
+  for(var i=0;i<8;i++){
+    var record=await readStorageRecord();
+    if(!sameKdf(record.envelope&&record.envelope.kdf,kdf)) throw new Error('主密码已更改，请重新解锁');
+    try{await commitStorageRecord(record,Object.assign({},record,{syncConfig:env}));return;}
+    catch(e){if(!e.storageRetry) throw e;}
+  }
+  throw new Error('其他页面正在保存，请重试同步设置');
 }
 function syncDeviceId(){
   return b64Url(randomBytes(18));
@@ -2212,7 +2478,7 @@ function syncAssertSession(session){
 }
 async function syncOnce(config,session){
   syncAssertSession(session);
-  await saveQueue.catch(function(){});
+  if(!await flushStorage()) throw new Error('请先处理本机尚未保存的修改');
   syncAssertSession(session);
   var meta=readSyncMeta(), startVersion=syncEditVersion;
   var local=syncClone(S), cloud=await syncReadCloud(config);
@@ -2240,6 +2506,11 @@ async function syncOnce(config,session){
   var remoteChanged=new Date(remotePayload.updatedAt||0).getTime();
   var merged=syncMergeStates(config.baseState||null,local,remotePayload.state,
     localChanged>=remoteChanged);
+  if(merged.conflicts.length){
+    familyConflict={base:syncClone(config.baseState),local:local,remote:remotePayload.state,
+      paths:merged.conflicts,revision:remotePayload.revision};
+    throw new Error('存在同时修改的记录，请到家庭同步中核对冲突');
+  }
   if(syncEditVersion!==startVersion) throw {retry:true};
 
   var needsUpload=!syncSame(merged.state,remotePayload.state);
@@ -2267,7 +2538,7 @@ async function syncOnce(config,session){
 }
 async function runSync(options){
   options=options||{};
-  if(!S||!vaultKey) return false;
+  if(!S||!vaultKey||storageRotating) return false;
   var meta=readSyncMeta();
   if(!meta.configured){
     if(!options.quiet) openSyncSettings();
@@ -2306,10 +2577,7 @@ async function runSync(options){
   var changed=!syncSame(S,stateToApply);
   if(changed){
     S=assertState(Object.assign({},SEED,syncClone(stateToApply)));
-    await saveQueue.catch(function(){});
-    syncAssertSession(session);
-    var kdf={iterations:vaultEnvelope.kdf.iterations,salt:vaultEnvelope.kdf.salt};
-    await persistSnapshot(JSON.stringify(S),vaultKey,kdf);
+    if(!await save()) throw new Error('同步结果尚未保存到本机');
     render();
   }
   config=result.config;
@@ -2335,7 +2603,7 @@ function syncNow(options){
     var message=e&&e.message?e.message:'同步失败';
     writeSyncMeta({lastError:message});
     setSyncStatus('error','同步失败',message);
-    if(!options||!options.quiet) toast('同步失败：'+message);
+    if(!options||!options.quiet) toast('同步失败：'+message,familyConflict?'核对':null,familyConflict?openFamilyConflict:null);
     return false;
   }).finally(function(){
     if(syncRunning===run){
@@ -2359,7 +2627,8 @@ function syncSettingsStatusCard(){
       esc(syncStatus.detail||syncTimeLabel(meta.lastSyncAt))+'</p></div>'+
       '<span class="sync-state '+esc(syncStatus.kind)+'" id="sync_status_state">'+
         icon(syncStatusIcon(syncStatus.kind))+'</span></div>'+
-    (meta.configured?btn('立即同步','syncNow({quiet:false})','ghost sm','arrows-clockwise'):'')
+    (meta.configured?btn('立即同步','syncNow({quiet:false})','ghost sm','arrows-clockwise'):'')+
+    (familyConflict?btn('核对冲突','openFamilyConflict()','danger'):'')
   );
 }
 function renderSyncSettings(config){
@@ -2423,8 +2692,10 @@ async function saveSyncSettings(){
     await syncNow({quiet:false});
   }catch(e){ toast(e.message); }
 }
-function disableFamilySync(){
+async function disableFamilySync(){
   if(!confirm('停用这台设备的家庭同步？本机数据和云端密文都不会被删除。')) return;
+  syncLocked();
+  try{await storeSyncConfigEnvelope(null,vaultEnvelope.kdf);}catch(e){return toast(e.message);}
   localStorage.removeItem(SYNC_CONFIG_KEY);
   localStorage.removeItem(SYNC_META_KEY);
   syncClearTimers();
@@ -2514,6 +2785,7 @@ function parseBankMatrix(rows){
   var amountCol=pickColumn(headers,[/^betrag$/,/\bbetrag\b/,/^umsatz$/,/\bamount\b/]);
   var debitCol=pickColumn(headers,[/^soll$/,/\bdebit\b/]);
   var creditCol=pickColumn(headers,[/^haben$/,/\bcredit\b/]);
+  var refCol=pickColumn(headers,[/^transaktions ?id$/,/^umsatz ?id$/,/^transaction ?id$/]);
   if(dateCol<0 || (amountCol<0&&debitCol<0&&creditCol<0))
     throw new Error('账单列无法识别');
   var noteCols=[];
@@ -2534,9 +2806,9 @@ function parseBankMatrix(rows){
       if(isFinite(credit)&&credit!==0) amount=Math.abs(credit);
       else if(isFinite(debit)&&debit!==0) amount=-Math.abs(debit);
     }
-    if(!date||!isFinite(amount)||amount===0) return;
+    if(!isDate(date)||!isFinite(amount)||amount===0) return;
     var note=uniqueText(noteCols.map(function(i){return r[i];}));
-    out.push({date:date,amount:amount,note:note||'银行账单导入',selected:true});
+    out.push({date:date,amount:amount,note:note||'银行账单导入',bankId:refCol>=0?String(r[refCol]||'').trim():'',selected:true});
   });
   if(!out.length) throw new Error('没有找到可导入的交易');
   return out;
@@ -2560,31 +2832,35 @@ function shortHash(s){
   return (h>>>0).toString(16).padStart(8,'0');
 }
 function markBankDuplicates(){
-  var accountId=val('bank_acc'), seen={};
+  var accountId=val('bank_acc'), seen={},occurrences={};
   S.txs.forEach(function(t){
-    seen[importSignature(t.accountId,t)]=1;
-    if(t.importRef) seen[t.importRef]=1;
+    var key=importSignature(t.accountId,t);seen[key]=(seen[key]||0)+1;
+    if(t.importIdentity) seen[t.importIdentity]=true;
   });
   bankImportRows.forEach(function(r){
     var wasDuplicate=r.duplicate;
     r.signature=importSignature(accountId,r);
     r.importRef='bank-'+shortHash(r.signature);
-    r.duplicate=!!(seen[r.signature]||seen[r.importRef]);
+    occurrences[r.signature]=(occurrences[r.signature]||0)+1;
+    r.importIdentity=r.bankId?accountId+'|bank-id|'+r.bankId:r.signature+'|occurrence|'+occurrences[r.signature];
+    r.duplicate=!!seen[r.importIdentity]||(!r.bankId&&(seen[r.signature]||0)>=occurrences[r.signature]);
+    if(r.bankId) seen[r.importIdentity]=true;
     if(r.duplicate) r.selected=false;
     else if(wasDuplicate) r.selected=true;
-    seen[r.signature]=1;
   });
 }
 function openBankImport(){
   bankImportRows=[];
   bankImportFileName='';
   bankImportUndoIds=[];
-  var selected=accSel==='all'?(S.accounts.filter(function(a){return a.id==='ing';})[0]||S.accounts[0]).id:accSel;
+  var available=S.accounts.filter(function(a){return !a.archived;});
+  if(!available.length) return openAccountManager();
+  var selected=accSel==='all'?available[0].id:accSel;
   openSheet('导入银行账单',
     card('<h2 class="h2">ING / 银行 CSV</h2><p class="dim" style="margin:0;line-height:1.6">'+
       '从网上银行导出 CSV 后在这里选择。账单只在当前设备解析，导入前可核对，重复记录会自动跳过。</p>','blue')+
     field({id:'bank_acc',label:'导入到账户',type:'select',val:selected,
-      opts:S.accounts.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
+      opts:available.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
     fileField({id:'bank_file',label:'选择 CSV 账单',accept:'.csv,text/csv',
       onchange:'readBankFile(this)',hint:'支持德式日期与小数格式，也兼容常见的逗号分隔 CSV。'})+
     '<div id="bank_preview"><p class="empty">尚未选择文件</p></div>');
@@ -2613,7 +2889,7 @@ function renderBankPreview(){
   var account=S.accounts.filter(function(a){return a.id===val('bank_acc');})[0];
   var rows=bankImportRows.slice(0,100).map(function(r,i){
     return '<label class="import-row"><input type="checkbox" '+(r.selected?'checked ':'')+
-      (r.duplicate?'disabled ':'')+'onchange="toggleBankRow('+i+',this.checked)">'+
+      'onchange="toggleBankRow('+i+',this.checked)">'+
       '<span class="dim">'+fmtDate(r.date)+'</span><span class="note">'+esc(r.note)+
       (r.duplicate?'<br><span class="c-amber">重复，已跳过</span>':'')+'</span>'+
       '<b class="tnum '+(r.amount<0?'c-red':'c-green')+'">'+
@@ -2627,18 +2903,37 @@ function renderBankPreview(){
     btn('导入已选记录','importBankRows()')+
     btn('查找并撤销这份 CSV 的已导入记录','previewBankImportUndo()','ghost','arrow-counter-clockwise'));
 }
-function toggleBankRow(i,checked){ if(bankImportRows[i]&&!bankImportRows[i].duplicate) bankImportRows[i].selected=checked; }
+function toggleBankRow(i,checked){
+  var r=bankImportRows[i];if(!r) return;
+  if(r.duplicate&&checked){
+    if(!confirm('这条记录疑似已存在。确认它是另一笔独立交易？')) return renderBankPreview();
+    r.distinctId=r.distinctId||uid();
+  }
+  r.selected=checked;r.force=checked&&!!r.distinctId;
+}
+async function bankTransactionId(identity){
+  return 'bank-v2-'+Array.from(new Uint8Array(await subtle().digest('SHA-256',new TextEncoder().encode(identity))))
+    .map(function(v){return v.toString(16).padStart(2,'0');}).join('');
+}
 async function importBankRows(){
   var accountId=val('bank_acc');
+  var account=S.accounts.find(function(a){return a.id===accountId;});
+  if(!account||account.archived) return toast('请选择一个可用账户');
   markBankDuplicates();
-  var chosen=bankImportRows.filter(function(r){return r.selected&&!r.duplicate;});
+  var chosen=bankImportRows.filter(function(r){return r.force||(r.selected&&!r.duplicate);});
   if(!chosen.length) return toast('没有可导入的记录');
+  var tail=(bankImportFileName.match(/DE\d{20}/i)||[''])[0].slice(-4);
+  if(tail&&account.ibanLast4&&tail!==account.ibanLast4) return toast('账单 IBAN 尾号与账户不符，请更正目标账户');
+  if(!confirm('将 '+chosen.length+' 条记录导入「'+account.name+'」（'+account.currency+'）？')) return;
   var batchId='bank-batch-'+uid(), importedAt=new Date().toISOString();
-  chosen.forEach(function(r){
-    S.txs.push({id:uid(),accountId:accountId,date:r.date,amount:r.amount,note:r.note,
+  var pending=[];
+  for(var r of chosen){
+    var identity=r.importIdentity+(r.force?'|distinct|'+r.distinctId:'');
+    pending.push({id:await bankTransactionId(identity),importIdentity:identity,accountId:accountId,date:r.date,amount:r.amount,note:r.note,
       importRef:r.importRef,importBatchId:batchId,importFileName:bankImportFileName,importedAt:importedAt});
-  });
-  await save();
+  }
+  S.txs=S.txs.concat(pending);
+  if(!await save()) return false;
   closeSheet(); render(); toast('已导入 '+chosen.length+' 条账单记录');
 }
 
@@ -2684,7 +2979,7 @@ async function undoBankImportMatches(){
   S.txs=S.txs.filter(function(tx){return !idSet[tx.id];});
   var removed=before-S.txs.length;
   if(!removed) return toast('这些记录已经撤销');
-  await save();
+  if(!await save()) return false;
   bankImportUndoIds=[]; bankImportRows=[]; bankImportFileName='';
   closeSheet(); render(); toast('已撤销 '+removed+' 条银行导入记录');
 }
@@ -3182,6 +3477,7 @@ function viewMeter(kind){
   var ms=S.meters.filter(function(m){return m.kind===kind;});
   var m=pickMeter(kind);
   if(!m) return card('<p class="empty">尚未配置表计</p>');
+  m=termsAt(m,today());
   var unit = m.unit==='m3' ? 'm³' : 'kWh';
   var rs=meterReadings(S.readings,m.id), iv=intervals(rs,m), per=currentPeriod(rs,m);
   var last=rs[rs.length-1], li=iv[iv.length-1];
@@ -3228,7 +3524,7 @@ function viewMeter(kind){
 
   if(iv.length){
     out+=card(h2('每期月均消耗 (kWh / 30天)')+barChart(
-      iv.map(function(i){return {date:i.to,value:Math.max(0,Math.round(i.avg30))};}),
+      iv.map(function(i){return {date:i.to,value:Math.round(i.avg30)};}),
       function(v){return n0(v)+' kWh';},null,null,'kWh','每期月均消耗'));
     out+=card(h2('每期费用 (€)')+barChart(
       iv.map(function(i){return {date:i.to,value:Math.round(i.cost)};}),
@@ -3285,7 +3581,7 @@ function previewReading(){
     (m.factor!==1?(' = '+n0(kwh)+' kWh'):'')+' · 约 '+n2(kwh*m.arbeitspreisCt/100)+' €'+
     (net<0?' <span class="c-red">（读数比上次低，请核对）</span>':'');
 }
-function saveReading(){
+async function saveReading(){
   var m=pickMeter(window._addKind);
   var d=val('rd_date'), v=fnum('rd_val');
   if(!isDate(d)) return toast('请选择日期');
@@ -3293,7 +3589,7 @@ function saveReading(){
   var rs=meterReadings(S.readings,m.id), last=rs[rs.length-1];
   if(last && v<last.value && !confirm('读数 '+n2(v)+' 小于上次的 '+n2(last.value)+'，仍然保存吗？')) return;
   S.readings.push({id:uid(),meterId:m.id,date:d,value:v,note:val('rd_note')});
-  save(); closeSheet(); render(); toast('已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('已保存');
 }
 function openReadingDetail(id){
   var r=S.readings.filter(function(x){return x.id===id;})[0];
@@ -3322,6 +3618,7 @@ function editTarif(id){
   var m=id?S.meters.filter(function(x){return x.id===id;})[0]:pickMeter(view==='gas'?'gas':'power');
   if(!m) return;
   openSheet('能源合同与资费 · '+m.label,
+    field({id:'tf_effective',label:'本次资费生效日',type:'date',val:today()})+
     field({id:'tf_provider',label:'能源运营商',val:m.provider||'',ph:'例如能源供应商名称'})+
     field({id:'tf_start',label:'合同开始日',type:'date',val:m.contractStartDate||'',
       hint:'购买额度从这个日期开始累计。'})+
@@ -3341,11 +3638,15 @@ function editTarif(id){
     (m.unit==='m3'?field({id:'tf_f',label:'m³ → kWh 换算系数',type:'number',step:'any',
       inputmode:'decimal',val:m.factor,hint:'Brennwert × Zustandszahl，账单上可查，Excel 中为 10.7'}):'')+
     field({id:'tf_t',label:'年度抄表日 (MM-DD)',val:m.ableseTermin,hint:'用于划分结算年度'})+
+    financialTermsMarkup(m,{arbeitspreisCt:'ct/kWh',monthlyAbschlag:'月预缴 €',factor:'换算系数'})+
+    '<p class="dim">跨资费生效日但没有当日读数时，用量按区间天数分摊估算。</p>'+
     btn('保存','saveTarif(\''+m.id+'\')'));
 }
-function saveTarif(id){
+async function saveTarif(id){
   var m=S.meters.filter(function(x){return x.id===id;})[0];
   if(!m) return;
+  var previous=copyState(m),effective=val('tf_effective');
+  if(!isDate(effective)) return toast('请选择资费生效日');
   var p=fnum('tf_p'), a=fnum('tf_a'), f=fnum('tf_f'), quota=fnum('tf_quota'),
     startReading=fnum('tf_start_reading'),start=val('tf_start'),end=val('tf_end'),t=val('tf_t');
   if(start&&!isDate(start)) return toast('合同开始日格式不对');
@@ -3353,6 +3654,8 @@ function saveTarif(id){
   if(start&&end&&start>end) return toast('合同开始日不能晚于到期日');
   if(isFinite(startReading)&&startReading<0) return toast('合同开始读数不能小于 0');
   if(isFinite(quota)&&quota<0) return toast('合同周期购买额度不能小于 0');
+  if(!isFinite(p)||!isFinite(a)||a<0) return toast('请填写单价和非负月预缴额');
+  if(!isDate('2024-'+t)) return toast('请填写有效的年度抄表日（MM-DD）');
   m.provider=val('tf_provider');
   m.contractStartDate=start||null;
   m.contractStartReading=isFinite(startReading)?startReading:null;
@@ -3363,7 +3666,8 @@ function saveTarif(id){
   if(isFinite(a)) m.monthlyAbschlag=a;
   if(isFinite(f)&&f>0) m.factor=f;
   if(/^\d{2}-\d{2}$/.test(t)) m.ableseTermin=t;
-  save(); closeSheet(); render(); toast('已保存');
+  recordTerms(previous,m,['arbeitspreisCt','monthlyAbschlag','factor'],effective);
+  if(!await save()) return false; closeSheet(); render(); toast('已保存');
 }
 
 /* ================= 储蓄 ================= */
@@ -3381,6 +3685,8 @@ function fxSourceText(){
 }
 function setAcc(k){ accSel=k; showAllTx=false; render(); }
 function toggleAllTx(){ showAllTx=!showAllTx; render(); }
+var showArchivedAccounts=false;
+function toggleArchivedAccounts(){showArchivedAccounts=!showArchivedAccounts;if(!showArchivedAccounts)accSel='all';render();}
 
 function viewSave(mode){
   mode=mode==='transactions'?'transactions':'save';
@@ -3388,16 +3694,19 @@ function viewSave(mode){
   var eurIds=S.accounts.filter(function(a){return a.currency==='EUR';}).map(function(a){return a.id;});
   var ids = accSel==='all' ? eurIds : [accSel];
   var sel = S.accounts.filter(function(a){return a.id===accSel;})[0];
+  var visibleAccounts=S.accounts.filter(function(a){return !a.archived||showArchivedAccounts;});
   var out=sectionTabs('funds',mode);
 
-  var netWorthCard=card('<div class="between"><span class="dim">家庭净资产（折算欧元）</span>'+
+  var chartUnit=sel&&sel.currency==='RMB'?'¥':'€';
+  var netWorthCard=card('<div class="between"><span class="dim">账户资产合计（折算欧元）</span>'+
     '<button class="badge b-gold" onclick="editFx()" aria-label="编辑汇率" title="编辑汇率">'+
       '汇率 1€ = '+fxText(fx)+' ¥ '+icon('pencil-simple')+'</button></div>'+
     '<span class="big tnum c-gold">'+n2(tot)+' €</span>'+
     '<span class="dim">≈ '+n0(tot*fx)+' ¥</span>'+
     '<span class="dim">'+esc(fxSourceText())+'</span>','gold');
 
-  var accountsCard=card(h2('账户余额')+S.accounts.map(function(a){
+  var accountsCard=card(h2('账户余额',S.accounts.some(function(a){return a.archived;})?
+    btn(showArchivedAccounts?'隐藏归档':'显示归档','toggleArchivedAccounts()','ghost sm','archive'):null)+visibleAccounts.map(function(a){
     var b=accountBalance(S.txs,a.id);
     var sub=(a.currency==='RMB'?('≈ '+n2(b/fx)+' €'):'')+(a.note?((a.currency==='RMB'?' · ':'')+a.note):'');
     return row({label:a.name,sub:sub,value:money(b,a.currency),tone:b<0?'red':'',
@@ -3405,11 +3714,11 @@ function viewSave(mode){
   }).join(''));
   if(mode==='save') out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
 
-  out+=chips([{k:'all',label:'欧元合计'}].concat(S.accounts.map(function(a){
+  out+=chips([{k:'all',label:'欧元合计'}].concat(visibleAccounts.map(function(a){
     return {k:a.id,label:a.name};})),accSel,'setAcc');
 
   var balanceCard=card(h2('余额走势',badge(accSel==='all'?'EUR 账户合计':(sel?sel.currency:''),'dim'))+
-    lineChart(balanceSeries(S.txs,ids),null,function(v){return n2(v)+' €';},'€','余额走势'));
+    lineChart(balanceSeries(S.txs,ids),null,function(v){return n2(v)+' '+chartUnit;},chartUnit,'余额走势'));
 
   var mn=monthlyNet(S.txs,ids).slice(-18);
   var yr=today().slice(0,4);
@@ -3418,8 +3727,8 @@ function viewSave(mode){
   var cashRel=rel.filter(function(t){return !t.valuationOnly;});
   var din=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
   var dout=cashRel.filter(function(t){return t.date.slice(0,4)===yr&&t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
-  var monthlyCard=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' €';},
-    function(v){return v<0?'var(--red)':'var(--green)';},3,'€','月度净流入')+hr()+
+  var monthlyCard=card(h2('月度净流入')+barChart(mn,function(v){return n0(v)+' '+chartUnit;},
+    function(v){return v<0?'var(--red)':'var(--green)';},3,chartUnit,'月度净流入')+hr()+
     '<div class="stats cashflow-summary-stats">'+stat(yr+' 存入',n0(din),'','green')+
     stat(yr+' 支出',n0(Math.abs(dout)),'','red')+
     stat('净额',n0(din+dout),'',din+dout>=0?'green':'red')+'</div>');
@@ -3449,9 +3758,11 @@ function viewSave(mode){
   return out;
 }
 function addTx(){
+  var active=S.accounts.filter(function(a){return !a.archived;});
+  if(!active.length) return openAccountManager();
   openSheet('记一笔',
-    field({id:'tx_acc',label:'账户',type:'select',val:accSel==='all'?S.accounts[0].id:accSel,
-      opts:S.accounts.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
+    field({id:'tx_acc',label:'账户',type:'select',val:accSel==='all'?active[0].id:accSel,
+      opts:active.map(function(a){return {k:a.id,label:a.name+' ('+a.currency+')'};})})+
     field({id:'tx_date',label:'日期',type:'date',val:today()})+
     '<div class="field"><label>收支类型</label>'+
       '<div class="mode-control tx-mode-control" role="group" aria-label="收支类型">'+
@@ -3475,13 +3786,13 @@ function setTxType(type){
   });
 }
 function setAmt(v){ document.getElementById('tx_amt').value=v; }
-function saveTx(){
+async function saveTx(){
   var d=val('tx_date'), a=fnum('tx_amt');
   if(!isDate(d)) return toast('请选择日期');
   if(!isFinite(a)||a===0) return toast('请输入有效金额');
   a=Math.abs(a)*(val('tx_type')==='expense'?-1:1);
   S.txs.push({id:uid(),accountId:val('tx_acc'),date:d,amount:a,note:val('tx_note')});
-  save(); closeSheet(); render(); toast('已记录');
+  if(!await save()) return false; closeSheet(); render(); toast('已记录');
 }
 function openTxDetail(id){
   var t=S.txs.filter(function(x){return x.id===id;})[0];
@@ -3552,21 +3863,21 @@ function editFx(){
     btn('保存手动汇率','saveFx()'));
   return fetchOfficialFx();
 }
-function useOfficialFx(){
+async function useOfficialFx(){
   if(!officialFxQuote) return toast('请先查询官方汇率');
   S.fxRmbPerEur=officialFxQuote.rate;
   S.fxRateSource='ECB';
   S.fxRateDate=officialFxQuote.date;
-  save(); closeSheet(); render();
+  if(!await save()) return false; closeSheet(); render();
   toast('已采用 ECB '+fmtDate(officialFxQuote.date)+' 参考汇率');
 }
-function saveFx(){
+async function saveFx(){
   var v=fnum('fx');
   if(!isFinite(v)||v<=0) return toast('请输入有效汇率');
   S.fxRmbPerEur=v;
   S.fxRateSource='manual';
   S.fxRateDate=null;
-  save(); closeSheet(); render(); toast('手动汇率已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('手动汇率已保存');
 }
 /* ================= 秘密退休计划 ================= */
 var RETIREMENT_TARGET=1000000;
@@ -3593,6 +3904,7 @@ function retirementDefaultPlan(){
   };
 }
 function retirementInferAssetType(account){
+  if(account&&RETIREMENT_ASSET_TYPES[account.assetType]) return account.assetType;
   var text=((account&&account.name)||'')+' '+((account&&account.note)||'');
   text=text.toLowerCase();
   if(/etf|股票|aktien|depot|stock|fonds|fund/.test(text)) return 'stock';
@@ -3977,12 +4289,12 @@ function retirementScenarioControl(plan){
         scenario+'\')"><b>'+meta.label+'</b><small>股票 '+fxText(plan.rates[scenario])+'%</small></button>';
     }).join('')+'</div>';
 }
-function setRetirementScenario(scenario){
+async function setRetirementScenario(scenario){
   if(['conservative','base','optimistic'].indexOf(scenario)<0) return;
   var plan=retirementPlanState();
   if(plan.selectedScenario===scenario) return;
   plan.selectedScenario=scenario;
-  save(); render();
+  if(!await save()) return false; render();
 }
 function retirementMilestoneProgress(total){
   var safe=Math.max(0,total), reached=Math.min(10,Math.floor(safe/RETIREMENT_MILESTONE));
@@ -4139,7 +4451,7 @@ function retirementAssetTypeChanged(index){
   document.getElementById('rp_rate_wrap_'+index).style.display=isStock?'none':'';
   document.getElementById('rp_stock_hint_'+index).style.display=isStock?'':'none';
 }
-function saveRetirementPlan(){
+async function saveRetirementPlan(){
   var accountRows=Array.prototype.slice.call(
     document.querySelectorAll('[data-retirement-account]'));
   var ids=[], configs={}, manualTotal=0, invalidRate=false, invalidMonthly=false;
@@ -4172,7 +4484,7 @@ function saveRetirementPlan(){
   if(mode==='manual') plan.manualMonthlyContribution=manualTotal;
   plan.rates={conservative:low,base:base,optimistic:high};
   plan.assetConfigs=configs;
-  save(); closeSheet(); render(); toast('退休计划已加密保存');
+  if(!await save()) return false; closeSheet(); render(); toast('退休计划已加密保存');
 }
 
 function retirementReachedMilestone(total){
@@ -4209,7 +4521,7 @@ function hideRetirementCelebration(){
   var overlay=document.getElementById('retirementCelebration');
   if(overlay) overlay.classList.remove('show');
 }
-function retirementMaybeCelebrateOnUnlock(){
+async function retirementMaybeCelebrateOnUnlock(){
   if(!S) return false;
   var plan=retirementPlanState(), current=retirementReachedMilestone(retirementPool(plan).total);
   if(current>plan.milestone.highestReached){
@@ -4219,7 +4531,7 @@ function retirementMaybeCelebrateOnUnlock(){
   }
   if(plan.milestone.active>0&&plan.milestone.remainingUnlocks>0){
     plan.milestone.remainingUnlocks--;
-    save();
+    if(!await save()) return false;
     showRetirementCelebration(plan.milestone.active);
     return true;
   }
@@ -4624,7 +4936,7 @@ function couponValueTypeChanged(){
   var wrap=document.getElementById('coupon_currency_wrap');
   if(wrap) wrap.style.display=val('coupon_type')==='percent'?'none':'';
 }
-function saveCoupon(id){
+async function saveCoupon(id){
   var name=val('coupon_name'),type=val('coupon_type')==='percent'?'percent':'amount';
   if(!name) return toast('请填写 Coupon 名称');
   var raw=val('coupon_value'),value=raw?fnum('coupon_value'):null;
@@ -4642,13 +4954,13 @@ function saveCoupon(id){
     image:couponSafeImage(couponImageDraft)};
   var index=(S.coupons||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.coupons[index]=obj; else S.coupons.push(obj);
-  save(); closeSheet(); render(); toast('Coupon 已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('Coupon 已保存');
 }
-function toggleCouponUsed(id){
+async function toggleCouponUsed(id){
   var c=(S.coupons||[]).filter(function(item){return item.id===id;})[0];
   if(!c) return;
   c.usedDate=c.usedDate?null:today();
-  save(); render(); toast(c.usedDate?'已标记为使用':'已恢复为未使用');
+  if(!await save()) return false; render(); toast(c.usedDate?'已标记为使用':'已恢复为未使用');
 }
 function deleteCoupon(id){
   var c=(S.coupons||[]).filter(function(item){return item.id===id;})[0];
@@ -4751,7 +5063,7 @@ function editDebt(id){
     btn('保存',"saveDebt('"+(debt.id||'')+"')")+
     (id?btn('删除这笔欠款',"deleteDebt('"+debt.id+"')",'danger','trash'):''));
 }
-function saveDebt(id){
+async function saveDebt(id){
   var title=val('debt_title'),amount=fnum('debt_amount');
   if(!title) return toast('请填写欠款事项');
   if(!isFinite(amount)||amount<=0) return toast('请输入有效金额');
@@ -4768,13 +5080,13 @@ function saveDebt(id){
     notes:val('debt_notes')};
   var index=(S.debts||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.debts[index]=obj; else S.debts.push(obj);
-  save(); closeSheet(); render(); toast('欠款已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('欠款已保存');
 }
-function toggleDebtSettled(id){
+async function toggleDebtSettled(id){
   var debt=(S.debts||[]).filter(function(item){return item.id===id;})[0];
   if(!debt) return;
   debt.settledDate=debt.settledDate?null:today();
-  save(); render(); toast(debt.settledDate?'已标记为结清':'已恢复为未结清');
+  if(!await save()) return false; render(); toast(debt.settledDate?'已标记为结清':'已恢复为未结清');
 }
 function deleteDebt(id){
   var debt=(S.debts||[]).filter(function(item){return item.id===id;})[0];
@@ -4817,29 +5129,38 @@ function estateMortgageBalanceAt(mortgage,throughDate,ignoreSpecialId){
   var target=isDate(throughDate||'')?throughDate:today();
   var baselineDate=mortgage.startDate;
   var balance=Number(mortgage.originalPrincipal||0);
-  if(!isDate(baselineDate||'')||target<=baselineDate) return Math.max(0,Math.round(balance*100)/100);
+  if(!isDate(baselineDate||'')) return null;
+  if(target<baselineDate) return 0;
+  var firstTerms=termsAt(mortgage,baselineDate);
+  if(firstTerms.sollzinsPct==null||!isFinite(Number(firstTerms.sollzinsPct))) return null;
   var events=[];
   var startParts=baselineDate.split('-'),endParts=target.split('-');
   var startMonth=Number(startParts[0])*12+Number(startParts[1])-1;
   var endMonth=Number(endParts[0])*12+Number(endParts[1])-1;
+  var firstPayment=isDate(mortgage.firstPaymentDate||'')?mortgage.firstPaymentDate:null;
+  if(firstPayment&&firstPayment>=baselineDate&&firstPayment<=target) events.push({date:firstPayment,type:'payment'});
   for(var monthIndex=startMonth;monthIndex<=endMonth;monthIndex++){
     var year=Math.floor(monthIndex/12),month=monthIndex%12;
-    var due=estateMortgageDueDate(year,month,mortgage.paymentDay);
-    if(due>baselineDate&&due<=target) events.push({date:due,type:'payment'});
+    var term=termsAt(mortgage,isoOf(Date.UTC(year,month,1)));
+    var due=estateMortgageDueDate(year,month,term.paymentDay);
+    if(due>baselineDate&&due<=target&&(!firstPayment||due.slice(0,7)>firstPayment.slice(0,7))) events.push({date:due,type:'payment'});
   }
   estateSpecialRepayments(mortgage.id).forEach(function(item){
-    if(item.id!==ignoreSpecialId&&item.date>baselineDate&&item.date<=target)
+    if(item.id!==ignoreSpecialId&&item.date>=baselineDate&&item.date<=target)
       events.push({date:item.date,type:'special',amount:Number(item.amount||0)});
   });
   events.sort(function(a,b){
     if(a.date!==b.date) return a.date<b.date?-1:1;
     return a.type==='payment'?-1:b.type==='payment'?1:0;
   });
-  var monthlyRate=Math.max(0,Number(mortgage.sollzinsPct||0))/100/12;
-  var monthlyPayment=Math.max(0,Number(mortgage.monthlyPayment||0));
   events.forEach(function(event){
     if(balance<=0) return;
-    if(event.type==='payment') balance=Math.max(0,balance+balance*monthlyRate-monthlyPayment);
+    var active=termsAt(mortgage,event.date);
+    if(event.type==='payment'){
+      var exception=(S.mortgageExceptions||[]).find(function(x){return x.ownerId===mortgage.id&&x.period===event.date.slice(0,7);});
+      var payment=exception?exception.actualAmount:Number(active.monthlyPayment||0);
+      balance=Math.max(0,balance+balance*Number(active.sollzinsPct)/100/12-payment);
+    }
     else balance=Math.max(0,balance-event.amount);
     balance=Math.round((balance+Number.EPSILON)*100)/100;
   });
@@ -4850,6 +5171,7 @@ function estateMortgageBalance(mortgage){
 }
 function estateMortgagePrincipalPaid(mortgage){
   var original=Number(mortgage.originalPrincipal||0),balance=estateMortgageBalance(mortgage);
+  if(balance==null) return null;
   if(original>0) return Math.max(0,original-balance);
   return estateMortgagePayments(mortgage.id).reduce(function(sum,item){
     return sum+Number(item.principal||0)+Number(item.specialPrincipal||0);
@@ -4880,11 +5202,13 @@ function estateRentPaymentTotal(payment){
 function estateSummary(){
   var mortgages=S.mortgages||[],tenancies=S.tenancies||[];
   return {
-    balance:mortgages.reduce(function(sum,item){return sum+estateMortgageBalance(item);},0),
-    monthly:mortgages.reduce(function(sum,item){return sum+Number(item.monthlyPayment||0);},0),
-    kalt:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){return sum+Number(item.kaltmiete||0);},0),
+    balance:mortgages.reduce(function(sum,item){return sum+(estateMortgageBalance(item)||0);},0),
+    unknown:mortgages.filter(function(item){return estateMortgageBalance(item)==null;}).length,
+    monthly:mortgages.filter(function(item){return item.startDate<=today()&&estateMortgageBalance(item)!==0;})
+      .reduce(function(sum,item){return sum+Number(termsAt(item,today()).monthlyPayment||0);},0),
+    kalt:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){return sum+Number(termsAt(item,today()).kaltmiete||0);},0),
     warm:tenancies.filter(estateActiveTenancy).reduce(function(sum,item){
-      return sum+Number(item.kaltmiete||0)+Number(item.nebenkosten||0);
+      var term=termsAt(item,today());return sum+Number(term.kaltmiete||0)+Number(term.nebenkosten||0);
     },0)
   };
 }
@@ -4900,7 +5224,7 @@ function viewEstate(){
   out+='<div class="estate-heading"><div><h1>房产</h1><p class="dim">贷款、还款、出租与持有成本</p></div>'+
     btn('新增房产','editEstateProperty()','sm','plus')+'</div>';
   out+=card('<div class="stats estate-summary-stats">'+
-    stat('剩余贷款',n2(summary.balance),'€',summary.balance?'red':'dim')+
+    stat(summary.unknown?'已知剩余贷款':'剩余贷款',n2(summary.balance),'€',summary.balance?'red':'dim',summary.unknown?summary.unknown+' 笔待补利率':'')+
     stat('每月贷款扣款',n2(summary.monthly),'€',summary.monthly?'gold':'dim')+
     stat('当前月冷租',n2(summary.kalt),'€',summary.kalt?'green':'dim')+
     stat('每月暖租',n2(summary.warm),'€',summary.warm?'green':'dim')+'</div>','blue estate-summary');
@@ -4936,22 +5260,24 @@ function estatePropertyCard(property){
 }
 function estateMortgageRecord(mortgage){
   var balance=estateMortgageBalance(mortgage),paid=estateMortgagePrincipalPaid(mortgage);
+  var currentTerms=termsAt(mortgage,today());
   var specials=estateSpecialRepayments(mortgage.id),last=specials[0];
   var specialLimit=estateSpecialRepaymentLimit(mortgage),specialUsed=estateSpecialRepaymentYearUsage(mortgage);
   var term=[];
-  if(mortgage.sollzinsPct!=null) term.push('Sollzins '+n2(mortgage.sollzinsPct)+'%');
+  if(currentTerms.sollzinsPct!=null) term.push('Sollzins '+n2(currentTerms.sollzinsPct)+'%');
   if(mortgage.fixedRateEnd) term.push('固定利率至 '+fmtDate(mortgage.fixedRateEnd));
   var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(mortgage.lender||'贷款机构待补')+'</b>'+
     '<span class="dim">'+esc(term.join(' · ')||'贷款条款待补')+'</span></div>'+badge(specials.length+' 次 Sondertilgung','dim')+'</div>'+
-    '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red','自动计算至 '+fmtDate(today()))+
-    stat('每月扣款',n2(mortgage.monthlyPayment||0),'€')+
+    '<div class="stats">'+stat('剩余贷款',n2(balance),'€','red',balance==null?'待补充贷款开始日与 Sollzins':'估算至 '+fmtDate(today()))+
+    stat('每月扣款',n2(currentTerms.monthlyPayment||0),'€')+
     stat('已偿还本金',n2(paid),'€','green')+
     stat('初始本金',n2(mortgage.originalPrincipal||0),'€')+'</div>';
   if(mortgage.currentBalance!=null&&isFinite(Number(mortgage.currentBalance))){
-    var referenceDiff=balance-Number(mortgage.currentBalance);
+    var referenceCalculated=estateMortgageBalanceAt(mortgage,mortgage.referenceBalanceDate);
+    var referenceDiff=referenceCalculated==null?null:referenceCalculated-Number(mortgage.currentBalance);
     body+=row({label:'银行参考余额',
       sub:(isDate(mortgage.referenceBalanceDate||'')?fmtDate(mortgage.referenceBalanceDate):'日期待补')+
-        ' · 与自动估算差额 '+n2(referenceDiff)+' €',
+        ' · 同日估算差额 '+n2(referenceDiff)+' €',
       value:n2(Number(mortgage.currentBalance))+' €'});
   }
   body+=row({label:'年度允许 Sondertilgung',
@@ -4959,24 +5285,42 @@ function estateMortgageRecord(mortgage){
       '本年已用 '+n2(specialUsed)+' € · 剩余 '+n2(Math.max(0,specialLimit-specialUsed))+' €',
     value:specialLimit==null?'—':n2(specialLimit)+' € / 年'});
   if(last) body+=row({label:'最近 Sondertilgung '+fmtDate(last.date),sub:last.notes||'特别还款',value:n2(last.amount)+' €',tone:'green'});
-  body+='<p class="dim estate-assumption">剩余贷款按月供、Sollzins 和 Sondertilgung 自动计算；合同变更时请更新贷款资料。</p>'+
+  body+='<p class="dim estate-assumption">按月计息估算，未计银行逐日计息与费用；固定利率到期后的余额暂沿用最近利率。</p>'+
     '<div class="estate-actions estate-record-actions">'+btn('记录 Sondertilgung',"editSpecialRepayment('"+mortgage.id+"')",null,'plus')+
     btn('Sondertilgung 记录',"openSpecialRepaymentHistory('"+mortgage.id+"')",'ghost','list-bullets')+
-    btn('编辑贷款',"editMortgage('"+mortgage.id+"')",'ghost','pencil-simple')+'</div></div>';
+    btn('编辑贷款',"editMortgage('"+mortgage.id+"')",'ghost','pencil-simple')+'</div>'+
+    btn('月供异常',"openPaymentExceptions('mortgage','"+mortgage.id+"')",'ghost','warning')+'</div>';
   return body;
 }
 function estateTenancyRecord(tenancy){
   var active=estateActiveTenancy(tenancy);
+  var current=termsAt(tenancy,today());
   var body='<div class="estate-record"><div class="between"><div class="estate-record-title"><b>'+esc(tenancy.tenantName||'租客待补')+'</b>'+
     '<span class="dim">'+esc(estateRentTypeLabel(tenancy.rentType))+' · '+fmtDate(tenancy.startDate)+
     (tenancy.endDate?' 至 '+fmtDate(tenancy.endDate):' · 无固定终止日')+'</span></div>'+badge(active?'租约进行中':'租约已结束',active?'green':'dim')+'</div>'+
-    '<div class="stats">'+stat('Kaltmiete',n2(tenancy.kaltmiete||0),'€','green')+
-    stat('Nebenkosten',n2(tenancy.nebenkosten||0),'€')+
+    '<div class="stats">'+stat('Kaltmiete',n2(current.kaltmiete||0),'€','green')+
+    stat('Nebenkosten',n2(current.nebenkosten||0),'€')+
     stat('Kaution',n2(tenancy.kaution||0),'€')+
     stat('付款日',tenancy.paymentDay||'—','号')+'</div>';
-  body+='<p class="dim estate-assumption">租金按租约默认正常收取，仅在合同变化时更新。</p>'+
-    btn('编辑租约',"editTenancy('"+tenancy.id+"')",'ghost','pencil-simple')+'</div>';
+  var rent=estateRentYear(tenancy,today().slice(0,4));
+  body+=row({label:'本年收租估算',sub:rent.exceptions+' 次异常 · 未记录异常的月份按约定收租',value:n2(rent.received)+' €'});
+  body+='<p class="dim estate-assumption">正常收租不必逐月记录；首尾月分摊、少收和漏收请记录异常。</p>'+
+    btn('编辑租约',"editTenancy('"+tenancy.id+"')",'ghost','pencil-simple')+
+    btn('收租异常',"openPaymentExceptions('rent','"+tenancy.id+"')",'ghost','warning')+'</div>';
   return body;
+}
+function estateRentYear(tenancy,year){
+  if(!isDate(tenancy.startDate||'')) return {received:null,exceptions:0};
+  var now=today(),received=0,exceptions=0;
+  for(var month=1;month<=12;month++){
+    var period=year+'-'+String(month).padStart(2,'0'),active=termsAt(tenancy,period+'-01');
+    var due=estateMortgageDueDate(Number(year),month-1,active.paymentDay);
+    var exception=(S.rentExceptions||[]).find(function(x){return x.ownerId===tenancy.id&&x.period===period;});
+    if(period<tenancy.startDate.slice(0,7)||period>now.slice(0,7)||(tenancy.endDate&&period>tenancy.endDate.slice(0,7))) continue;
+    if(exception){if(exception.date<=now){received+=exception.actualAmount;exceptions++;}}
+    else if(due>=tenancy.startDate&&due<=now&&(!tenancy.endDate||due<=tenancy.endDate)) received+=Number(active.kaltmiete||0)+Number(active.nebenkosten||0);
+  }
+  return {received:received,exceptions:exceptions};
 }
 
 function openSpecialRepaymentHistory(mortgageId){
@@ -5008,19 +5352,18 @@ function editSpecialRepayment(mortgageId,id){
     btn('保存',"saveSpecialRepayment('"+mortgageId+"','"+(id||'')+"')")+
     (id?btn('删除这条 Sondertilgung',"deleteSpecialRepayment('"+id+"')",'danger','trash'):''));
 }
-function saveSpecialRepayment(mortgageId,id){
+async function saveSpecialRepayment(mortgageId,id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
   var date=val('re_special_date'),amount=fnum('re_special_amount');
   if(!mortgage||!isDate(date)) return toast('请选择正确的特别还款日');
   if(date<mortgage.startDate) return toast('特别还款日不能早于贷款开始日');
   if(date>today()) return toast('特别还款日不能晚于今天');
   if(!isFinite(amount)||amount<=0) return toast('请输入有效的 Sondertilgung 金额');
-  var balance=Math.max(0,estateMortgageBalanceAt(mortgage,date,id)-amount);
   var record={id:id||uid(),mortgageId:mortgageId,date:date,amount:Math.round(amount*100)/100,
-    remainingBalance:Math.round(balance*100)/100,notes:val('re_special_notes')};
+    notes:val('re_special_notes')};
   var index=(S.specialRepayments||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.specialRepayments[index]=record; else S.specialRepayments.push(record);
-  save(); closeSheet(); render(); toast('Sondertilgung 已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('Sondertilgung 已保存');
 }
 function deleteSpecialRepayment(id){
   var record=(S.specialRepayments||[]).filter(function(item){return item.id===id;})[0];
@@ -5080,7 +5423,7 @@ function editEstateProperty(id){
     btn('保存',"saveEstateProperty('"+(id||'')+"')")+
     (id?btn('删除房产',"deleteEstateProperty('"+id+"')",'danger','trash'):''));
 }
-function saveEstateProperty(id){
+async function saveEstateProperty(id){
   var name=val('re_prop_name'),purchaseDate=val('re_prop_purchase_date');
   if(!name) return toast('请填写房产名称');
   if(purchaseDate&&!isDate(purchaseDate)) return toast('购入日格式不对');
@@ -5097,7 +5440,7 @@ function saveEstateProperty(id){
     notes:val('re_prop_notes')});
   var index=(S.properties||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.properties[index]=property; else S.properties.push(property);
-  save(); closeSheet(); render(); toast('房产资料已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('房产资料已保存');
 }
 
 function editMortgage(id,propertyId){
@@ -5106,6 +5449,7 @@ function editMortgage(id,propertyId){
     originalPrincipal:null,currentBalance:null,referenceBalanceDate:'',monthlyPayment:null,sollzinsPct:null,effectiveRatePct:null,
     initialTilgungPct:null,startDate:'',fixedRateEnd:'',maturityDate:'',specialRepaymentLimit:null,paymentDay:1,notes:''};
   openSheet(id?'编辑贷款':'新增贷款',
+    (id?field({id:'re_mort_terms_date',label:'本次利率 / 月供生效日',type:'date',val:today()}):'')+
     field({id:'re_mort_prop',label:'房产',type:'select',val:mortgage.propertyId,opts:estatePropertyOptions()})+
     field({id:'re_mort_lender',label:'贷款机构',val:mortgage.lender,ph:'例如 ING / Sparkasse'})+
     field({id:'re_mort_contract',label:'合同号（可选）',val:mortgage.contractNo||''})+
@@ -5119,6 +5463,7 @@ function editMortgage(id,propertyId){
     field({id:'re_mort_effective',label:'Effektivzins（%）',type:'text',inputmode:'decimal',val:mortgage.effectiveRatePct==null?'':n2(mortgage.effectiveRatePct)})+
     field({id:'re_mort_tilgung',label:'初始 Tilgung（%）',type:'text',inputmode:'decimal',val:mortgage.initialTilgungPct==null?'':n2(mortgage.initialTilgungPct)})+
     field({id:'re_mort_start',label:'贷款开始日',type:'date',val:mortgage.startDate||''})+
+    field({id:'re_mort_first',label:'首次扣款日（可选）',type:'date',val:mortgage.firstPaymentDate||''})+
     field({id:'re_mort_fixed_end',label:'Zinsbindung 至（可选）',type:'date',val:mortgage.fixedRateEnd||''})+
     field({id:'re_mort_maturity',label:'预计贷款结束日（可选）',type:'date',val:mortgage.maturityDate||''})+
     field({id:'re_mort_special',label:'每年允许的 Sondertilgung 金额（€）',type:'text',inputmode:'decimal',
@@ -5126,10 +5471,11 @@ function editMortgage(id,propertyId){
       hint:'填写贷款合同每年允许的最高特别还款金额。'})+
     field({id:'re_mort_day',label:'每月扣款日',type:'number',val:mortgage.paymentDay||1})+
     field({id:'re_mort_notes',label:'备注',type:'textarea',val:mortgage.notes||''})+
+    financialTermsMarkup(mortgage,{sollzinsPct:'Sollzins %',monthlyPayment:'月供 €',paymentDay:'扣款日'})+
     btn('保存',"saveMortgage('"+(id||'')+"')")+
     (id?btn('删除贷款',"deleteMortgage('"+id+"')",'danger','trash'):''));
 }
-function saveMortgage(id){
+async function saveMortgage(id){
   var lender=val('re_mort_lender'),original=fnum('re_mort_original'),
     monthly=fnum('re_mort_monthly'),start=val('re_mort_start'),fixed=val('re_mort_fixed_end'),
     maturity=val('re_mort_maturity'),day=Number(val('re_mort_day')),
@@ -5140,7 +5486,11 @@ function saveMortgage(id){
   if(isFinite(referenceBalance)&&(referenceBalance<0||referenceBalance>original)) return toast('参考余额应在 0 与初始本金之间');
   if(referenceDate&&!isDate(referenceDate)) return toast('参考余额日期格式不对');
   if(!isFinite(monthly)||monthly<=0) return toast('请输入每月扣款');
+  if(!isFinite(fnum('re_mort_sollzins'))) return toast('请填写 Sollzins，确为免息时填 0');
   if(!isDate(start)) return toast('请选择贷款开始日');
+  var first=val('re_mort_first'),effective=id?val('re_mort_terms_date'):start;
+  if(!isDate(effective)||effective<start) return toast('生效日不能早于贷款开始日');
+  if(first&&(!isDate(first)||first<start)) return toast('首次扣款日不能早于贷款开始日');
   if((fixed&&!isDate(fixed))||(maturity&&!isDate(maturity))) return toast('贷款日期格式不对');
   if((fixed&&fixed<start)||(maturity&&maturity<start)) return toast('结束日期不能早于贷款开始日');
   if(!Number.isInteger(day)||day<1||day>31) return toast('扣款日应为 1 至 31');
@@ -5154,11 +5504,12 @@ function saveMortgage(id){
     referenceBalanceDate:isFinite(referenceBalance)?(referenceDate||today()):null,
     monthlyPayment:estateOptionalNumber('re_mort_monthly'),sollzinsPct:estateOptionalNumber('re_mort_sollzins'),
     effectiveRatePct:estateOptionalNumber('re_mort_effective'),initialTilgungPct:estateOptionalNumber('re_mort_tilgung'),
-    startDate:start,fixedRateEnd:fixed||null,maturityDate:maturity||null,
+    startDate:start,firstPaymentDate:first||null,fixedRateEnd:fixed||null,maturityDate:maturity||null,
     specialRepaymentLimit:specialLimit,paymentDay:day,notes:val('re_mort_notes')};
   var index=(S.mortgages||[]).findIndex(function(item){return item.id===id;});
+  recordTerms(index>=0?S.mortgages[index]:null,mortgage,['sollzinsPct','monthlyPayment','paymentDay'],effective);
   if(index>=0) S.mortgages[index]=mortgage; else S.mortgages.push(mortgage);
-  save(); closeSheet(); render(); toast('贷款已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('贷款已保存');
 }
 
 function editMortgagePayment(mortgageId,id){
@@ -5179,7 +5530,7 @@ function editMortgagePayment(mortgageId,id){
     btn('保存',"saveMortgagePayment('"+mortgageId+"','"+(id||'')+"')")+
     (id?btn('删除还款记录',"deleteMortgagePayment('"+id+"')",'danger','trash'):''));
 }
-function saveMortgagePayment(mortgageId,id){
+async function saveMortgagePayment(mortgageId,id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===mortgageId;})[0];
   var date=val('re_pay_date'),total=fnum('re_pay_total'),interest=fnum('re_pay_interest'),
     principal=fnum('re_pay_principal'),special=fnum('re_pay_special'),balance=fnum('re_pay_balance');
@@ -5197,7 +5548,7 @@ function saveMortgagePayment(mortgageId,id){
     notes:val('re_pay_notes')};
   var index=(S.mortgagePayments||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.mortgagePayments[index]=payment; else S.mortgagePayments.push(payment);
-  save(); closeSheet(); render(); toast('还款记录已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('还款记录已保存');
 }
 
 function editTenancy(id,propertyId){
@@ -5205,6 +5556,7 @@ function editTenancy(id,propertyId){
   tenancy=tenancy||{propertyId:propertyId||(S.properties[0]&&S.properties[0].id)||'',tenantName:'',
     startDate:today(),endDate:'',kaltmiete:null,nebenkosten:null,kaution:null,paymentDay:3,rentType:'fixed',notes:''};
   openSheet(id?'编辑租约':'新增租约',
+    (id?field({id:'re_ten_effective',label:'本次租金生效日',type:'date',val:today()}):'')+
     field({id:'re_ten_prop',label:'房产',type:'select',val:tenancy.propertyId,opts:estatePropertyOptions()})+
     field({id:'re_ten_tenant',label:'租客 / 承租方',val:tenancy.tenantName})+
     field({id:'re_ten_start',label:'租约开始日',type:'date',val:tenancy.startDate})+
@@ -5216,24 +5568,28 @@ function editTenancy(id,propertyId){
     field({id:'re_ten_type',label:'租金调整方式',type:'select',val:tenancy.rentType||'fixed',opts:[
       {k:'fixed',label:'固定租金'},{k:'index',label:'Indexmiete（指数租金）'},{k:'step',label:'Staffelmiete（阶梯租金）'}]})+
     field({id:'re_ten_notes',label:'备注',type:'textarea',val:tenancy.notes||''})+
+    financialTermsMarkup(tenancy,{kaltmiete:'冷租 €',nebenkosten:'杂费 €',paymentDay:'付款日'})+
     btn('保存',"saveTenancy('"+(id||'')+"')")+
     (id?btn('删除租约',"deleteTenancy('"+id+"')",'danger','trash'):''));
 }
-function saveTenancy(id){
+async function saveTenancy(id){
   var tenant=val('re_ten_tenant'),start=val('re_ten_start'),end=val('re_ten_end'),
     kalt=fnum('re_ten_kalt'),neben=fnum('re_ten_neben'),kaution=fnum('re_ten_kaution'),day=Number(val('re_ten_day'));
   if(!val('re_ten_prop')) return toast('请选择房产');
   if(!tenant) return toast('请填写租客或承租方');
   if(!isDate(start)||(end&&!isDate(end))) return toast('租约日期格式不对');
   if(end&&end<start) return toast('租约结束日不能早于开始日');
+  var effective=id?val('re_ten_effective'):start;
+  if(!isDate(effective)||effective<start) return toast('租金生效日不能早于租约开始日');
   if(!isFinite(kalt)||kalt<0||!isFinite(neben)||neben<0||!isFinite(kaution)||kaution<0) return toast('租金、杂费和押金不能小于 0');
   if(!Number.isInteger(day)||day<1||day>31) return toast('付款日应为 1 至 31');
   var tenancy={id:id||uid(),propertyId:val('re_ten_prop'),tenantName:tenant,startDate:start,endDate:end||null,
     kaltmiete:Math.round(kalt*100)/100,nebenkosten:Math.round(neben*100)/100,kaution:Math.round(kaution*100)/100,
     paymentDay:day,rentType:val('re_ten_type'),notes:val('re_ten_notes')};
   var index=(S.tenancies||[]).findIndex(function(item){return item.id===id;});
+  recordTerms(index>=0?S.tenancies[index]:null,tenancy,['kaltmiete','nebenkosten','paymentDay'],effective);
   if(index>=0) S.tenancies[index]=tenancy; else S.tenancies.push(tenancy);
-  save(); closeSheet(); render(); toast('租约已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('租约已保存');
 }
 
 function editRentPayment(tenancyId,id){
@@ -5253,7 +5609,7 @@ function editRentPayment(tenancyId,id){
     btn('保存',"saveRentPayment('"+tenancyId+"','"+(id||'')+"')")+
     (id?btn('删除收租记录',"deleteRentPayment('"+id+"')",'danger','trash'):''));
 }
-function saveRentPayment(tenancyId,id){
+async function saveRentPayment(tenancyId,id){
   var period=val('re_rent_period'),date=val('re_rent_date'),kalt=fnum('re_rent_kalt'),
     neben=fnum('re_rent_neben'),other=fnum('re_rent_other');
   if(!/^\d{4}-\d{2}$/.test(period)||!isDate(date)) return toast('请选择对应月份和到账日');
@@ -5262,7 +5618,7 @@ function saveRentPayment(tenancyId,id){
     nebenkosten:Math.round(neben*100)/100,other:Math.round(other*100)/100,notes:val('re_rent_notes')};
   var index=(S.rentPayments||[]).findIndex(function(item){return item.id===id;});
   if(index>=0) S.rentPayments[index]=payment; else S.rentPayments.push(payment);
-  save(); closeSheet(); render(); toast('收租记录已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('收租记录已保存');
 }
 
 function deleteEstateProperty(id){
@@ -5271,30 +5627,258 @@ function deleteEstateProperty(id){
   if(!confirm('删除房产「'+estatePropertyName(id)+'」？')) return;
   closeSheet(); removeWithUndo('properties',id,estatePropertyName(id));
 }
-function deleteMortgage(id){
+async function deleteMortgage(id){
   var mortgage=(S.mortgages||[]).filter(function(item){return item.id===id;})[0];
   if(!mortgage||!confirm('删除这笔贷款？')) return;
   S.mortgagePayments=(S.mortgagePayments||[]).filter(function(item){return item.mortgageId!==id;});
   S.specialRepayments=(S.specialRepayments||[]).filter(function(item){return item.mortgageId!==id;});
+  S.mortgageExceptions=(S.mortgageExceptions||[]).filter(function(item){return item.ownerId!==id;});
   S.mortgages=(S.mortgages||[]).filter(function(item){return item.id!==id;});
-  save(); closeSheet(); render(); toast('贷款已删除');
+  if(!await save()) return false; closeSheet(); render(); toast('贷款已删除');
 }
 function deleteMortgagePayment(id){
   var payment=(S.mortgagePayments||[]).filter(function(item){return item.id===id;})[0];
   if(!payment||!confirm('删除这条还款记录？')) return;
   closeSheet(); removeWithUndo('mortgagePayments',id,fmtDate(payment.date));
 }
-function deleteTenancy(id){
+async function deleteTenancy(id){
   var tenancy=(S.tenancies||[]).filter(function(item){return item.id===id;})[0];
   if(!tenancy||!confirm('删除这份租约及其全部收租记录？')) return;
   S.rentPayments=(S.rentPayments||[]).filter(function(item){return item.tenancyId!==id;});
+  S.rentExceptions=(S.rentExceptions||[]).filter(function(item){return item.ownerId!==id;});
   S.tenancies=(S.tenancies||[]).filter(function(item){return item.id!==id;});
-  save(); closeSheet(); render(); toast('租约及收租记录已删除');
+  if(!await save()) return false; closeSheet(); render(); toast('租约及收租记录已删除');
 }
 function deleteRentPayment(id){
   var payment=(S.rentPayments||[]).filter(function(item){return item.id===id;})[0];
   if(!payment||!confirm('删除这条收租记录？')) return;
   closeSheet(); removeWithUndo('rentPayments',id,payment.period);
+}
+/* Recovery and maintenance stay inside the same encrypted state boundary. */
+var familyConflict=null;
+function financialTermsMarkup(record,labels){
+  if(!record.terms||!record.terms.length) return '';
+  return '<details class="settings-section"><summary>生效历史</summary><div class="settings-section-body">'+
+    record.terms.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).map(function(t){
+      return row({label:t.date==='0001-01-01'?'早期条款（起日待核对）':fmtDate(t.date),
+        sub:Object.keys(labels).map(function(k){return labels[k]+' '+n2(t.values[k]);}).join(' · '),value:''});
+    }).join('')+'</div></details>';
+}
+function accountLabel(id){var a=S.accounts.find(function(x){return x.id===id;});return a?a.name:'未知账户';}
+function openLockedRecovery(){
+  lockUi('备份与恢复','恢复会替换这台设备的当前数据。请先导出本机加密副本。',
+    '<input id="recovery_file" type="file" accept=".json,application/json" aria-label="加密备份文件">'+
+    passwordInput('recovery_pw','备份密码'),
+    '<button class="btn ghost" onclick="exportLockedCopy()">导出本机加密副本</button>'+
+    '<button class="btn" onclick="restoreLockedCopy()">恢复加密备份</button>'+
+    '<button class="btn ghost" onclick="showUnlock()">返回解锁</button>');
+}
+async function exportLockedCopy(){
+  try{
+    var env=volatileRecovery||await readLocalEnvelope();
+    if(!env) throw new Error('没有本机密文');
+    saveFile('Scrooge-local-'+today()+'.vault.json',JSON.stringify(Object.assign({},env,
+      {format:'scrooge-vault-backup'})),'application/json');
+  }catch(e){
+    var raw=localStorage.getItem(ENC_KEY);
+    if(raw) saveFile('Scrooge-damaged-'+today()+'.json',raw,'application/json');
+    else setLockError(e.message);
+  }
+}
+async function restoreLockedCopy(){
+  var file=document.getElementById('recovery_file').files[0],password=val('recovery_pw');
+  if(!file||!password) return setLockError('请选择备份并输入备份密码');
+  try{
+    var backup=JSON.parse(await file.text()),state=await decryptBackupPayload(backup,password);
+    if(!confirm('使用这份备份替换本机数据？备份密码将成为本机主密码。')) return;
+    var key=await keyForEnvelope(password,backup),record;
+    try{record=await readStorageRecord();}catch(e){record={revision:0,history:[]};}
+    var env=await encryptTextWithKey(JSON.stringify(state),key,backup.kdf,'scrooge-vault-local');
+    await commitStorageRecord(record,{envelope:env,syncConfig:null,history:[]});
+    try{localStorage.removeItem(DEVICE_KEY);localStorage.removeItem(SYNC_META_KEY);
+      localStorage.removeItem(ENC_KEY);localStorage.removeItem(SYNC_CONFIG_KEY);}catch(e){}
+    vaultKey=key;S=state;storageAdopt(S,env);unlockUi();toast('已恢复，请重新设置家庭同步');
+  }catch(e){setLockError(e.storageRetry?'其他页面正在保存，请关闭后重试':'恢复失败：密码或备份不正确，原数据未替换');}
+}
+async function openRecoveryHistory(){
+  var record=await readStorageRecord();
+  openSheet('本机恢复点',card('<p class="dim">最近保存：'+esc(record.savedAt||'尚未保存')+
+    '</p><p class="dim">最近同步：'+esc(readSyncMeta().lastSyncAt||'尚未同步')+
+    '</p><p class="dim">最近生成备份：'+esc(record.lastBackupGeneratedAt||'暂无记录')+
+    '</p><p class="dim">恢复点与当前数据保存在同一设备，不能代替独立备份。</p>')+
+    (record.history||[]).map(function(point){return card(row({label:fmtDate(point.date.slice(0,10)),
+      sub:new Date(point.date).toLocaleTimeString(),value:''})+
+      btn('恢复到此记录',"restoreRecoveryPoint('"+point.id+"')",'ghost','arrow-counter-clockwise'));}).join('')+
+    (!record.history.length?'<p class="empty">暂无恢复点</p>':'')+
+    (storageFailure?btn('处理未保存的修改','openStorageRecovery()','danger'):'')+
+    btn('导出独立加密备份','exportBackup()',null,'download-simple'));
+}
+async function restoreRecoveryPoint(id){
+  if(!await flushStorage()) return;
+  var record=await readStorageRecord(),point=(record.history||[]).find(function(x){return x.id===id;});
+  if(!point) return toast('恢复点已更新，请重新打开列表');
+  if(!confirm('将本机账目恢复到选定时间？此操作也会参与下一次家庭同步。')) return;
+  try{
+    S=assertState(JSON.parse(await decryptTextWithKey(point.envelope,vaultKey)));
+    if(!await save()) return;
+    closeSheet();render();toast('已恢复，恢复前的数据仍在最近恢复点中');
+  }catch(e){toast('恢复失败，当前记录未替换：'+e.message);}
+}
+function openAccountManager(){
+  openSheet('账户管理',S.accounts.map(function(a){return card(row({label:a.name,
+    sub:(a.owner||'未填写持有人')+' · '+a.currency+(a.archived?' · 已归档':''),
+    value:money(accountBalance(S.txs,a.id),a.currency)})+
+    btn('编辑',"editAccount('"+a.id+"')",'ghost','pencil-simple'));}).join('')+
+    btn('新增账户','editAccount()',null,'plus'));
+}
+function editAccount(id){
+  var a=S.accounts.find(function(x){return x.id===id;})||{};
+  openSheet(id?'编辑账户':'新增账户',field({id:'account_name',label:'账户名称',val:a.name||''})+
+    field({id:'account_owner',label:'持有人',val:a.owner||''})+
+    field({id:'account_currency',label:'币种',type:'select',val:a.currency||'EUR',
+      opts:[{k:'EUR',label:'欧元'},{k:'RMB',label:'人民币'}]})+
+    field({id:'account_type',label:'资产类别',type:'select',val:a.assetType||retirementInferAssetType(a),
+      opts:Object.keys(RETIREMENT_ASSET_TYPES).map(function(k){return {k:k,label:RETIREMENT_ASSET_TYPES[k].label};})})+
+    field({id:'account_iban',label:'IBAN 尾号（可选，4 位）',val:a.ibanLast4||''})+
+    '<label class="check-row"><input id="account_archived" type="checkbox" '+(a.archived?'checked':'')+'>归档账户</label>'+
+    btn('保存',"saveAccount('"+(id||'')+"')"));
+}
+async function saveAccount(id){
+  var a=S.accounts.find(function(x){return x.id===id;}),currency=val('account_currency'),name=val('account_name');
+  if(!name) return toast('请填写账户名称');
+  if(a&&a.currency!==currency&&S.txs.some(function(t){return t.accountId===id;}))
+    return toast('已有流水的账户不能更改币种，请新建账户');
+  var tail=val('account_iban');if(tail&&!/^\d{4}$/.test(tail)) return toast('IBAN 尾号填写最后 4 位数字');
+  var next=Object.assign({},a||{id:'account-'+uid()},{name:name,owner:val('account_owner'),currency:currency,
+    assetType:val('account_type'),ibanLast4:tail,archived:document.getElementById('account_archived').checked});
+  if(a) S.accounts[S.accounts.indexOf(a)]=next;else S.accounts.push(next);
+  if(S.retirementPlan&&S.retirementPlan.assetConfigs&&S.retirementPlan.assetConfigs[next.id])
+    S.retirementPlan.assetConfigs[next.id].type=next.assetType;
+  if(!await save()) return;openAccountManager();render();toast('账户已保存');
+}
+function bankBatches(){
+  var groups={};S.txs.forEach(function(t){
+    if(!t.importBatchId) return;
+    if(!groups[t.importBatchId]) groups[t.importBatchId]={id:t.importBatchId,rows:[],date:t.importedAt||t.date,file:t.importFileName||'银行导入'};
+    groups[t.importBatchId].rows.push(t);
+  });return Object.values(groups).sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+}
+function openImportBatches(){
+  var batches=bankBatches();
+  openSheet('银行导入批次',batches.length?batches.map(function(b){return card(h2(esc(b.file),badge(b.rows.length+' 条'))+
+    '<p class="dim">'+esc(b.date.slice(0,10))+' · '+esc(accountLabel(b.rows[0].accountId))+'</p>'+
+    row({label:'本批净额',value:money(b.rows.reduce(function(s,t){return s+t.amount;},0),
+      (S.accounts.find(function(a){return a.id===b.rows[0].accountId;})||{}).currency||'EUR')})+
+    btn('核对 / 更换账户 / 撤销',"openImportBatch('"+b.id+"')",'ghost'));}).join(''):'<p class="empty">暂无带批次编号的导入</p>');
+}
+async function recordBackupGeneration(){
+  for(var i=0;i<8;i++){
+    var record=await readStorageRecord();if(!sameKdf(record.envelope.kdf,vaultEnvelope.kdf)) return;
+    try{await commitStorageRecord(record,Object.assign({},record,{lastBackupGeneratedAt:new Date().toISOString()}));return;}
+    catch(e){if(!e.storageRetry) return;}
+  }
+}
+function exceptionCollection(kind){return kind==='mortgage'?'mortgageExceptions':'rentExceptions';}
+function exceptionOwner(kind,id){return (kind==='mortgage'?S.mortgages:S.tenancies).find(function(x){return x.id===id;});}
+function openPaymentExceptions(kind,id){
+  var owner=exceptionOwner(kind,id);if(!owner) return;
+  var records=(S[exceptionCollection(kind)]||[]).filter(function(x){return x.ownerId===id;}).sort(function(a,b){return b.period.localeCompare(a.period);});
+  openSheet(kind==='mortgage'?'月供异常':'收租异常',
+    '<p class="dim">仅记录与约定不符的月份。填写该月实际总额，漏扣或漏收填 0；不影响正常月份。</p>'+
+    records.map(function(x){return row({label:x.period,sub:fmtDate(x.date)+' · '+(x.notes||''),value:n2(x.actualAmount)+' €',
+      onclick:"editPaymentException('"+kind+"','"+id+"','"+x.period+"')"});}).join('')+
+    btn('记录异常',"editPaymentException('"+kind+"','"+id+"')",null,'plus'));
+}
+function editPaymentException(kind,id,period){
+  var owner=exceptionOwner(kind,id);if(!owner) return;
+  period=period||today().slice(0,7);
+  var record=(S[exceptionCollection(kind)]||[]).find(function(x){return x.ownerId===id&&x.period===period;});
+  var active=termsAt(owner,period+'-01');
+  var expected=kind==='mortgage'?Number(active.monthlyPayment):Number(active.kaltmiete||0)+Number(active.nebenkosten||0);
+  openSheet('异常记录',field({id:'exception_period',label:'对应月份',type:'month',val:period})+
+    field({id:'exception_date',label:'实际日期（未发生时填核对日）',type:'date',val:record?record.date:today()})+
+    field({id:'exception_amount',label:'本月实际总额（€）',type:'text',inputmode:'decimal',val:n2(record?record.actualAmount:expected)})+
+    field({id:'exception_notes',label:'原因 / 备注',type:'textarea',val:record?record.notes:''})+
+    btn('保存',"savePaymentException('"+kind+"','"+id+"','"+(record?record.id:'')+"')")+
+    (record?btn('恢复正常月份',"deletePaymentException('"+kind+"','"+record.id+"')",'danger'):'')
+  );
+}
+async function savePaymentException(kind,id,recordId){
+  var owner=exceptionOwner(kind,id),period=val('exception_period'),date=val('exception_date'),amount=fnum('exception_amount');
+  if(!owner||!isDate(owner.startDate||'')||!isDate(period+'-01')||!isDate(date)||date>today()) return toast('请填写有效的合同开始日、月份和不晚于今天的日期');
+  if(period<owner.startDate.slice(0,7)||period>today().slice(0,7)) return toast('月份必须处于合同开始至今的范围');
+  if(owner.endDate&&period>owner.endDate.slice(0,7)) return toast('月份不能晚于合同结束日');
+  if(!isFinite(amount)||amount<0) return toast('实际总额不能为负数');
+  var key=exceptionCollection(kind),records=S[key]||[];
+  if(records.some(function(x){return x.ownerId===id&&x.period===period&&x.id!==recordId;})) return toast('该月已有异常，请编辑原记录');
+  S[key]=records.filter(function(x){return x.id!==recordId;}).concat({id:recordId||'exception-'+uid(),ownerId:id,period:period,date:date,actualAmount:Math.round(amount*100)/100,notes:val('exception_notes')});
+  if(!await save()) return;openPaymentExceptions(kind,id);render();toast('异常已保存');
+}
+async function deletePaymentException(kind,id){
+  if(!confirm('删除异常并恢复为合同约定金额？')) return;
+  if(await removeWithUndo(exceptionCollection(kind),id,'异常记录')) closeSheet();
+}
+function openImportBatch(id){
+  var b=bankBatches().find(function(x){return x.id===id;});if(!b) return;
+  openSheet('导入批次',card(h2(esc(b.file),badge(b.rows.length+' 条'))+
+    b.rows.slice(0,50).map(function(t){var a=S.accounts.find(function(x){return x.id===t.accountId;});
+      return row({label:t.note,sub:fmtDate(t.date)+' · '+accountLabel(t.accountId),value:money(t.amount,a?a.currency:'EUR')});}).join(''))+
+    field({id:'batch_account',label:'目标账户',type:'select',val:b.rows[0].accountId,
+      opts:S.accounts.filter(function(a){return !a.archived;}).map(function(a){return {k:a.id,label:a.name};})})+
+    btn('移至这个账户',"moveImportBatch('"+id+"')",'ghost')+
+    btn('撤销这批导入',"deleteImportBatch('"+id+"')",'danger'));
+}
+async function moveImportBatch(id){
+  var rows=S.txs.filter(function(t){return t.importBatchId===id;}),target=S.accounts.find(function(a){return a.id===val('batch_account');});
+  if(!target||!rows.length) return;
+  if(rows.some(function(t){var a=S.accounts.find(function(x){return x.id===t.accountId;});return !a||a.currency!==target.currency;}))
+    return toast('不同币种的账户不能直接移动流水');
+  if(!confirm('将这批 '+rows.length+' 条流水移至「'+target.name+'」？')) return;
+  rows.forEach(function(t){t.accountId=target.id;});
+  if(!await save()) return;openImportBatches();render();toast('账户已更正');
+}
+async function deleteImportBatch(id){
+  var count=S.txs.filter(function(t){return t.importBatchId===id;}).length;
+  if(!count||!confirm('撤销这批 '+count+' 条导入？')) return;
+  S.txs=S.txs.filter(function(t){return t.importBatchId!==id;});
+  if(!await save()) return;openImportBatches();render();toast('已撤销，可在本机恢复点找回');
+}
+function openFamilyConflict(){
+  if(!familyConflict) return toast('尚未检测到冲突，请先同步一次');
+  openSheet('家庭同步冲突',conflictMarkup(familyConflict)+
+    btn('保留本机的冲突值','resolveFamilyConflict(true)')+
+    btn('采用云端的冲突值','resolveFamilyConflict(false)','ghost'));
+}
+function conflictPathValue(state,path){
+  var value=state,parts=path.match(/[^.\[\]]+|\[[^\]]+\]/g)||[];
+  parts.forEach(function(part){
+    if(value==null) return;
+    value=part[0]==='['&&Array.isArray(value)?value.find(function(x){return x.id===part.slice(1,-1);}):value[part];
+  });return value;
+}
+function conflictValueText(value){
+  if(value===undefined) return '已删除 / 未设置';
+  if(value===null) return '空';
+  if(typeof value==='string') return /^data:image/.test(value)?'图片内容':value.slice(0,300);
+  if(typeof value==='object') return value.name||value.title||value.note||'整条记录';
+  return String(value);
+}
+function conflictMarkup(c){
+  var roots={txs:'流水',accounts:'账户',readings:'抄表',contracts:'合同',coupons:'Coupon',debts:'欠款',mortgages:'贷款',retirementPlan:'退休计划',fxRmbPerEur:'汇率',meters:'能源',tenancies:'租约'};
+  return c.paths.map(function(p){
+    var root=p.split(/[.\[]/)[0],tail=p.split('.').pop();
+    var label=(roots[root]||root)+(tail!==root?' · '+tail:'');
+    return card(h2(esc(label))+row({label:'本机',value:esc(conflictValueText(conflictPathValue(c.local,p)))})+
+      row({label:'另一方',value:esc(conflictValueText(conflictPathValue(c.remote,p)))}));
+  }).join('');
+}
+async function resolveFamilyConflict(prefer){
+  var c=familyConflict;if(!c) return;
+  var config=await readSyncConfig();
+  S=syncMergeStates(c.base,S,c.remote,prefer).state;
+  if(!await save()) return;
+  config.baseState=copyState(c.remote);
+  await writeSyncConfig(config);familyConflict=null;closeSheet();render();syncNow();
 }
 /* ================= 合同与保险 ================= */
 var CATS=['车险','房屋险','家财险','责任险','法律险','健康险','意外险','旅行险','税费','能源','通讯','其他'];
@@ -5484,7 +6068,7 @@ function contractCategoryChanged(){
   if(vehicle) vehicle.style.display=category==='车险'?'':'none';
   if(insured) insured.style.display=needsInsuredPerson(category)?'':'none';
 }
-function saveCtr(id){
+async function saveCtr(id){
   var type=contractTypeById(val('c_name_type'));
   var name=type?type.name:val('c_name');
   if(!name) return toast('请填写合同名称');
@@ -5508,7 +6092,7 @@ function saveCtr(id){
   var i=-1;
   S.contracts.forEach(function(c,k){ if(c.id===id) i=k; });
   if(i>=0) S.contracts[i]=obj; else S.contracts.push(obj);
-  save(); closeSheet(); render(); toast('已保存');
+  if(!await save()) return false; closeSheet(); render(); toast('已保存');
 }
 function delCtr(id){
   var c=S.contracts.filter(function(x){return x.id===id;})[0];
@@ -5559,6 +6143,7 @@ async function makeEncryptedBackup(){
     closeSheet();
     saveFile('Scrooges-Safe-加密备份-'+today()+'.vault.json',JSON.stringify(env,null,2),
       'application/json','加密备份已生成');
+    await recordBackupGeneration();
   }catch(e){ toast('备份失败：'+e.message); }
 }
 
@@ -5571,6 +6156,10 @@ function openSettings(){
       '<br>数据始终先加密保存在这台设备；启用家庭同步后，只上传端到端加密密文。'+
       '<br><b class="c-amber">删除浏览器数据或清空 Safari 缓存会一起清掉，请定期导出备份。</b></p>')+
     '<div class="settings-actions">'+
+      btn('账户管理','openAccountManager()','ghost','wallet')+
+      btn('银行导入批次','openImportBatches()','ghost','list')+
+      btn('本机恢复点 / 保存状态','openRecoveryHistory()','ghost','arrow-counter-clockwise')+
+      (familyConflict?btn('核对家庭同步冲突','openFamilyConflict()','danger'):'')+
       btn('家庭同步','openSyncSettings()','ghost','cloud-check')+
       btn('安全设置 / Face ID','openSecuritySettings()','ghost','fingerprint')+
       btn('导出加密备份','exportBackup()',null,'lock-key')+
@@ -5609,12 +6198,13 @@ async function doImport(){
   var t=val('imp');
   if(!t) return toast('请先选择文件或粘贴内容');
   try{
+    if(!await flushStorage()) return;
     var p=JSON.parse(t);
     if(p&&p.format==='scrooge-vault-patch'){
       var patchPassword=val('imp_pw');
       if(!patchPassword) return toast('请输入更新密码');
       var result=applyDataPatch(await decryptDataPatchPayload(p,patchPassword));
-      await save(); closeSheet(); render();
+      if(!await save()) return false; closeSheet(); render();
       return toast(result.already?'这个更新包已经导入过':'数据更新已合并并加密保存');
     }
     if(p&&p.format==='scrooge-vault-backup'){
@@ -5623,8 +6213,9 @@ async function doImport(){
       p=await decryptBackupPayload(p,password);
     }
     assertState(p);
+    if(!confirm('完整备份将替换当前账目。确定恢复？')) return;
     S=Object.assign({},SEED,p);
-    await save(); closeSheet(); render(); toast('备份已恢复并加密保存');
+    if(!await save()) return false; closeSheet(); render(); toast('备份已恢复并加密保存');
   }catch(e){ toast('恢复失败：'+e.message); }
 }
 function assertDataPatch(p){
@@ -5661,9 +6252,9 @@ function applyDataPatch(p){
   S.appliedPatches[p.id]=true;
   return result;
 }
-function doReset(){
+async function doReset(){
   if(!confirm('将丢弃所有新增记录，恢复到从 Excel 导入时的状态。继续？')) return;
-  S=JSON.parse(JSON.stringify(SEED)); save(); closeSheet(); render(); toast('已重置');
+  S=JSON.parse(JSON.stringify(SEED)); if(!await save()) return false; closeSheet(); render(); toast('已重置');
 }
 /** 生成不含数据的空壳，用于公开托管 */
 function exportShell(){
