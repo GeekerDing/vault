@@ -946,7 +946,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='9ce8d8974724';
+var APP_BUILD='43b00350df38';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -4887,6 +4887,8 @@ function validateInvestment(p){
       }
     });
   });
+  if(p.performanceStart&&p.performanceStart!=='auto'&&p.performanceStart!=='history'&&
+    !p.valuations.some(function(v){return v.date===p.performanceStart;})) throw new Error('收益起点必须对应一笔估值，请重新选择');
   return p;
 }
 function investmentXirr(flows){
@@ -4946,6 +4948,34 @@ function investmentSummary(p){
   x.startDate=p.opening?p.opening.date:(trades[0]?trades[0].date:null);
   return x;
 }
+function investmentPerformance(p,endDate){
+  validateInvestment(p);
+  var snapshots=p.valuations.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var mode=p.performanceStart||'auto';
+  var fullHistory=p.complete===true&&(!p.opening||!p.opening.shares||p.opening.marketValue!=null);
+  if(mode==='history'||(mode==='auto'&&fullHistory)||!snapshots.length) return null;
+  var start=mode==='auto'?snapshots[0]:snapshots.find(function(v){return v.date===mode;});
+  var end=endDate?snapshots.find(function(v){return v.date===endDate;}):snapshots[snapshots.length-1];
+  if(!start||!end||end.date<start.date) return null;
+  var x={startDate:start.date,endDate:end.date,openingValue:start.marketValue,bought:0,sold:0,dividends:0,fees:0,
+    profit:null,xirr:null,periodReturn:null,estimated:p.complete!==true,issues:[],days:(Date.parse(end.date)-Date.parse(start.date))/86400000};
+  // Snapshots are end-of-day holdings; their day's cash flows are already included.
+  var flows=[{date:start.date,amount:-start.marketValue}],shares=start.shares;
+  p.trades.filter(function(t){return t.date>start.date&&t.date<=end.date;})
+    .sort(function(a,b){return a.date.localeCompare(b.date)||(a.type==='buy'?-1:1);}).forEach(function(t){
+      if(t.type==='buy'){x.bought+=t.amount;shares+=t.shares;}
+      else if(t.type==='sell'){x.sold+=t.amount;shares-=t.shares;if(shares<-.0001)x.issues.push('观察期卖出份额超过持仓');}
+      else if(t.type==='dividend')x.dividends+=t.amount;else x.fees+=t.amount;
+      flows.push({date:t.date,amount:(t.type==='buy'||t.type==='fee'?-1:1)*t.amount});
+    });
+  if(Math.abs(shares-end.shares)>.0001)x.issues.push('观察期交易份额与估值不一致');
+  if(!x.issues.length){
+    x.profit=end.marketValue-start.marketValue-x.bought+x.sold+x.dividends-x.fees;
+    flows.push({date:end.date,amount:end.marketValue});x.xirr=investmentXirr(flows);
+    if(x.xirr!=null)x.periodReturn=Math.pow(1+x.xirr,x.days/365)-1;
+  }
+  return x;
+}
 function mergeInvestment(existing,incoming){
   validateInvestment(incoming);
   if(!existing) return copyState(incoming);
@@ -4963,13 +4993,15 @@ function mergeInvestment(existing,incoming){
 function investmentNumber(n){return Number(n).toLocaleString('de-DE',{maximumFractionDigits:5});}
 function investmentChart(p,mode,unit){
   unit=unit||'€';
+  var observation=investmentPerformance(p);
   var data=p.valuations.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).map(function(v){
-    var summary=investmentSummary(Object.assign({},p,{valuations:[v]}));
-    return {date:v.date,value:mode==='profit'?summary.totalProfit:v.marketValue,
+    var summary=investmentSummary(Object.assign({},p,{valuations:[v],performanceStart:'history'}));
+    var interval=observation?investmentPerformance(p,v.date):null;
+    return {date:v.date,value:mode==='profit'?(observation?(interval?interval.profit:null):summary.totalProfit):v.marketValue,
       values:{market:v.marketValue,cost:v.costBasis}};
   }).filter(function(v){return v.value!=null;});
   if(data.length<2) return '<p class="dim">'+(mode==='profit'?'收益记录尚不完整':'目前只有 '+data.length+' 个估值时点')+'，积累后显示走势。</p>';
-  if(mode==='profit') return lineChart(data,'var(--green)',function(v){return n2(v)+' '+unit;},unit,'累计投资收益');
+  if(mode==='profit') return lineChart(data,'var(--green)',function(v){return n2(v)+' '+unit;},unit,observation?'观察期收益':'累计投资收益');
   var series=[{key:'market',label:'市值',color:'var(--blue)'},{key:'cost',label:'持仓成本',color:'var(--dim)'}];
   if(data.some(function(d){return d.values.cost==null;}))series=series.slice(0,1);
   var scale=chartScale(data.flatMap(function(d){return [d.value,d.values.cost].filter(function(v){return v!=null;});}));
@@ -4992,7 +5024,8 @@ function investmentPanel(a){
     '<p class="dim">尚无证券交易记录</p><div class="investment-actions">'+btn('导入投资记录',action,'ghost','upload-simple')+
     btn('设置证券','editInvestmentProfile()','ghost','sliders-horizontal')+'</div></section>';
   var x;try{x=investmentSummary(p);}catch(e){return card('<p>'+esc(e.message)+'</p>');}
-  var v=x.valuation,unit=a.currency==='RMB'?'¥':'€';
+  var v=x.valuation,unit=a.currency==='RMB'?'¥':'€',observation=investmentPerformance(p);
+  var annual=observation?observation.xirr:x.xirr,profit=observation?observation.profit:x.totalProfit;
   function metric(label,value,tone,sub){return stat(label,value==null?'待补齐':n2(value),value==null?'':unit,tone,sub);}
   var html='<section class="investment-panel" aria-label="投资收益">'+h2(esc(p.name),badge(v?fmtDate(v.date):'未更新估值','dim'))+
     '<p class="dim">'+esc(p.isin||'')+' · '+(v?investmentNumber(v.shares)+' 份':'无持仓快照')+'</p>'+
@@ -5001,21 +5034,29 @@ function investmentPanel(a){
     btn('导入','openInvestmentImport()','ghost','upload-simple')+btn('设置','editInvestmentProfile()','ghost','sliders-horizontal')+'</div>'+
     '<div class="investment-metrics">'+metric('持仓市值',v?v.marketValue:null)+metric('持仓成本',v?v.costBasis:null)+
     metric('持仓浮盈',x.unrealized,x.unrealized<0?'red':'green',v&&v.costBasis>0&&x.unrealized!=null?n2(x.unrealized/v.costBasis*100)+'% · 非年化':null)+
-    stat('年化收益 XIRR',x.xirr==null?'待补齐':n2(x.xirr*100)+'%','',x.xirr<0?'red':'green')+
-    metric(x.period?'记录期间总收益':'累计总收益',x.totalProfit,x.totalProfit<0?'red':'green')+
-    metric('卖出已实现盈亏',x.realized,x.realized<0?'red':'green','FIFO 成本口径')+'</div>'+
-    '<p class="dim investment-status">'+(x.startDate?'记录自 '+fmtDate(x.startDate)+'。':'')+
+    stat('年化收益 XIRR',annual==null?'暂无结果':n2(annual*100)+'%','',annual<0?'red':'green',observation?(observation.estimated?'已记录现金流估算':'观察期资金加权'):null)+
+    metric(observation?'观察期收益':(x.period?'记录期间总收益':'累计总收益'),profit,profit<0?'red':'green')+
+    (observation?stat('区间收益率',observation.periodReturn==null?'暂无结果':n2(observation.periodReturn*100)+'%','',profit<0?'red':'green','资金加权 · 非年化'):
+    metric('卖出已实现盈亏',x.realized,x.realized<0?'red':'green','FIFO 成本口径'))+'</div>'+
+    '<p class="dim investment-status">'+(observation?
+    '收益观察期 '+fmtDate(observation.startDate)+' → '+fmtDate(observation.endDate)+'，期初市值 '+n2(observation.openingValue)+' '+unit+'。'+
+    (observation.estimated?'按已记录现金流估算，不含未记录分红及费用。':'')+
+    (observation.days<365?'统计不足一年，年化数值易被短期波动放大，不代表长期预期。':'')+
+    (observation.issues.length?esc(observation.issues.join('；')):''):
+    (x.startDate?'记录自 '+fmtDate(x.startDate)+'。':'')+
     (p.opening&&p.opening.shares>0?'包含期初持仓，成立以来收益尚缺早期交易。':'')+
-    (!p.complete?'分红及历史完整性尚未确认；总收益与 XIRR 暂不计算。':'')+
+    (!p.complete?'分红及历史完整性尚未确认；总收益与 XIRR 暂不计算。':''))+
     (x.afterValuation?'有 '+x.afterValuation+' 笔交易晚于估值，未计入本期收益。':'')+
     (x.issues.length?esc(x.issues.join('；')):'')+'</p>'+
     '<div class="investment-metrics secondary">'+metric('累计买入',x.bought,null,'记录期间')+
     metric('累计卖出',x.sold,null,investmentNumber(x.soldShares)+' 份 · 不是盈利')+
     metric('交易净投入',x.bought-x.sold,null,'不含未知期初成本')+
-    metric('已记录分红',x.dividends,null,p.complete?'':'尚未确认完整')+metric('另记费用 / 税款',x.fees)+'</div>'+
+    metric('已记录分红',x.dividends,null,p.complete?'':'尚未确认完整')+metric('另记费用 / 税款',x.fees)+
+    (observation?stat('历史卖出盈亏',x.realized==null?'未追溯':n2(x.realized),x.realized==null?'':unit,x.realized<0?'red':'green',x.realized==null?'早期成本不完整，不按零计算':'FIFO 成本口径'):'')+'</div>'+
     '<details><summary>计算口径</summary><p class="dim">证券现金流口径：买入为投入，卖出和分红为回收，期末采用估值日市值。XIRR 为资金加权年化收益，不是预测。买卖金额使用实际支出或回款，已包含的费用不重复扣除；另记费用不计入 FIFO 卖出盈亏。银行持仓成本用于浮盈，不用于倒推历史买入。税款缺失时不代表税后收益。</p></details>'+
     '<div class="investment-charts"><section>'+h2('市值与持仓成本')+investmentChart(p,'value',unit)+'</section>'+
-    '<section>'+h2('累计收益走势')+investmentChart(p,'profit',unit)+'</section></div>'+
+    '<section>'+h2(observation?'观察期收益走势':'累计收益走势')+investmentChart(p,'profit',unit)+
+    '<p class="dim">仅连接实际估值时点，不代表期间每日走势。</p></section></div>'+
     '<details class="investment-history"><summary>买卖与分红 · '+p.trades.length+' 笔</summary>';
   if(p.opening) html+=row({label:'期初持仓',sub:fmtDate(p.opening.date)+' · 历史买入成本未提供',value:investmentNumber(p.opening.shares)+' 份'});
   html+=p.trades.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).map(function(t){
@@ -5035,6 +5076,9 @@ function editInvestmentProfile(){
   var a=investmentAccount();if(!a) return;var p=a.investment||{name:'',isin:'',trades:[],valuations:[]},o=p.opening||{};
   openSheet('证券与历史范围',field({id:'inv_name',label:'证券名称',val:p.name})+
     field({id:'inv_isin',label:'ISIN（可选）',val:p.isin})+
+    field({id:'inv_performance',label:'收益统计起点',type:'select',val:p.performanceStart||'auto',opts:
+      [{k:'auto',label:'自动：历史不完整时从首个估值开始'},{k:'history',label:'全部历史（缺失数据时不计算）'}].concat(
+        p.valuations.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).map(function(v){return {k:v.date,label:fmtDate(v.date)+' · '+money(v.marketValue,a.currency)};}))})+
     field({id:'inv_start',label:'期初日期（完整历史则留空）',type:'date',val:o.date||''})+
     investmentField('shares','期初份额',o.shares)+investmentField('opening','期初当日市值（可选，不是成本）',o.marketValue)+
     '<label class="check-row"><input id="inv_complete" type="checkbox" '+(p.complete?'checked':'')+'>已核对记录期间全部交易、分红及另记费用</label>'+saveButton('saveInvestmentProfile()'));
@@ -5042,6 +5086,7 @@ function editInvestmentProfile(){
 async function saveInvestmentProfile(){
   var a=investmentAccount();if(!a) return;
   var p=copyState(a.investment||{trades:[],valuations:[]});p.name=val('inv_name');p.isin=val('inv_isin');
+  p.performanceStart=val('inv_performance');
   p.complete=document.getElementById('inv_complete').checked;
   p.opening=val('inv_start')?{date:val('inv_start'),shares:fnum('inv_shares'),marketValue:val('inv_opening')?fnum('inv_opening'):null}:null;
   try{validateInvestment(p);}catch(e){return toast(e.message);}
@@ -5066,13 +5111,17 @@ async function saveInvestmentRecord(kind,id){
   var r={id:id||uid(),date:val('inv_date'),shares:val('inv_shares')?fnum('inv_shares'):0,note:val('inv_note')};
   if(kind==='trade'){r.type=val('inv_type');r.amount=fnum('inv_amount');r.price=val('inv_price')?fnum('inv_price'):null;}
   else {r.marketValue=fnum('inv_value');r.costBasis=val('inv_cost')?fnum('inv_cost'):null;}
-  var i=p[key].findIndex(function(t){return t.id===id;});if(i<0)p[key].push(r);else p[key][i]=r;
+  var i=p[key].findIndex(function(t){return t.id===id;});
+  if(kind==='valuation'&&i>=0&&p.performanceStart===p[key][i].date)p.performanceStart=r.date;
+  if(i<0)p[key].push(r);else p[key][i]=r;
   try{validateInvestment(p);}catch(e){return toast(e.message);}
   a.investment=p;if(!await save())return;closeSheet();render();toast('投资记录已保存');
 }
 async function deleteInvestmentRecord(kind,id){
   if(!confirm('删除这条投资记录？可从设置中的本地恢复点恢复。')) return;
   var a=investmentAccount(),key=kind==='valuation'?'valuations':'trades';
+  var removed=a.investment[key].find(function(t){return t.id===id;});
+  if(kind==='valuation'&&removed&&a.investment.performanceStart===removed.date)a.investment.performanceStart='auto';
   a.investment[key]=a.investment[key].filter(function(t){return t.id!==id;});
   if(!await save())return;closeSheet();render();toast('记录已删除');
 }
