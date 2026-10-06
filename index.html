@@ -657,6 +657,23 @@ body.locked .app-shell,body.locked .sheet,body.locked .toast,body.locked #nav{vi
 @media (min-width:900px) and (max-width:1199px){
   .save-overview,.save-dashboard,.save-chart-grid,.overview-grid{grid-template-columns:minmax(0,1fr)}
 }
+.investment-panel{min-width:0;display:flex;flex-direction:column;gap:16px;padding:20px 0}
+.investment-panel>p{margin:0;line-height:1.6;overflow-wrap:anywhere}
+.investment-actions{display:flex;flex-wrap:wrap;gap:8px}
+.investment-actions .btn{min-height:44px;flex:1 1 130px}
+.investment-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px;padding:20px 0;border-block:1px solid var(--line)}
+.investment-metrics .stat .v{font-size:20px;line-height:1.4;overflow-wrap:anywhere}
+.investment-metrics.secondary{border-top:0}
+.investment-status{color:var(--dim);font-size:13px}
+.investment-panel summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+.investment-panel summary::before{content:'+';margin-right:10px;color:var(--dim)}
+.investment-panel details[open]>summary::before{content:'−'}
+.investment-history .row{gap:16px}.investment-history .row .l{min-width:0}
+.investment-history .row .v{font-size:16px;white-space:normal;overflow-wrap:anywhere;max-width:45%}
+.investment-charts{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+.investment-charts>section{min-width:0}
+@media(min-width:900px){.investment-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.investment-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:359px){.investment-metrics{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -929,7 +946,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='bf9cfe898f36';
+var APP_BUILD='9ce8d8974724';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1894,6 +1911,7 @@ function assertState(p){
   if(!p || !Array.isArray(p.accounts) || !Array.isArray(p.txs) ||
      !Array.isArray(p.readings) || !Array.isArray(p.contracts))
     throw new Error('备份内容结构不完整');
+  p.accounts.forEach(function(a){if(a.investment)validateInvestment(a.investment);});
   if(p.coupons==null) p.coupons=[];
   if(p.debts==null) p.debts=[];
   if(p.mortgages==null) p.mortgages=[];
@@ -2055,6 +2073,7 @@ async function lockVault(automatic){
   closeSheet();
   document.getElementById('sheetBody').innerHTML='';
   clearTimeout(undoT);pendingUndo=null;bankImportRows=[];bankImportFileName='';bankImportUndoIds=[];couponImageDraft=null;
+  investmentImportDraft=null;
   if(ocrPreviewUrl) URL.revokeObjectURL(ocrPreviewUrl);
   if(ocrWindowPreviewUrl) URL.revokeObjectURL(ocrWindowPreviewUrl);
   ocrPreviewUrl='';ocrWindowPreviewUrl='';
@@ -2337,6 +2356,7 @@ function syncMergeValue(base,local,remote,path,context){
 }
 function syncStateEmpty(state){
   if(!state) return true;
+  if((state.accounts||[]).some(function(a){return !!a.investment;})) return false;
   return ['properties','meters','readings','txs','contracts','coupons','debts','mortgages',
     'mortgagePayments','specialRepayments','tenancies','rentPayments'].every(function(k){
     return !Array.isArray(state[k])||state[k].length===0;
@@ -3825,9 +3845,10 @@ function viewSave(mode){
   var eurIds=S.accounts.filter(function(a){return a.currency==='EUR';}).map(function(a){return a.id;});
   var ids = accSel==='all' ? eurIds : [accSel];
   var sel = S.accounts.filter(function(a){return a.id===accSel;})[0];
+  var investmentSelected=!!(sel&&(sel.investment||retirementInferAssetType(sel)==='stock'));
   var visibleAccounts=S.accounts.filter(function(a){return !a.archived||showArchivedAccounts;});
   var out=sectionTabs('funds',mode);
-  out+=pageHeading(mode==='save'?'账户':'流水',btn('记一笔','addTx()',null,'plus')+
+  out+=pageHeading(mode==='save'?(investmentSelected?'股票投资':'账户'):'流水',btn('记一笔','addTx()',null,'plus')+
     btn('导入账单','openBankImport()','ghost','file-csv')+
     (mode==='save'?btn('管理账户','openAccountManager()','ghost','sliders-horizontal'):
       btn('导入批次','openImportBatches()','ghost','clock-counter-clockwise')));
@@ -3847,7 +3868,7 @@ function viewSave(mode){
     return row({label:a.name,sub:sub,value:money(b,a.currency),tone:b<0?'red':'',
       onclick:"setAcc('"+a.id+"')"});
   }).join(''));
-  if(mode==='save') out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
+  if(mode==='save'&&!investmentSelected) out+='<section class="save-overview">'+netWorthCard+accountsCard+'</section>';
 
   out+=chips([{k:'all',label:'欧元合计'}].concat(visibleAccounts.map(function(a){
     return {k:a.id,label:a.name};})),accSel,'setAcc');
@@ -3881,7 +3902,7 @@ function viewSave(mode){
   if(!list.length) body+='<p class="empty">还没有流水</p>';
   if(list.length>25) body+=btn(showAllTx?'收起':('显示全部 '+list.length+' 条'),'toggleAllTx()','ghost');
   if(mode==='save'){
-    out+='<section class="save-account-view">'+balanceCard+'</section>';
+    out+='<section class="save-account-view">'+(investmentSelected?investmentPanel(sel):balanceCard)+'</section>';
   }else{
     out+='<section class="save-dashboard"><div class="save-chart-grid">'+monthlyCard+'</div>'+
       '<div class="card save-transactions">'+body+'</div></section>';
@@ -4667,6 +4688,435 @@ async function retirementMaybeCelebrateOnUnlock(){
     return true;
   }
   return false;
+}
+"use strict";
+var InvestmentXirrLibrary = (() => {
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __commonJS = (cb, mod) => function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+
+  // node_modules/newton-raphson-method/index.js
+  var require_newton_raphson_method = __commonJS({
+    "node_modules/newton-raphson-method/index.js"(exports, module) {
+      "use strict";
+      module.exports = newtonRaphson;
+      function newtonRaphson(f, fp, x0, options) {
+        var x1, y, yp, tol, maxIter, iter, yph, ymh, yp2h, ym2h, h, hr, verbose, eps;
+        if (typeof fp !== "function") {
+          options = x0;
+          x0 = fp;
+          fp = null;
+        }
+        options = options || {};
+        tol = options.tolerance === void 0 ? 1e-7 : options.tolerance;
+        eps = options.epsilon === void 0 ? 2220446049250313e-31 : options.epsilon;
+        maxIter = options.maxIterations === void 0 ? 20 : options.maxIterations;
+        h = options.h === void 0 ? 1e-4 : options.h;
+        verbose = options.verbose === void 0 ? false : options.verbose;
+        hr = 1 / h;
+        iter = 0;
+        while (iter++ < maxIter) {
+          y = f(x0);
+          if (fp) {
+            yp = fp(x0);
+          } else {
+            yph = f(x0 + h);
+            ymh = f(x0 - h);
+            yp2h = f(x0 + 2 * h);
+            ym2h = f(x0 - 2 * h);
+            yp = (ym2h - yp2h + 8 * (yph - ymh)) * hr / 12;
+          }
+          if (Math.abs(yp) <= eps * Math.abs(y)) {
+            if (verbose) {
+              console.log("Newton-Raphson: failed to converged due to nearly zero first derivative");
+            }
+            return false;
+          }
+          x1 = x0 - y / yp;
+          if (Math.abs(x1 - x0) <= tol * Math.abs(x1)) {
+            if (verbose) {
+              console.log("Newton-Raphson: converged to x = " + x1 + " after " + iter + " iterations");
+            }
+            return x1;
+          }
+          x0 = x1;
+        }
+        if (verbose) {
+          console.log("Newton-Raphson: Maximum iterations reached (" + maxIter + ")");
+        }
+        return false;
+      }
+    }
+  });
+
+  // node_modules/xirr/xirr.js
+  var require_xirr = __commonJS({
+    "node_modules/xirr/xirr.js"(exports, module) {
+      var newton = require_newton_raphson_method();
+      var MILLIS_PER_DAY = 1e3 * 60 * 60 * 24;
+      var DAYS_IN_YEAR = 365;
+      function convert(data) {
+        if (!data || !data.length || !data.forEach || data.length < 2) {
+          throw new Error("Argument is not an array with length of 2 or more.");
+        }
+        var investments = [];
+        var start = Math.floor(data[0].when / MILLIS_PER_DAY);
+        var end = start;
+        var minAmount = Number.POSITIVE_INFINITY;
+        var maxAmount = Number.NEGATIVE_INFINITY;
+        var total = 0;
+        var deposits = 0;
+        data.forEach(function(datum) {
+          total += datum.amount;
+          if (datum.amount < 0) {
+            deposits += -datum.amount;
+          }
+          var epochDays = Math.floor(datum.when / MILLIS_PER_DAY);
+          start = Math.min(start, epochDays);
+          end = Math.max(end, epochDays);
+          minAmount = Math.min(minAmount, datum.amount);
+          maxAmount = Math.max(maxAmount, datum.amount);
+          investments.push({
+            amount: datum.amount,
+            epochDays
+          });
+        });
+        if (start === end) {
+          throw new Error("Transactions must not all be on the same day.");
+        }
+        if (minAmount >= 0) {
+          throw new Error("Transactions must not all be nonnegative.");
+        }
+        if (maxAmount < 0) {
+          throw new Error("Transactions must not all be negative.");
+        }
+        investments.forEach(function(investment) {
+          investment.years = (end - investment.epochDays) / DAYS_IN_YEAR;
+        });
+        return {
+          total,
+          deposits,
+          days: end - start,
+          investments,
+          maxAmount
+        };
+      }
+      function xirr(transactions, options) {
+        var data = convert(transactions);
+        if (data.maxAmount === 0) {
+          return -1;
+        }
+        var investments = data.investments;
+        var value = function(rate2) {
+          return investments.reduce(function(sum, investment) {
+            var A = investment.amount;
+            var Y = investment.years;
+            if (-1 < rate2) {
+              return sum + A * Math.pow(1 + rate2, Y);
+            } else if (rate2 < -1) {
+              return sum - Math.abs(A) * Math.pow(-1 - rate2, Y);
+            } else if (Y === 0) {
+              return sum + A;
+            } else {
+              return sum;
+            }
+          }, 0);
+        };
+        var derivative = function(rate2) {
+          return investments.reduce(function(sum, investment) {
+            var A = investment.amount;
+            var Y = investment.years;
+            if (Y === 0) {
+              return sum;
+            } else if (-1 < rate2) {
+              return sum + A * Y * Math.pow(1 + rate2, Y - 1);
+            } else if (rate2 < -1) {
+              return sum + Math.abs(A) * Y * Math.pow(-1 - rate2, Y - 1);
+            } else {
+              return sum;
+            }
+          }, 0);
+        };
+        var guess = options ? options.guess : void 0;
+        if (guess && isNaN(guess)) {
+          throw new Error("option.guess must be a number.");
+        }
+        if (!guess) {
+          guess = data.total / data.deposits / (data.days / DAYS_IN_YEAR);
+        }
+        var rate = newton(value, derivative, guess, options);
+        if (rate === false) {
+          throw new Error("Newton-Raphson algorithm failed to converge.");
+        }
+        return rate;
+      }
+      module.exports = xirr;
+    }
+  });
+  return require_xirr();
+})();
+/* Securities records are account metadata, not another copy of bank cash flows. */
+var INVESTMENT_TYPES={buy:'买入',sell:'卖出',dividend:'分红',fee:'费用 / 税款'};
+function investmentDate(d){
+  return typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&
+    isFinite(Date.parse(d))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
+}
+function validateInvestment(p){
+  if(!p||typeof p.name!=='string'||!p.name.trim()||!Array.isArray(p.trades)||!Array.isArray(p.valuations))
+    throw new Error('投资记录结构不完整');
+  function number(n){return typeof n==='number'&&isFinite(n)&&n>=0;}
+  if(p.opening&&(!investmentDate(p.opening.date)||!number(p.opening.shares)||
+    (p.opening.marketValue!=null&&!number(p.opening.marketValue)))) throw new Error('期初日期或持仓无效');
+  [p.trades,p.valuations].forEach(function(list,kind){
+    var ids=new Set(),dates=new Set();
+    list.forEach(function(r){
+      if(!r||typeof r.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(r.id)||ids.has(r.id)) throw new Error('记录编号重复或无效');
+      ids.add(r.id);
+      if(!investmentDate(r.date)) throw new Error('记录日期无效');
+      if(kind===0){
+        if(!INVESTMENT_TYPES[r.type]||!number(r.amount)||r.amount===0) throw new Error('交易类型或金额无效');
+        if((r.type==='buy'||r.type==='sell')&&(!number(r.shares)||r.shares===0)) throw new Error('交易份额无效');
+        if(r.price!=null&&!number(r.price)) throw new Error('成交价格无效');
+        if(p.opening&&r.date<=p.opening.date) throw new Error('期初之前的买卖请先补全历史并移除期初持仓');
+      }else{
+        if(!number(r.marketValue)||!number(r.shares)||(r.costBasis!=null&&!number(r.costBasis))) throw new Error('估值金额或份额无效');
+        if(dates.has(r.date)) throw new Error('同一天只能保留一笔估值');
+        dates.add(r.date);
+        if(p.opening&&r.date<p.opening.date) throw new Error('估值不能早于期初日期');
+      }
+    });
+  });
+  return p;
+}
+function investmentXirr(flows){
+  var daily={};flows.forEach(function(f){daily[f.date]=(daily[f.date]||0)+f.amount;});
+  var list=Object.keys(daily).sort().map(function(d){return {amount:daily[d],when:new Date(d+'T00:00:00Z')};})
+    .filter(function(f){return Math.abs(f.amount)>1e-9;});
+  if(list.length<2||!list.some(function(f){return f.amount<0;})||!list.some(function(f){return f.amount>0;})) return null;
+  var roots=[],origin=list[0].when.getTime(),scale=list.reduce(function(s,f){return s+Math.abs(f.amount);},0);
+  // Retry the established solver; reject ambiguous roots and verify the residual.
+  [-.99,-.9,-.5,0,.05,.1,.2,.5,1,5,20].forEach(function(guess){
+    try{
+      var r=InvestmentXirrLibrary(list,{guess:guess,maxIterations:200});
+      if(!isFinite(r)||r<=-1) return;
+      var residual=list.reduce(function(s,f){return s+f.amount/Math.pow(1+r,(f.when-origin)/86400000/365);},0);
+      if(Math.abs(residual)<=Math.max(.00001,scale*1e-8)&&!roots.some(function(x){return Math.abs(x-r)<1e-6;})) roots.push(r);
+    }catch(e){}
+  });
+  return roots.length===1?roots[0]:null;
+}
+function investmentSummary(p){
+  validateInvestment(p);
+  var valuation=p.valuations.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).pop()||null;
+  var cutoff=valuation?valuation.date:today(),trades=p.trades.filter(function(t){return t.date<=cutoff;})
+    .slice().sort(function(a,b){return a.date.localeCompare(b.date)||(a.type==='buy'?-1:1);});
+  var x={valuation:valuation,bought:0,sold:0,soldShares:0,dividends:0,fees:0,realized:0,unrealized:null,
+    totalProfit:null,xirr:null,shares:p.opening?p.opening.shares:0,issues:[],afterValuation:p.trades.length-trades.length};
+  var lots=p.opening&&p.opening.shares?[{shares:p.opening.shares,cost:null}]:[],unknownSale=false,flows=[];
+  if(p.opening&&p.opening.marketValue!=null) flows.push({date:p.opening.date,amount:-p.opening.marketValue});
+  trades.forEach(function(t){
+    if(t.type==='buy'){
+      x.bought+=t.amount;x.shares+=t.shares;lots.push({shares:t.shares,cost:t.amount/t.shares});
+    }else if(t.type==='sell'){
+      x.sold+=t.amount;x.soldShares+=t.shares;x.shares-=t.shares;
+      var remaining=t.shares,cost=0;
+      while(remaining>1e-7&&lots.length){
+        var lot=lots[0],take=Math.min(remaining,lot.shares);
+        if(lot.cost==null) unknownSale=true;else cost+=take*lot.cost;
+        remaining-=take;lot.shares-=take;if(lot.shares<1e-7) lots.shift();
+      }
+      if(remaining>1e-5){unknownSale=true;x.issues.push('卖出份额超过已记录持仓');}
+      x.realized+=t.amount-cost;
+    }else if(t.type==='dividend') x.dividends+=t.amount;
+    else x.fees+=t.amount;
+    flows.push({date:t.date,amount:(t.type==='buy'||t.type==='fee'?-1:1)*t.amount});
+  });
+  if(unknownSale||(!p.complete&&x.sold>0)) x.realized=null;
+  if(valuation){
+    if(Math.abs(x.shares-valuation.shares)>.0001) x.issues.push('交易累计份额与估值持仓不一致');
+    if(valuation.costBasis!=null) x.unrealized=valuation.marketValue-valuation.costBasis;
+    var openingKnown=!p.opening||p.opening.shares===0||p.opening.marketValue!=null;
+    if(p.complete===true&&openingKnown&&!x.issues.length){
+      x.totalProfit=valuation.marketValue+x.sold+x.dividends-x.bought-x.fees-(p.opening?p.opening.marketValue||0:0);
+      flows.push({date:valuation.date,amount:valuation.marketValue});x.xirr=investmentXirr(flows);
+    }
+  }
+  x.period=!!(p.opening&&p.opening.shares>0);
+  x.startDate=p.opening?p.opening.date:(trades[0]?trades[0].date:null);
+  return x;
+}
+function mergeInvestment(existing,incoming){
+  validateInvestment(incoming);
+  if(!existing) return copyState(incoming);
+  validateInvestment(existing);
+  if((existing.isin||existing.name)!==(incoming.isin||incoming.name)) throw new Error('证券不匹配，不能合并');
+  var result=copyState(existing);
+  ['trades','valuations'].forEach(function(key){incoming[key].forEach(function(r){
+    var old=result[key].find(function(t){return t.id===r.id;});
+    if(old&&!syncSame(old,r)) throw new Error('同编号记录冲突，请在明细中核对');
+    if(!old) result[key].push(copyState(r));
+  });});
+  if(!syncSame(existing.opening||null,incoming.opening||null)) throw new Error('期初记录冲突，请先核对');
+  return validateInvestment(result);
+}
+function investmentNumber(n){return Number(n).toLocaleString('de-DE',{maximumFractionDigits:5});}
+function investmentChart(p,mode,unit){
+  unit=unit||'€';
+  var data=p.valuations.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).map(function(v){
+    var summary=investmentSummary(Object.assign({},p,{valuations:[v]}));
+    return {date:v.date,value:mode==='profit'?summary.totalProfit:v.marketValue,
+      values:{market:v.marketValue,cost:v.costBasis}};
+  }).filter(function(v){return v.value!=null;});
+  if(data.length<2) return '<p class="dim">'+(mode==='profit'?'收益记录尚不完整':'目前只有 '+data.length+' 个估值时点')+'，积累后显示走势。</p>';
+  if(mode==='profit') return lineChart(data,'var(--green)',function(v){return n2(v)+' '+unit;},unit,'累计投资收益');
+  var series=[{key:'market',label:'市值',color:'var(--blue)'},{key:'cost',label:'持仓成本',color:'var(--dim)'}];
+  if(data.some(function(d){return d.values.cost==null;}))series=series.slice(0,1);
+  var scale=chartScale(data.flatMap(function(d){return [d.value,d.values.cost].filter(function(v){return v!=null;});}));
+  var first=Date.parse(data[0].date),span=Date.parse(data[data.length-1].date)-first;
+  var X=function(d){return 2+(Date.parse(d)-first)/span*(CW-4);};
+  var Y=function(v){return 18+(scale.max-v)/(scale.max-scale.min)*(CH-24);};
+  var points=data.map(function(d){return {x:X(d.date),y:Y(d.value),date:d.date,value:d.value,color:'var(--blue)'};});
+  var marks=series.map(function(s){var started=false;return '<path d="'+data.map(function(d){
+    var v=d.values[s.key];if(v==null){started=false;return '';}
+    var path=(started?'L':'M')+X(d.date).toFixed(1)+','+Y(v).toFixed(1);started=true;return path;
+  }).join(' ')+'" fill="none" stroke="'+s.color+'" stroke-width="2" vector-effect="non-scaling-stroke"/>';}).join('');
+  var id='chart-'+(++chartSeq);
+  chartStore[id]={id:id,data:data,points:points,selected:data.length-1,color:'var(--blue)',
+    fmt:function(v){return v==null?'待补齐':n2(v)+' '+unit;},unit:unit,label:'市值与持仓成本',series:series};
+  return chartMarkup(chartStore[id],marks,scale,Y,1,true);
+}
+function investmentPanel(a){
+  var action='openInvestmentImport()',p=a.investment;
+  if(!p) return '<section class="investment-panel">'+h2('投资收益')+
+    '<p class="dim">尚无证券交易记录</p><div class="investment-actions">'+btn('导入投资记录',action,'ghost','upload-simple')+
+    btn('设置证券','editInvestmentProfile()','ghost','sliders-horizontal')+'</div></section>';
+  var x;try{x=investmentSummary(p);}catch(e){return card('<p>'+esc(e.message)+'</p>');}
+  var v=x.valuation,unit=a.currency==='RMB'?'¥':'€';
+  function metric(label,value,tone,sub){return stat(label,value==null?'待补齐':n2(value),value==null?'':unit,tone,sub);}
+  var html='<section class="investment-panel" aria-label="投资收益">'+h2(esc(p.name),badge(v?fmtDate(v.date):'未更新估值','dim'))+
+    '<p class="dim">'+esc(p.isin||'')+' · '+(v?investmentNumber(v.shares)+' 份':'无持仓快照')+'</p>'+
+    '<div class="investment-actions">'+btn('记录交易','editInvestmentRecord(\'trade\')',null,'plus')+
+    btn('更新估值','editInvestmentRecord(\'valuation\')','ghost','chart-line-up')+
+    btn('导入','openInvestmentImport()','ghost','upload-simple')+btn('设置','editInvestmentProfile()','ghost','sliders-horizontal')+'</div>'+
+    '<div class="investment-metrics">'+metric('持仓市值',v?v.marketValue:null)+metric('持仓成本',v?v.costBasis:null)+
+    metric('持仓浮盈',x.unrealized,x.unrealized<0?'red':'green',v&&v.costBasis>0&&x.unrealized!=null?n2(x.unrealized/v.costBasis*100)+'% · 非年化':null)+
+    stat('年化收益 XIRR',x.xirr==null?'待补齐':n2(x.xirr*100)+'%','',x.xirr<0?'red':'green')+
+    metric(x.period?'记录期间总收益':'累计总收益',x.totalProfit,x.totalProfit<0?'red':'green')+
+    metric('卖出已实现盈亏',x.realized,x.realized<0?'red':'green','FIFO 成本口径')+'</div>'+
+    '<p class="dim investment-status">'+(x.startDate?'记录自 '+fmtDate(x.startDate)+'。':'')+
+    (p.opening&&p.opening.shares>0?'包含期初持仓，成立以来收益尚缺早期交易。':'')+
+    (!p.complete?'分红及历史完整性尚未确认；总收益与 XIRR 暂不计算。':'')+
+    (x.afterValuation?'有 '+x.afterValuation+' 笔交易晚于估值，未计入本期收益。':'')+
+    (x.issues.length?esc(x.issues.join('；')):'')+'</p>'+
+    '<div class="investment-metrics secondary">'+metric('累计买入',x.bought,null,'记录期间')+
+    metric('累计卖出',x.sold,null,investmentNumber(x.soldShares)+' 份 · 不是盈利')+
+    metric('交易净投入',x.bought-x.sold,null,'不含未知期初成本')+
+    metric('已记录分红',x.dividends,null,p.complete?'':'尚未确认完整')+metric('另记费用 / 税款',x.fees)+'</div>'+
+    '<details><summary>计算口径</summary><p class="dim">证券现金流口径：买入为投入，卖出和分红为回收，期末采用估值日市值。XIRR 为资金加权年化收益，不是预测。买卖金额使用实际支出或回款，已包含的费用不重复扣除；另记费用不计入 FIFO 卖出盈亏。银行持仓成本用于浮盈，不用于倒推历史买入。税款缺失时不代表税后收益。</p></details>'+
+    '<div class="investment-charts"><section>'+h2('市值与持仓成本')+investmentChart(p,'value',unit)+'</section>'+
+    '<section>'+h2('累计收益走势')+investmentChart(p,'profit',unit)+'</section></div>'+
+    '<details class="investment-history"><summary>买卖与分红 · '+p.trades.length+' 笔</summary>';
+  if(p.opening) html+=row({label:'期初持仓',sub:fmtDate(p.opening.date)+' · 历史买入成本未提供',value:investmentNumber(p.opening.shares)+' 份'});
+  html+=p.trades.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).map(function(t){
+    return row({label:INVESTMENT_TYPES[t.type],sub:fmtDate(t.date)+(t.shares?' · '+investmentNumber(t.shares)+' 份':'')+
+      (t.price!=null?' · 成交价 '+investmentNumber(t.price):''),value:money(t.amount,a.currency),
+      onclick:"editInvestmentRecord('trade','"+t.id+"')"});
+  }).join('')+'</details><details class="investment-history"><summary>估值记录 · '+p.valuations.length+' 笔</summary>'+
+    p.valuations.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).map(function(r){
+      return row({label:fmtDate(r.date),sub:investmentNumber(r.shares)+' 份',value:money(r.marketValue,a.currency),
+        onclick:"editInvestmentRecord('valuation','"+r.id+"')"});
+    }).join('')+'</details></section>';
+  return html;
+}
+function investmentAccount(){return S.accounts.find(function(a){return a.id===accSel;});}
+function investmentField(id,label,value){return field({id:'inv_'+id,label:label,val:value==null?'':value,inputmode:'decimal'});}
+function editInvestmentProfile(){
+  var a=investmentAccount();if(!a) return;var p=a.investment||{name:'',isin:'',trades:[],valuations:[]},o=p.opening||{};
+  openSheet('证券与历史范围',field({id:'inv_name',label:'证券名称',val:p.name})+
+    field({id:'inv_isin',label:'ISIN（可选）',val:p.isin})+
+    field({id:'inv_start',label:'期初日期（完整历史则留空）',type:'date',val:o.date||''})+
+    investmentField('shares','期初份额',o.shares)+investmentField('opening','期初当日市值（可选，不是成本）',o.marketValue)+
+    '<label class="check-row"><input id="inv_complete" type="checkbox" '+(p.complete?'checked':'')+'>已核对记录期间全部交易、分红及另记费用</label>'+saveButton('saveInvestmentProfile()'));
+}
+async function saveInvestmentProfile(){
+  var a=investmentAccount();if(!a) return;
+  var p=copyState(a.investment||{trades:[],valuations:[]});p.name=val('inv_name');p.isin=val('inv_isin');
+  p.complete=document.getElementById('inv_complete').checked;
+  p.opening=val('inv_start')?{date:val('inv_start'),shares:fnum('inv_shares'),marketValue:val('inv_opening')?fnum('inv_opening'):null}:null;
+  try{validateInvestment(p);}catch(e){return toast(e.message);}
+  a.investment=p;if(!await save()) return;closeSheet();render();toast('证券资料已保存');
+}
+function editInvestmentRecord(kind,id){
+  var a=investmentAccount();if(!a||!a.investment) return editInvestmentProfile();
+  var key=kind==='valuation'?'valuations':'trades',r=a.investment[key].find(function(x){return x.id===id;})||{};
+  var body=field({id:'inv_date',label:'日期',type:'date',val:r.date||today()});
+  if(kind==='trade') body+=field({id:'inv_type',label:'类型',type:'select',val:r.type||'buy',opts:Object.keys(INVESTMENT_TYPES).map(function(k){return {k:k,label:INVESTMENT_TYPES[k]};})})+
+    investmentField('amount','实际支出 / 回款（含已扣费用）',r.amount)+investmentField('shares','份额（分红 / 费用可留空）',r.shares)+
+    investmentField('price','成交价（可选）',r.price);
+  else body+=investmentField('shares','持仓份额',r.shares)+investmentField('value','持仓市值',r.marketValue)+
+    investmentField('cost','银行显示的持仓成本（可选）',r.costBasis)+
+    '<p class="dim">估值记录用于收益分析，不会自动改变家庭账户余额。</p>';
+  body+=field({id:'inv_note',label:'备注',val:r.note||''})+saveButton("saveInvestmentRecord('"+kind+"','"+(id||'')+"')");
+  if(id) body+=btn('删除记录',"deleteInvestmentRecord('"+kind+"','"+id+"')",'danger','trash');
+  openSheet(kind==='valuation'?'持仓估值':'投资交易',body);
+}
+async function saveInvestmentRecord(kind,id){
+  var a=investmentAccount(),p=copyState(a.investment),key=kind==='valuation'?'valuations':'trades';
+  var r={id:id||uid(),date:val('inv_date'),shares:val('inv_shares')?fnum('inv_shares'):0,note:val('inv_note')};
+  if(kind==='trade'){r.type=val('inv_type');r.amount=fnum('inv_amount');r.price=val('inv_price')?fnum('inv_price'):null;}
+  else {r.marketValue=fnum('inv_value');r.costBasis=val('inv_cost')?fnum('inv_cost'):null;}
+  var i=p[key].findIndex(function(t){return t.id===id;});if(i<0)p[key].push(r);else p[key][i]=r;
+  try{validateInvestment(p);}catch(e){return toast(e.message);}
+  a.investment=p;if(!await save())return;closeSheet();render();toast('投资记录已保存');
+}
+async function deleteInvestmentRecord(kind,id){
+  if(!confirm('删除这条投资记录？可从设置中的本地恢复点恢复。')) return;
+  var a=investmentAccount(),key=kind==='valuation'?'valuations':'trades';
+  a.investment[key]=a.investment[key].filter(function(t){return t.id!==id;});
+  if(!await save())return;closeSheet();render();toast('记录已删除');
+}
+function openInvestmentImport(){
+  var a=investmentAccount();if(!a)return;
+  openSheet('导入投资记录', '<p>'+esc(a.name)+'</p>'+fileField({id:'inv_file',label:'选择投资记录 JSON',accept:'.json',onchange:'readInvestmentFile(this)'})+
+    field({id:'inv_json',label:'投资记录内容',type:'textarea'})+
+    btn('核对导入','previewInvestmentImport()',null,'check'));
+}
+async function readInvestmentFile(input){
+  if(!input.files[0])return;
+  if(input.files[0].size>2000000)return toast('投资记录文件过大');
+  var text=await input.files[0].text();if(!S||!document.getElementById('inv_json'))return;
+  document.getElementById('inv_json').value=text;previewInvestmentImport();
+}
+var investmentImportDraft=null;
+function previewInvestmentImport(){
+  var a=investmentAccount(),bundle;
+  try{
+    bundle=JSON.parse(val('inv_json'));
+    if(bundle.format!=='scrooge-investment-records'||bundle.version!==1||bundle.currency!==a.currency)throw new Error('文件格式或币种不匹配');
+    var p=mergeInvestment(a.investment,bundle.investment),x=investmentSummary(p);
+    if(x.issues.length)throw new Error(x.issues.join('；'));
+    investmentImportDraft={accountId:a.id,base:copyState(a.investment||null),investment:p};
+    openSheet('确认投资记录', '<p>'+esc(a.name)+' · '+esc(p.name)+'</p><p>'+p.trades.length+' 笔交易，'+p.valuations.length+' 笔估值</p>'+
+      '<p class="dim">合并证券明细，不新增银行流水；未知期初成本与分红保持待补齐。</p>'+
+      (x.valuation?'<p>最新市值 '+money(x.valuation.marketValue,a.currency)+' · '+fmtDate(x.valuation.date)+'</p>':'')+
+      '<label class="check-row"><input id="inv_align" type="checkbox">同时用最新估值校准账户余额（市值调整，不计作存入）</label>'+
+      saveButton('commitInvestmentImport()'));
+  }catch(e){toast('未导入：'+e.message);}
+}
+async function commitInvestmentImport(){
+  var draft=investmentImportDraft,a=draft&&S.accounts.find(function(a){return a.id===draft.accountId;});
+  if(!a)return;
+  if(!syncSame(a.investment||null,draft.base))return toast('账户记录已更改，请重新核对导入');
+  var p=copyState(draft.investment),v=investmentSummary(p).valuation;
+  if(document.getElementById('inv_align').checked&&v){
+    var id='investment-mark-'+shortHash(a.id+'|'+v.date);
+    var others=S.txs.filter(function(t){return t.id!==id;});
+    var balance=others.filter(function(t){return t.accountId===a.id&&t.date<=v.date;}).reduce(function(s,t){return s+t.amount;},0);
+    S.txs=others;var delta=Math.round((v.marketValue-balance)*100)/100;
+    if(delta)S.txs.push({id:id,accountId:a.id,date:v.date,amount:delta,valuationOnly:true,note:'证券估值校准'});
+  }
+  a.investment=p;if(!await save())return;investmentImportDraft=null;closeSheet();render();toast('投资记录已合并');
 }
 /* ================= Coupon 与欠款 ================= */
 var couponFilter='usable', debtFilter='open', couponImageDraft=null, jsQrLoader=null,
