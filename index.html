@@ -946,7 +946,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='358cd55bda4b';
+var APP_BUILD='0b05ab1b2551';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1918,7 +1918,10 @@ function assertState(p){
   if(!p || !Array.isArray(p.accounts) || !Array.isArray(p.txs) ||
      !Array.isArray(p.readings) || !Array.isArray(p.contracts))
     throw new Error('备份内容结构不完整');
-  p.accounts.forEach(function(a){if(a.investment)validateInvestment(a.investment);});
+  p.accounts.forEach(function(a){
+    if(a.investment)validateInvestment(a.investment);
+    if(a.stockLedger)validateStockLedger(a.stockLedger);
+  });
   if(p.coupons==null) p.coupons=[];
   if(p.debts==null) p.debts=[];
   if(p.mortgages==null) p.mortgages=[];
@@ -2363,7 +2366,7 @@ function syncMergeValue(base,local,remote,path,context){
 }
 function syncStateEmpty(state){
   if(!state) return true;
-  if((state.accounts||[]).some(function(a){return !!a.investment;})) return false;
+  if((state.accounts||[]).some(function(a){return !!(a.investment||a.stockLedger);})) return false;
   return ['properties','meters','readings','txs','contracts','coupons','debts','mortgages',
     'mortgagePayments','specialRepayments','tenancies','rentPayments'].every(function(k){
     return !Array.isArray(state[k])||state[k].length===0;
@@ -5129,7 +5132,7 @@ function investmentPanel(a){
       return row({label:fmtDate(r.date),sub:investmentNumber(r.shares)+' 份',value:money(r.marketValue,a.currency),
         onclick:"editInvestmentRecord('valuation','"+r.id+"')"});
     }).join('')+'</details></section>';
-  return html;
+  return html+stockLedgerPanel(a);
 }
 function investmentAccount(){return S.accounts.find(function(a){return a.id===accSel;});}
 function investmentField(id,label,value){return field({id:'inv_'+id,label:label,val:value==null?'':value,inputmode:'decimal'});}
@@ -5191,7 +5194,7 @@ async function deleteInvestmentRecord(kind,id){
 }
 function openInvestmentImport(){
   var a=investmentAccount();if(!a)return;
-  openSheet('导入投资记录', '<p>'+esc(a.name)+'</p>'+fileField({id:'inv_file',label:'选择投资记录 JSON',accept:'.json',onchange:'readInvestmentFile(this)'})+
+  openSheet('导入投资记录', '<p>'+esc(a.name)+'</p>'+fileField({id:'inv_file',label:'选择投资或 ING 股票档案 JSON',accept:'.json',onchange:'readInvestmentFile(this)'})+
     field({id:'inv_json',label:'投资记录内容',type:'textarea'})+
     btn('核对导入','previewInvestmentImport()',null,'check'));
 }
@@ -5206,6 +5209,19 @@ function previewInvestmentImport(){
   var a=investmentAccount(),bundle;
   try{
     bundle=JSON.parse(val('inv_json'));
+    if(bundle.format==='scrooge-stock-ledger'){
+      var prepared=prepareStockLedgerImport(a,bundle),summary=investmentSummary(prepared.investment,{skipXirr:true});
+      investmentImportDraft={accountId:a.id,base:copyState(a.investment||null),
+        baseLedger:copyState(a.stockLedger||null),investment:prepared.investment,stockLedger:prepared.ledger};
+      openSheet('确认 ING 股票档案','<p>'+esc(a.name)+' · '+esc(prepared.investment.name)+'</p>'+
+        '<p>'+prepared.ledger.securities.length+' 只证券 · '+prepared.ledger.trades.length+' 笔买卖 · '+
+        prepared.ledger.income.length+' 笔分红 · '+prepared.ledger.statements.length+' 份持仓对账单</p>'+
+        '<p>当前 ETF 份额 '+investmentNumber(summary.shares)+' · 最新市值 '+
+        money(summary.valuation.marketValue,a.currency)+'</p>'+
+        '<p class="dim">ING 凭证金额优先替换原估算；重复文件不重复计入。只保存证券档案，不新增银行流水、不调整账户余额。</p>'+
+        saveButton('commitInvestmentImport()'));
+      return;
+    }
     if(bundle.format!=='scrooge-investment-records'||bundle.version!==1||bundle.currency!==a.currency)throw new Error('文件格式或币种不匹配');
     var p=mergeInvestment(a.investment,bundle.investment,bundle.replacementOpening),x=investmentSummary(p);
     if(x.issues.length)throw new Error(x.issues.join('；'));
@@ -5224,15 +5240,193 @@ async function commitInvestmentImport(){
   var draft=investmentImportDraft,a=draft&&S.accounts.find(function(a){return a.id===draft.accountId;});
   if(!a)return;
   if(!syncSame(a.investment||null,draft.base))return toast('账户记录已更改，请重新核对导入');
+  if(draft.stockLedger&&!syncSame(a.stockLedger||null,draft.baseLedger))return toast('股票档案已更改，请重新核对导入');
   var p=copyState(draft.investment),v=investmentSummary(p).valuation;
-  if(document.getElementById('inv_align').checked&&v){
+  var align=document.getElementById('inv_align');
+  if(align&&align.checked&&v){
     var id='investment-mark-'+shortHash(a.id+'|'+v.date);
     var others=S.txs.filter(function(t){return t.id!==id;});
     var balance=others.filter(function(t){return t.accountId===a.id&&t.date<=v.date;}).reduce(function(s,t){return s+t.amount;},0);
     S.txs=others;var delta=Math.round((v.marketValue-balance)*100)/100;
     if(delta)S.txs.push({id:id,accountId:a.id,date:v.date,amount:delta,valuationOnly:true,note:'证券估值校准'});
   }
-  a.investment=p;if(!await save())return;investmentImportDraft=null;closeSheet();render();toast('投资记录已合并');
+  a.investment=p;if(draft.stockLedger)a.stockLedger=copyState(draft.stockLedger);
+  if(!await save())return;investmentImportDraft=null;closeSheet();render();toast('投资记录已合并');
+}
+/* A brokerage archive can contain several securities, while the legacy panel tracks one. */
+function validateStockLedger(ledger){
+  if(!ledger||ledger.format!=='scrooge-ing-depot-ledger'||ledger.version!==1||ledger.currency!=='EUR'||
+    !Array.isArray(ledger.securities)||!Array.isArray(ledger.trades)||!Array.isArray(ledger.income)||
+    !Array.isArray(ledger.statements)||!Array.isArray(ledger.documents))throw new Error('证券档案格式无效');
+  var securities=new Set(),ids=new Set(),sourceFiles=new Set(),duplicateSources=new Set();
+  ledger.securities.forEach(function(s){
+    if(!s||typeof s.isin!=='string'||!/^[A-Z]{2}[A-Z0-9]{10}$/.test(s.isin)||
+      securities.has(s.isin)||typeof s.name!=='string'||!s.name.trim())throw new Error('证券编号或名称无效');
+    securities.add(s.isin);
+  });
+  ledger.documents.forEach(function(d){
+    if(!d||typeof d.file!=='string'||sourceFiles.has(d.file)||
+      typeof d.sha256!=='string'||!/^[a-f0-9]{64}$/.test(d.sha256))throw new Error('来源凭证无效或重复');
+    sourceFiles.add(d.file);
+    if(d.category==='duplicate')duplicateSources.add(d.file);
+  });
+  ledger.trades.concat(ledger.income).forEach(function(t){
+    if(!t||typeof t.id!=='string'||ids.has(t.id)||!securities.has(t.isin)||
+      !investmentDate(t.date)||!sourceFiles.has(t.sourceFile)||duplicateSources.has(t.sourceFile)||
+      typeof t.amount!=='number'||!isFinite(t.amount)||t.amount<=0)throw new Error('证券交易或分红记录无效');
+    ids.add(t.id);
+    if(t.type==='buy'||t.type==='sell'){
+      if(typeof t.shares!=='number'||!isFinite(t.shares)||t.shares<=0||
+        typeof t.price!=='number'||!isFinite(t.price)||t.price<=0)throw new Error('交易份额或价格无效');
+    }else if(t.type!=='dividend')throw new Error('证券交易类型无效');
+  });
+  if(ledger.trades.some(function(t){return t.type==='dividend';})||
+    ledger.income.some(function(t){return t.type!=='dividend';}))throw new Error('交易与分红分类不一致');
+  var statementDates=new Set();
+  ledger.statements.forEach(function(s){
+    if(!s||!investmentDate(s.date)||statementDates.has(s.date)||!Array.isArray(s.positions)||
+      !sourceFiles.has(s.sourceFile))throw new Error('持仓对账单无效');
+    statementDates.add(s.date);
+    var positions=new Set();
+    s.positions.forEach(function(p){
+      if(!p||!securities.has(p.isin)||positions.has(p.isin)||
+        typeof p.shares!=='number'||!isFinite(p.shares)||p.shares<0||
+        typeof p.marketValue!=='number'||!isFinite(p.marketValue)||p.marketValue<0)
+        throw new Error('对账单持仓无效');
+      positions.add(p.isin);
+    });
+    securities.forEach(function(isin){
+      var calculated=ledger.trades.filter(function(t){return t.isin===isin&&t.date<=s.date;})
+        .reduce(function(total,t){return total+(t.type==='buy'?t.shares:-t.shares);},0);
+      var bank=s.positions.find(function(p){return p.isin===isin;});
+      if(Math.abs(calculated-(bank?bank.shares:0))>.0001)throw new Error('交易份额与银行对账单不一致：'+s.date);
+    });
+  });
+  return ledger;
+}
+function stockSecurityRecord(ledger,security,bankValuations,prices){
+  var isin=security.isin;
+  var trades=ledger.trades.filter(function(t){return t.isin===isin;}).map(function(t){
+    return {id:t.id,date:t.date,type:t.type,shares:t.shares,amount:t.amount,
+      price:t.price,sourceFile:t.sourceFile};
+  }).concat(ledger.income.filter(function(t){return t.isin===isin;}).map(function(t){
+    return {id:t.id,date:t.date,type:'dividend',shares:0,amount:t.amount,sourceFile:t.sourceFile};
+  }));
+  var valuations=ledger.statements.flatMap(function(s){return s.positions.filter(function(p){return p.isin===isin;})
+    .map(function(p){return {id:'ing-statement-'+isin+'-'+s.date.replace(/-/g,''),date:s.date,
+      shares:p.shares,marketValue:p.marketValue,sourceFile:s.sourceFile};});});
+  (bankValuations||[]).forEach(function(v){
+    if(v.shares!==undefined){
+      var index=valuations.findIndex(function(old){return old.date===v.date;});
+      if(index>=0)valuations[index]=copyState(v);else valuations.push(copyState(v));
+    }
+  });
+  var shares=trades.reduce(function(total,t){return total+(t.type==='buy'?t.shares:t.type==='sell'?-t.shares:0);},0);
+  if(Math.abs(shares)<.0001){
+    var lastSale=trades.filter(function(t){return t.type==='sell';}).map(function(t){return t.date;}).sort().pop();
+    if(lastSale&&!valuations.some(function(v){return v.date>=lastSale;}))
+      valuations.push({id:'ing-closed-'+isin,date:lastSale,shares:0,marketValue:0,note:'卖出后持仓为零，后续对账单已核对'});
+  }
+  return validateInvestment({name:security.name,isin:isin,opening:null,complete:true,performanceStart:'history',
+    trades:trades,valuations:valuations,historyPrices:prices||[]});
+}
+function mergeVerifiedStockRecord(existing,verified){
+  if(!existing)return copyState(verified);
+  validateInvestment(existing);
+  if(existing.isin!==verified.isin)throw new Error('证券编号不匹配');
+  var result=copyState(existing),matched=new Set();
+  if(result.opening){
+    var early=verified.trades.filter(function(t){return t.date<=result.opening.date;});
+    var earlyShares=early.reduce(function(sum,t){return sum+(t.type==='buy'?t.shares:t.type==='sell'?-t.shares:0);},0);
+    if(Math.abs(earlyShares-result.opening.shares)>.00001)throw new Error('银行历史份额与原期初持仓不一致');
+    result.opening=null;
+  }
+  var previous=result.trades.map(function(old){
+    var found=verified.trades.find(function(t){
+      return !matched.has(t.id)&&t.type===old.type&&t.date===old.date&&
+        (t.type==='buy'||t.type==='sell'?Math.abs(t.shares-old.shares)<.00001:
+          Math.abs(t.amount-old.amount)<.005);
+    });
+    if(!found)throw new Error('已有证券交易未在 ING 凭证中匹配：'+old.date);
+    matched.add(found.id);
+    return Object.assign({},found,{id:old.id},old.note?{note:old.note}:{});
+  });
+  result.trades=previous.concat(verified.trades.filter(function(t){return !matched.has(t.id);}));
+  verified.valuations.forEach(function(v){
+    var old=result.valuations.find(function(item){return item.date===v.date;});
+    if(old){
+      if(Math.abs(old.shares-v.shares)>.0001||Math.abs(old.marketValue-v.marketValue)>.01)
+        throw new Error('银行估值与已有记录冲突：'+v.date);
+    }else result.valuations.push(copyState(v));
+  });
+  if(!result.historyPrices)result.historyPrices=[];
+  verified.historyPrices.forEach(function(q){
+    var old=result.historyPrices.find(function(item){return item.date===q.date;});
+    if(!old)result.historyPrices.push(copyState(q));
+    else if(Math.abs(old.price-q.price)>.0000001)throw new Error('历史价格冲突：'+q.date);
+  });
+  result.complete=true;
+  result.performanceStart='history';
+  validateInvestment(result);
+  var analysis=investmentSummary(result,{skipXirr:true});
+  if(analysis.issues.length)throw new Error(analysis.issues.join('；'));
+  return result;
+}
+function prepareStockLedgerImport(account,bundle){
+  if(!bundle||bundle.format!=='scrooge-stock-ledger'||bundle.version!==1||bundle.currency!==account.currency)
+    throw new Error('证券档案或币种不匹配');
+  var ledger=validateStockLedger(bundle.ledger);
+  var target=account.investment&&ledger.securities.find(function(s){return s.isin===account.investment.isin;});
+  if(!target)target=ledger.securities.find(function(s){return s.isin==='IE0031442068';});
+  if(!target)throw new Error('找不到该账户的主证券');
+  var bank=bundle.etfBankValuations||[];
+  bank.forEach(function(v){if(!investmentDate(v.date)||typeof v.marketValue!=='number'||
+    typeof v.shares!=='number')throw new Error('银行估值无效');});
+  var verified=stockSecurityRecord(ledger,target,bank,bundle.etfHistoryPrices||[]);
+  var merged=mergeVerifiedStockRecord(account.investment,verified);
+  ledger.securities.forEach(function(security){
+    var record=security.isin===target.isin?merged:stockSecurityRecord(ledger,security);
+    var result=investmentSummary(record,{skipXirr:true});
+    if(result.issues.length)throw new Error(security.name+'：'+result.issues.join('；'));
+  });
+  var analysis=investmentSummary(merged,{skipXirr:true});
+  if(analysis.valuation&&analysis.remainingCost!=null&&analysis.valuation.costBasis!=null&&
+    Math.abs(analysis.remainingCost-analysis.valuation.costBasis)>.01)
+    throw new Error('买入成本与银行持仓成本不一致，请核对');
+  return {ledger:copyState(ledger),investment:merged};
+}
+function stockLedgerPanel(account){
+  var ledger=account.stockLedger;
+  if(!ledger)return '';
+  var summaries=ledger.securities.map(function(security){
+    var p=security.isin===account.investment.isin?account.investment:stockSecurityRecord(ledger,security);
+    return {security:security,summary:investmentSummary(p,{skipXirr:true})};
+  });
+  var total=function(key){return summaries.reduce(function(sum,item){return sum+(item.summary[key]||0);},0);};
+  var profitKnown=summaries.every(function(item){return item.summary.totalProfit!=null&&
+    !item.summary.issues.length&&!item.summary.afterValuation;});
+  var portfolioProfit=profitKnown?total('totalProfit'):null;
+  var all=ledger.trades.concat(ledger.income).slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  return '<section class="investment-panel" aria-label="完整股票档案">'+h2('ING 股票档案',badge(ledger.securities.length+' 只证券','dim'))+
+    '<div class="investment-metrics">'+stat('累计买入',n2(total('bought')),'€')+
+    stat('累计卖出',n2(total('sold')),'€')+stat('净分红',n2(total('dividends')),'€')+
+    stat('累计总收益',portfolioProfit==null?'待补齐':n2(portfolioProfit),portfolioProfit==null?'':'€',
+      portfolioProfit==null?'':portfolioProfit<0?'red':'green')+'</div>'+
+    '<p class="dim">买卖采用 ING 净结算金额；重复凭证已去重。年度费用披露不重复扣款。</p>'+
+    summaries.map(function(item){var x=item.summary;return row({label:item.security.name,
+      sub:item.security.isin+' · '+(x.shares>1e-5?investmentNumber(x.shares)+' 份':'已清仓')+
+        ' · 买入 '+n2(x.bought)+' € · 卖出 '+n2(x.sold)+' € · 分红 '+n2(x.dividends)+' €',
+      value:n2(x.totalProfit)+' €',tone:x.totalProfit<0?'red':'green'});}).join('')+
+    '<details class="investment-history"><summary>全部买卖与分红 · '+all.length+' 笔</summary>'+
+    all.map(function(t){return row({label:INVESTMENT_TYPES[t.type]+' · '+(ledger.securities.find(function(s){return s.isin===t.isin;})||{}).name,
+      sub:fmtDate(t.date)+(t.shares?' · '+investmentNumber(t.shares)+' 份':''),
+      value:money(t.amount,account.currency)});}).join('')+'</details>'+
+    '<details class="investment-history"><summary>银行持仓对账单 · '+ledger.statements.length+' 份</summary>'+
+    ledger.statements.map(function(s){return row({label:fmtDate(s.date),
+      sub:s.positions.length+' 只证券',value:money(s.positions.reduce(function(sum,p){return sum+p.marketValue;},0),account.currency)});
+    }).join('')+'</details>'+
+    '<p class="dim">另保存 '+(ledger.annualCostDisclosures||[]).length+' 份年度费用披露和 '+
+    (ledger.taxInformation||[]).length+' 份预扣税说明；来源凭证保存在本机原文件夹。</p></section>';
 }
 /* ================= Coupon 与欠款 ================= */
 var couponFilter='usable', debtFilter='open', couponImageDraft=null, jsQrLoader=null,
