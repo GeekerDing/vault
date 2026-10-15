@@ -413,14 +413,31 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
 .chart-y-right .chart-y-unit,.chart-y-right .chart-y-label{left:0;right:auto}
 .chart-x-title{font-size:11px;color:var(--dim);text-align:center;margin-top:4px}
 .chart-detail{margin:12px 0 0;font-size:12px;line-height:1.6;min-height:39px;overflow-wrap:anywhere}
-.energy-trend .chart-y-axis:first-child .chart-y-unit{color:var(--blue)}
-.energy-trend .chart-y-right .chart-y-unit{color:var(--green)}
+.energy-chart{--energy-accent:#367FC0;gap:0}
+.energy-gas{--energy-accent:#27867F}
+.energy-chart .chart-readout{height:22px;border:0}
 .energy-trend .chart-readout strong{display:none}
-.energy-trend .chart-series-readout{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px 0 14px}
+.energy-trend .chart-series-readout{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px 0 12px}
 .energy-trend .chart-series-readout b{font-size:11px;white-space:normal}
 .energy-trend .chart-series-readout strong{font-size:16px;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
-.energy-trend .chart-series-readout i.dashed{height:2px;border-radius:0}
+.energy-chart .chart-frame{grid-template-columns:var(--energy-axis-width,38px) minmax(0,1fr);gap:5px}
+.energy-panel-heading{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--dim);margin:0 0 3px}
+.energy-panel-daily .chart,.energy-panel-daily .chart-y-axis{height:132px}
+.energy-panel-reading{margin-top:12px}
+.energy-panel-reading .chart,.energy-panel-reading .chart-y-axis{height:76px}
+.energy-chart .chart-bar{opacity:.68}
+.energy-chart .chart-bar.selected{opacity:1;stroke:var(--energy-accent);stroke-width:1.5}
+.energy-panel-daily .chart-focus-dot{display:none}
+.energy-chart .chart-detail{font-size:11px;line-height:1.5;min-height:33px;margin-top:8px}
+.energy-chart .chart-grid{opacity:.65}
 .energy-trend .h2{flex-wrap:wrap;gap:8px}
+.energy-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}
+.energy-card-head>div:first-child{min-width:0}
+.energy-card-head .h2{margin:0 0 3px}
+.energy-card-head .energy-meter-name{display:block;font-size:12px;line-height:1.5}
+.energy-card-actions{display:flex;gap:4px;flex:none}
+.energy-card-actions .energy-icon{width:38px;height:40px;min-height:40px;padding:0;border:0}
+.energy-card-actions .energy-icon .ph{font-size:20px}
 .energy-toolbar{display:flex;align-items:center;gap:10px;min-width:0}
 .energy-toolbar>.chips{flex:1;min-width:0;margin:0;padding:0}
 .energy-toolbar>.meter-entry{flex:none}
@@ -428,6 +445,14 @@ nav button .ph,nav button .ph-fill{font-size:23px;width:24px;height:24px;justify
 .energy-meter-name{min-width:0;overflow-wrap:anywhere}
 @media (max-width:599px){
   .energy-trend .chart-x-label:not(.first):not(.last):not(.single){display:none}
+}
+@media (max-width:899px){
+  main[data-view="energy"],main[data-view="power"],main[data-view="gas"]{padding-left:12px;padding-right:12px;gap:12px}
+  .card.energy-trend{padding:14px 12px;gap:8px}
+}
+@media (prefers-color-scheme:dark){
+  .energy-chart{--energy-accent:#7AB5E6}
+  .energy-gas{--energy-accent:#6AC4BA}
 }
 .retirement-phase-key+.chart-shell{animation:retirement-scenario-in .22s var(--ease-out) both}
 @media (max-width:440px){
@@ -998,7 +1023,7 @@ function buildIcs(contracts){
 var KEY='scrooge.vault.v1';
 var ENC_KEY='scrooge.vault.encrypted.v2';
 var DEVICE_KEY='scrooge.vault.device.v1';
-var APP_BUILD='8b6103ef8082';
+var APP_BUILD='d743a9b5b2f4';
 var S=null, view='home', meterSel={power:null,gas:null}, accSel='all', catSel='all', showAllTx=false;
 var updateChecking=false, updatePending=false, lastUpdateCheck=0, appUpdatesStarted=false;
 var appRefreshStatus='idle', appRefreshTitle='重新加载最新版';
@@ -1328,16 +1353,11 @@ function chartAriaLabel(st,index){
   if(point.detail) text+='，'+point.detail;
   return text;
 }
-function chartMarkup(st,marks,scale,Y,every,line){
-  var p=st.points[st.selected], col=p.color||st.color;
-  return '<div class="chart-shell" id="'+st.id+'" data-chart-shell="'+st.id+'">'+
-    '<div class="chart-readout" id="'+st.id+'-readout" role="status" aria-live="polite" aria-atomic="true">'+
-      '<span data-chart-date>'+esc(chartPointDate(st,st.selected))+'</span>'+
-      '<strong class="tnum" data-chart-value>'+esc(st.fmt(p.value))+'</strong></div>'+
-    chartSeriesReadout(st,st.selected)+
-    '<div class="chart-frame'+(st.secondaryAxis?' chart-dual-axis':'')+'"><div class="chart-y-axis" aria-hidden="true">'+
-      chartYAxis(scale,Y,st.unit,st.yFmt)+'</div><div class="chart-plot">'+
-      '<svg class="chart interactive-chart" data-chart-id="'+st.id+'" viewBox="0 0 '+CW+' '+CH+
+function chartSvg(st,marks,scale,Y,panelKey){
+  var p=st.points[st.selected],panel=st.panels&&st.panels[panelKey];
+  var y=panel?p[panel.pointKey]:p.y,col=panel?panel.color:(p.color||st.color);
+  return '<svg class="chart interactive-chart" data-chart-id="'+st.id+'"'+
+        (panelKey?' data-chart-panel="'+panelKey+'"':'')+' viewBox="0 0 '+CW+' '+CH+
         '" preserveAspectRatio="none" role="img" tabindex="0" aria-describedby="'+st.id+'-readout"'+
         ' aria-label="'+esc(chartAriaLabel(st,st.selected))+'"'+
         ' onpointerdown="chartPointerDown(event,\''+st.id+'\')"'+
@@ -1348,10 +1368,21 @@ function chartMarkup(st,marks,scale,Y,every,line){
         chartGrid(scale,Y)+marks+
         '<g class="chart-focus" aria-hidden="true">'+
           '<line class="chart-focus-line" x1="'+p.x+'" y1="0" x2="'+p.x+'" y2="'+CH+'"/>'+
-          '<circle class="chart-focus-dot" cx="'+p.x+'" cy="'+p.y+'" r="4" fill="var(--card)" stroke="'+col+'"/>'+
+          '<circle class="chart-focus-dot" cx="'+p.x+'" cy="'+(y==null?0:y)+'" r="4" fill="var(--card)" stroke="'+col+'"'+
+            (y==null?' visibility="hidden"':'')+'/>'+
           (st.secondaryAxis?'<circle class="chart-secondary-focus" cx="'+p.x+'" cy="'+(p.secondaryY==null?0:p.secondaryY)+
             '" r="4" fill="var(--card)" stroke="'+st.secondaryAxis.color+'"'+(p.secondaryY==null?' visibility="hidden"':'')+'/>':'')+
-        '</g></svg>'+
+        '</g></svg>';
+}
+function chartMarkup(st,marks,scale,Y,every,line){
+  var p=st.points[st.selected];
+  return '<div class="chart-shell" id="'+st.id+'" data-chart-shell="'+st.id+'">'+
+    '<div class="chart-readout" id="'+st.id+'-readout" role="status" aria-live="polite" aria-atomic="true">'+
+      '<span data-chart-date>'+esc(chartPointDate(st,st.selected))+'</span>'+
+      '<strong class="tnum" data-chart-value>'+esc(st.fmt(p.value))+'</strong></div>'+
+    chartSeriesReadout(st,st.selected)+
+    '<div class="chart-frame'+(st.secondaryAxis?' chart-dual-axis':'')+'"><div class="chart-y-axis" aria-hidden="true">'+
+      chartYAxis(scale,Y,st.unit,st.yFmt)+'</div><div class="chart-plot">'+chartSvg(st,marks,scale,Y)+
       '<div class="chart-x-axis" aria-hidden="true">'+chartXLabels(st.data,st.points,every,line,st.dated,st.xFmt)+'</div>'+
       (st.xLabel?'<div class="chart-x-title">'+esc(st.xLabel)+'</div>':'')+'</div>'+
       (st.secondaryAxis?'<div class="chart-y-axis chart-y-right" aria-hidden="true">'+
@@ -1363,27 +1394,32 @@ function selectChartPoint(id,index){
   if(!st||!shell) return;
   index=Math.max(0,Math.min(st.points.length-1,index));
   st.selected=index;
-  var p=st.points[index], svg=shell.querySelector('svg');
+  var p=st.points[index];
   shell.querySelector('[data-chart-date]').textContent=chartPointDate(st,index);
   shell.querySelector('[data-chart-value]').textContent=st.fmt(p.value);
   var seriesReadout=shell.querySelector('[data-chart-series-readout]');
   if(seriesReadout) seriesReadout.outerHTML=chartSeriesReadout(st,index);
   var detail=shell.querySelector('[data-chart-detail]');
   if(detail) detail.textContent=st.data[index].detail||'';
-  var line=svg.querySelector('.chart-focus-line'), dot=svg.querySelector('.chart-focus-dot');
-  line.setAttribute('x1',p.x); line.setAttribute('x2',p.x);
-  dot.setAttribute('cx',p.x); dot.setAttribute('cy',p.y);
-  dot.setAttribute('stroke',p.color||st.color);
-  var secondary=svg.querySelector('.chart-secondary-focus');
-  if(secondary){
-    secondary.setAttribute('cx',p.x);secondary.setAttribute('cy',p.secondaryY==null?0:p.secondaryY);
-    secondary.setAttribute('visibility',p.secondaryY==null?'hidden':'visible');
-  }
-  var bars=svg.querySelectorAll('.chart-bar');
-  Array.prototype.forEach.call(bars,function(b){
-    b.classList.toggle('selected',parseInt(b.getAttribute('data-bar-index'),10)===index);
+  shell.querySelectorAll('svg[data-chart-id]').forEach(function(svg){
+    var panel=st.panels&&st.panels[svg.getAttribute('data-chart-panel')];
+    var y=panel?p[panel.pointKey]:p.y;
+    var line=svg.querySelector('.chart-focus-line'), dot=svg.querySelector('.chart-focus-dot');
+    line.setAttribute('x1',p.x); line.setAttribute('x2',p.x);
+    dot.setAttribute('cx',p.x); dot.setAttribute('cy',y==null?0:y);
+    dot.setAttribute('visibility',y==null?'hidden':'visible');
+    dot.setAttribute('stroke',panel?panel.color:(p.color||st.color));
+    var secondary=svg.querySelector('.chart-secondary-focus');
+    if(secondary){
+      secondary.setAttribute('cx',p.x);secondary.setAttribute('cy',p.secondaryY==null?0:p.secondaryY);
+      secondary.setAttribute('visibility',p.secondaryY==null?'hidden':'visible');
+    }
+    var bars=svg.querySelectorAll('.chart-bar');
+    Array.prototype.forEach.call(bars,function(b){
+      b.classList.toggle('selected',parseInt(b.getAttribute('data-bar-index'),10)===index);
+    });
+    svg.setAttribute('aria-label',chartAriaLabel(st,index));
   });
-  svg.setAttribute('aria-label',chartAriaLabel(st,index));
 }
 function chartPointFromPointer(e,id){
   var st=chartStore[id], svg=e.currentTarget;
@@ -1395,6 +1431,12 @@ function chartPointFromPointer(e,id){
   st.points.forEach(function(p,i){
     var d=Math.abs(p.x-x); if(d<dist){dist=d;best=i;}
   });
+  if(svg.getAttribute('data-chart-panel')==='daily'){
+    var interval=st.points.findIndex(function(p,i){
+      return i>0&&p.dailyY!=null&&x>st.points[i-1].x&&x<=p.x;
+    });
+    if(interval>=0) best=interval;
+  }
   selectChartPoint(id,best);
 }
 function chartPointerDown(e,id){
@@ -3685,11 +3727,11 @@ function meterOverviewCard(kind){
   if(!meter) return card(h2(label)+
     '<p class="empty">尚未配置'+(kind==='power'?'电表':'燃气表')+'</p>');
   var readings=meterReadings(S.readings,meter.id);
-  return card(h2(label,badge(readings.length+' 次记录','dim'))+
-    '<span class="dim energy-meter-name">'+esc(energyMeterName(meter))+'</span>'+
-    energyTrendChart(meter,readings)+
-    '<div class="btnrow">'+btn('查看详情',"go('"+kind+"')",'ghost')+
-      btn('拍照录入',"startMeterEntry('"+kind+"')",null,'camera')+'</div>','energy-trend');
+  return card('<div class="energy-card-head"><div>'+h2(label)+
+    '<span class="dim energy-meter-name">'+esc(energyMeterName(meter))+' · '+readings.length+' 次记录</span></div>'+
+    '<div class="energy-card-actions"><button class="btn ghost energy-icon" title="拍照录入" aria-label="拍照录入'+label+'" onclick="startMeterEntry(\''+kind+'\')">'+
+      icon('camera')+'</button><button class="btn ghost energy-icon" title="查看详情" aria-label="查看'+label+'详情" onclick="go(\''+kind+'\')">'+
+      icon('arrow-right')+'</button></div></div>'+energyTrendChart(meter,readings),'energy-trend');
 }
 function viewEnergyOverview(){
   return sectionTabs('energy','energy')+
@@ -3701,8 +3743,8 @@ function energyTrendChart(m,readings){
   if(!rs.length) return '<p class="empty">暂无抄表记录</p>';
   var iv=intervals(rs,m);
   var readingFmt=function(v){return Number(v).toLocaleString('de-DE',{maximumFractionDigits:3})+' '+unit;};
-  var dailyFmt=function(v){return v==null?'待计算':n2(v)+' '+unit+'/天';};
-  var axisFmt=function(v){return Number(v).toLocaleString('de-DE',{maximumFractionDigits:4});};
+  var dailyFmt=function(v){return v==null?'待计算':(v!==0&&Math.abs(v)<.01?
+    Number(v).toLocaleString('de-DE',{minimumFractionDigits:2,maximumSignificantDigits:3}):n2(v))+' '+unit+'/天';};
   var data=rs.map(function(r,i){
     var interval=i?iv[i-1]:null,daily=interval&&interval.days>0?interval.netRaw/interval.days:null;
     return {date:r.date,value:Number(r.value),values:{reading:Number(r.value),daily:daily},
@@ -3711,32 +3753,55 @@ function energyTrendChart(m,readings){
   });
   var scale=chartScale(data.map(function(p){return p.value;}),false);
   var dailyScale=chartScale(data.map(function(p){return p.values.daily;}).filter(function(v){return v!=null;}));
+  function axisFormatter(s){
+    var step=s.ticks.length>1?s.ticks[1]-s.ticks[0]:s.max-s.min;
+    var digits=Math.max(0,Math.min(12,-Math.floor(Math.log10(step)+1e-9)));
+    return function(v){return Number(v).toLocaleString('de-DE',{maximumFractionDigits:digits});};
+  }
+  var readingAxisFmt=axisFormatter(scale),dailyAxisFmt=axisFormatter(dailyScale);
+  var axisLabels=scale.ticks.map(readingAxisFmt).concat(dailyScale.ticks.map(dailyAxisFmt));
+  var axisWidth=Math.max(32,Math.max.apply(null,axisLabels.map(function(label){return label.length;}))*6+2);
   var first=toD(data[0].date),span=toD(data[data.length-1].date)-first;
   var X=function(date){return span?4+(toD(date)-first)/span*(CW-8):CW/2;};
-  var Y=function(v){return 18+(scale.max-v)/(scale.max-scale.min)*(CH-26);};
-  var dailyY=function(v){return 18+(dailyScale.max-v)/(dailyScale.max-dailyScale.min)*(CH-26);};
+  var Y=function(v){return 10+(scale.max-v)/(scale.max-scale.min)*(CH-20);};
+  var dailyY=function(v){return 10+(dailyScale.max-v)/(dailyScale.max-dailyScale.min)*(CH-20);};
   var points=data.map(function(p){return {x:X(p.date),y:Y(p.value),value:p.value,date:p.date,
-    secondaryY:p.values.daily==null?null:dailyY(p.values.daily),color:'var(--blue)'};});
+    dailyY:p.values.daily==null?null:dailyY(p.values.daily),color:'var(--dim)'};});
   var path=points.map(function(p,i){return (i?'L':'M')+p.x.toFixed(2)+','+p.y.toFixed(2);}).join(' ');
-  // An interval mean is constant between readings, not a measured daily history.
-  var dailyPath='',previous=null;
-  data.forEach(function(p,i){
-    if(p.values.daily==null){previous=null;return;}
-    var from=X(data[i-1].date).toFixed(2),to=X(p.date).toFixed(2),y=dailyY(p.values.daily).toFixed(2);
-    dailyPath+=(previous===i-1?'L':'M')+from+','+y+' L'+to+','+y+' ';previous=i;
-  });
-  var marks='<path d="'+path+'" stroke="var(--blue)" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>'+
-    '<path d="'+dailyPath+'" stroke="var(--green)" stroke-width="2" stroke-dasharray="5 4" fill="none" vector-effect="non-scaling-stroke"/>'+
-    points.map(function(p){return '<circle data-energy-reading cx="'+p.x+'" cy="'+p.y+'" r="2.5" fill="var(--blue)"/>'+
-      (p.secondaryY==null?'':'<circle cx="'+p.x+'" cy="'+p.secondaryY+'" r="2.5" fill="var(--green)"/>');}).join('');
+  // Each bar spans its observed reading interval; it is not a daily measurement.
+  var bars=points.map(function(p,i){
+    if(p.dailyY==null) return '';
+    var width=p.x-points[i-1].x,gap=Math.min(2,width*.15),zero=dailyY(0);
+    var height=Math.abs(p.dailyY-zero),y=Math.min(p.dailyY,zero);
+    if(height<1){y=data[i].values.daily<0?zero:data[i].values.daily>0?zero-1:zero-.5;height=1;}
+    return '<rect class="chart-bar'+(i===points.length-1?' selected':'')+'" data-bar-index="'+i+'" x="'+
+      (points[i-1].x+gap/2)+'" y="'+y+'" width="'+(width-gap)+'" height="'+height+'" fill="var(--energy-accent)"/>';
+  }).join('');
+  var marks='<path d="'+path+'" stroke="var(--dim)" stroke-width="1.75" fill="none" vector-effect="non-scaling-stroke"/>'+
+    points.map(function(p){return '<circle data-energy-reading cx="'+p.x+'" cy="'+p.y+'" r="2" fill="var(--dim)"/>';}).join('');
   var id='chart-'+(++chartSeq);
-  chartStore[id]={id:id,data:data,points:points,selected:data.length-1,color:'var(--blue)',dated:true,
-    preserveMissing:true,fmt:readingFmt,unit:unit,yFmt:axisFmt,label:'抄表读数与日均用量',
-    xLabel:'抄表日期',xFmt:function(d){return fmtDate(d).slice(0,6)+d.slice(2,4);},
-    series:[{key:'reading',label:'累计读数 · 左轴',color:'var(--blue)',fmt:readingFmt},
-      {key:'daily',label:'区间日均 · 右轴',color:'var(--green)',dashed:true,fmt:dailyFmt}],
-    secondaryAxis:{scale:dailyScale,Y:dailyY,unit:unit+'/天',color:'var(--green)',fmt:axisFmt}};
-  return chartMarkup(chartStore[id],marks,scale,Y,1,true);
+  var st=chartStore[id]={id:id,data:data,points:points,selected:data.length-1,color:'var(--dim)',dated:true,
+    preserveMissing:true,fmt:readingFmt,unit:unit,label:'抄表读数与区间日均用量',
+    xFmt:function(d){return fmtDate(d);},
+    series:[{key:'daily',label:'区间日均',color:'var(--energy-accent)',fmt:dailyFmt},
+      {key:'reading',label:'累计读数',color:'var(--dim)',fmt:readingFmt}],
+    panels:{daily:{scale:dailyScale,Y:dailyY,pointKey:'dailyY',color:'var(--energy-accent)',fmt:dailyAxisFmt},
+      reading:{scale:scale,Y:Y,pointKey:'y',color:'var(--dim)',fmt:readingAxisFmt}}};
+  function panel(key,label,unit,marks){
+    var config=st.panels[key];
+    return '<div class="energy-chart-panel energy-panel-'+key+'"><div class="energy-panel-heading"><span>'+label+
+      '</span><span class="energy-panel-unit">'+unit+'</span></div><div class="chart-frame">'+
+      '<div class="chart-y-axis" aria-hidden="true">'+chartYAxis(config.scale,config.Y,'',config.fmt)+'</div>'+
+      '<div class="chart-plot">'+chartSvg(st,marks,config.scale,config.Y,key)+
+      (key==='reading'?'<div class="chart-x-axis" aria-hidden="true">'+(span?chartXLabels(data,points,1,true,true,st.xFmt):
+        '<span class="chart-x-label single" style="left:50%">'+fmtDate(data[0].date)+'</span>')+'</div>':'')+
+      '</div></div></div>';
+  }
+  return '<div class="chart-shell energy-chart energy-'+m.kind+'" style="--energy-axis-width:'+axisWidth+'px" id="'+id+'" data-chart-shell="'+id+'">'+
+    '<div class="chart-readout" id="'+id+'-readout" role="status" aria-live="polite" aria-atomic="true">'+
+      '<span data-chart-date>'+esc(chartPointDate(st,st.selected))+'</span><strong data-chart-value>'+esc(readingFmt(data[st.selected].value))+'</strong></div>'+
+    chartSeriesReadout(st,st.selected)+panel('daily','区间日均',unit+'/天',bars)+panel('reading','累计读数',unit,marks)+
+    '<p class="chart-detail dim" data-chart-detail>'+esc(data[st.selected].detail)+'</p></div>';
 }
 
 function viewMeter(kind){
